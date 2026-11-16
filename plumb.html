@@ -83,7 +83,7 @@ header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin
 .admin-row { display: flex; gap: 8px; width: 100%; }
 .admin-row input { flex: 1; min-width: 0; border: 3px solid var(--bezel-l); background: var(--cab); color: var(--white); font-family: var(--term); font-size: 1.2rem; padding: 6px 10px; border-radius: 0; }
 .admin-row input:focus { outline: none; border-color: var(--a); }
-.admin-row .btn { padding: 8px 12px; }
+.admin-row .btn, .sheet.pay .admin-row .btn.primary { padding: 8px 12px; min-width: 0; margin-top: 0; flex: none; }
 .color-btn i { display: block; width: 14px; height: 14px; background: var(--a); box-shadow: inset -3px -3px 0 var(--ad), 0 0 8px -1px var(--a); }
 .admin-tag { font-family: var(--pixel); font-size: .45rem; color: #04121a; background: var(--a); padding: 3px 6px; vertical-align: middle; margin-left: 8px; }
 .sheet.pay .btn.primary { min-width: 70%; margin-top: 8px; }
@@ -450,10 +450,17 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
     <button class="btn primary" id="payBtn" disabled>Unlock unlimited</button>
     <p class="pay-small" id="paySoon">Payments coming soon.</p>
     <p class="pay-small" id="payVia" hidden>Secure checkout by Stripe.</p>
-    <button class="link-btn admin-link" id="adminLink">Admin</button>
+    <div style="display:flex;gap:18px;justify-content:center">
+      <button class="link-btn admin-link" id="adminLink">Admin</button>
+      <button class="link-btn admin-link" id="payWipeLink">Admin reset</button>
+    </div>
     <form class="admin-row" id="adminForm" hidden>
       <input id="adminCode" type="password" placeholder="Admin code" autocomplete="off" aria-label="Admin code">
       <button class="btn" type="submit">Enter</button>
+    </form>
+    <form class="admin-row" id="payWipeForm" hidden>
+      <input id="payWipeCode" type="password" placeholder="Password" autocomplete="off" aria-label="Admin password">
+      <button class="btn primary" type="submit">Reset all</button>
     </form>
   </div>
 </div>
@@ -472,7 +479,7 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
       <p class="arch-head">Admin</p>
       <button class="btn" id="wipeBtn">Admin reset</button>
       <form class="admin-row" id="wipeForm" hidden>
-        <input id="wipeCode" type="password" placeholder="Password to wipe all progress" autocomplete="off" aria-label="Admin password">
+        <input id="wipeCode" type="password" placeholder="Password" autocomplete="off" aria-label="Admin password">
         <button class="btn primary" type="submit">Reset all</button>
       </form>
     </div>
@@ -1847,7 +1854,7 @@ $("soundBtn").addEventListener("click", () => { muted = !muted; store.set("plumb
 // once the intro and today's daily are both finished, the paywall comes up ($5 once; payment wiring comes later)
 function paywall(afterDaily = true) {
   if (afterDaily && ok7()) return false;
-  closeModals(); $("payLead").hidden = !afterDaily; $("adminForm").hidden = true; $("payModal").hidden = false; return true;
+  closeModals(); $("payLead").hidden = !afterDaily; $("adminForm").hidden = true; $("payWipeForm").hidden = true; $("payModal").hidden = false; return true;
 }
 $("unlimBtn").addEventListener("click", () => ok7() ? openArchive() : paywall(false));
 $("payBtn").addEventListener("click", () => { if (PAY_LINK) location.href = PAY_LINK; });
@@ -1912,17 +1919,20 @@ $("colorBtn").addEventListener("click", () => {
 });
 // admin reset: after the password, every board's progress is wiped (admin mode, unlock, color and sound stay)
 $("wipeBtn").addEventListener("click", () => { $("wipeForm").hidden = false; $("wipeCode").focus(); });
-$("wipeForm").addEventListener("submit", e => {
-  e.preventDefault();
-  const v = $("wipeCode").value.trim().toLowerCase(); $("wipeCode").value = "";
-  if (!adm() || h7("ad\u2022" + v) !== A7) { toast("Wrong password"); return; }
+function wipeAll(input) {
+  const v = input.value.trim().toLowerCase(); input.value = "";
+  if (h7("ad\u2022" + v) !== A7) { toast("Wrong password"); return; }
   PUZZLES.forEach((_, i) => store.set(SAVE + i, null));
   store.set(KT, null);
   closeModals(); fireUntil = 0; load(INTRO);
   $("startLives").textContent = LIVES(); $("helpModal").hidden = false;
   toast("All progress reset");
-});
-$("adminLink").addEventListener("click", () => { $("adminForm").hidden = false; $("adminCode").focus(); });
+}
+$("wipeForm").addEventListener("submit", e => { e.preventDefault(); wipeAll($("wipeCode")); });
+// the same reset straight from the Unlimited screen, no admin mode needed
+$("payWipeLink").addEventListener("click", () => { $("adminForm").hidden = true; $("payWipeForm").hidden = false; $("payWipeCode").focus(); });
+$("payWipeForm").addEventListener("submit", e => { e.preventDefault(); wipeAll($("payWipeCode")); });
+$("adminLink").addEventListener("click", () => { $("payWipeForm").hidden = true; $("adminForm").hidden = false; $("adminCode").focus(); });
 $("adminForm").addEventListener("submit", e => {
   e.preventDefault();
   const v = $("adminCode").value.trim().toLowerCase(); $("adminCode").value = "";
