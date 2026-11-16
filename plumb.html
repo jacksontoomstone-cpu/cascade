@@ -268,10 +268,11 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 .st-nozzle { fill: var(--bezel-l); stroke: var(--white); stroke-width: 1.5; }
 @keyframes pufire { 0% { transform: scale(1.18); filter: brightness(2.4); } 100% { transform: none; } }
 .hoses { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 25; pointer-events: none; overflow: visible; }
-.hose-casing { fill: none; stroke: var(--bezel-l); stroke-width: 13; stroke-linecap: round; stroke-linejoin: round; }
 .hose-bore { fill: none; stroke: var(--cab); stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
-.hose-water { fill: none; stroke: hsl(var(--hue) calc(92% * var(--sk)) calc(58% + var(--lift-a))); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 3px hsl(var(--hue) calc(92% * var(--sk)) calc(58% + var(--lift-a)))); }
-.hose-clamp { fill: var(--bezel-l); stroke: var(--white); stroke-width: 2; transform-box: fill-box; transform-origin: center; }
+.hose-flow { fill: none; stroke: hsl(var(--hue) calc(90% * var(--sk)) calc(84% + var(--lift-a))); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: .03 .05; animation: hoseflow .5s linear infinite; opacity: 0; transition: opacity .15s; }
+@keyframes hoseflow { to { stroke-dashoffset: -.08; } }
+.hose-splash { fill: none; stroke: hsl(var(--hue) calc(90% * var(--sk)) calc(84% + var(--lift-a))); stroke-width: 2; }
+.hose-water { stroke-width: 7 !important; fill: none; stroke: hsl(var(--hue) calc(92% * var(--sk)) calc(58% + var(--lift-a))); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 3px hsl(var(--hue) calc(92% * var(--sk)) calc(58% + var(--lift-a)))); }
 .tile.await { color: transparent !important; text-shadow: none !important; }
 .tile.slap { animation: slap .38s cubic-bezier(.2,1.6,.4,1); z-index: 3; }
 @keyframes slap { 0% { transform: scale(1.9) rotate(-8deg); filter: brightness(2.2); } 60% { transform: scale(.88) rotate(2deg); } 100% { transform: none; } }
@@ -1464,34 +1465,34 @@ function hose({ t, key, r }, token) {
     svg.setAttribute("class", "hoses");
     const mk = (cls, extra = {}) => { const p = document.createElementNS(ns, extra.tag || "path"); p.setAttribute("class", cls);
       Object.entries(extra).forEach(([k, val]) => k !== "tag" && p.setAttribute(k, val)); svg.appendChild(p); return p; };
-    const casing = mk("hose-casing", { d, pathLength: 1 }), bore = mk("hose-bore", { d, pathLength: 1 }), water = mk("hose-water", { d, pathLength: 1 });
-    const clamp = mk("hose-clamp", { tag: "rect", x: ex - (r === 0 ? 11 : 4), y: ey - (r === 0 ? 4 : 11), width: r === 0 ? 22 : 8, height: r === 0 ? 8 : 22, rx: 2 });
-    clamp.style.opacity = 0;
+    // just water: the stream itself shoots out to the tile, with ripples running along it
+    const water = mk("hose-water", { d, pathLength: 1 }), flow = mk("hose-flow", { d, pathLength: 1 });
     document.body.appendChild(svg);
     const dash = (el, from, to, ms, ease) => el.animate([{ strokeDashoffset: from }, { strokeDashoffset: to }], { duration: ms, easing: ease, fill: "forwards" });
-    [casing, bore, water].forEach(el => { el.style.strokeDasharray = "1 1"; el.style.strokeDashoffset = 1; });
-    // 1. the hose grows out to the tile
-    dash(casing, 1, 0, 480, "cubic-bezier(.2,.7,.3,1)"); dash(bore, 1, 0, 480, "cubic-bezier(.2,.7,.3,1)");
+    water.style.strokeDasharray = "1 1"; water.style.strokeDashoffset = 1;
+    const OUT = 530;   // how long the stream takes to reach the tile
+    dash(water, 1, 0, OUT, "cubic-bezier(.2,.7,.3,1)");
     setTimeout(() => {
       if (token !== idx) { svg.remove(); return done(); }
-      // 2. it clamps on
-      clamp.style.opacity = 1;
-      clamp.animate([{ transform: "scale(1.8)" }, { transform: "scale(.85)", offset: .6 }, { transform: "scale(1)" }], { duration: 220, easing: "ease-out" });
+      flow.style.opacity = 1;
+      // a splash where the stream hits, and the letter fills in
+      const ns2 = "http://www.w3.org/2000/svg", ring = document.createElementNS(ns2, "circle");
+      ring.setAttribute("class", "hose-splash"); ring.setAttribute("cx", ex); ring.setAttribute("cy", ey); ring.setAttribute("r", 4); svg.appendChild(ring);
+      ring.style.transformBox = "fill-box"; ring.style.transformOrigin = "center";
+      ring.animate([{ transform: "scale(.7)", opacity: 1 }, { transform: "scale(4)", opacity: 0 }], { duration: 450, easing: "ease-out", fill: "forwards" });
       sfx("tick", 1);
-      // 3. water runs down the hose and the letter fills in
-      dash(water, 1, 0, 320, "ease-in");
       setTimeout(() => {
         if (token !== idx) { svg.remove(); return done(); }
         slapping.delete(key); render();
         t.classList.remove("slap"); void t.offsetWidth; t.classList.add("slap"); sfx("tick", 4);
-      }, 340);
-      // 4. a beat to hold, then it lets go and snaps back to the station
+      }, 200);
+      // a beat to hold, then the stream pulls back into the pump
       setTimeout(() => {
-        clamp.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 90, fill: "forwards" });
-        [water, bore, casing].forEach(el => dash(el, 0, 1, 190, "cubic-bezier(.6,0,.9,.4)"));
+        flow.style.opacity = 0;
+        dash(water, 0, 1, 190, "cubic-bezier(.6,0,.9,.4)");
         setTimeout(() => { svg.remove(); done(); }, 210);
-      }, 1100);
-    }, 480);
+      }, 1000);
+    }, OUT);
   });
 }
 function finishDrain() {
