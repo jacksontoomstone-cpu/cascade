@@ -468,6 +468,14 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
     <div class="arch-grid" id="archPast"></div>
     <p class="arch-head">Classics</p>
     <div class="arch-grid" id="archOld"></div>
+    <div id="adminTools" hidden>
+      <p class="arch-head">Admin</p>
+      <button class="btn" id="wipeBtn">Admin reset</button>
+      <form class="admin-row" id="wipeForm" hidden>
+        <input id="wipeCode" type="password" placeholder="Password to wipe all progress" autocomplete="off" aria-label="Admin password">
+        <button class="btn primary" type="submit">Reset all</button>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -1860,6 +1868,7 @@ function openArchive() {
   $("archPastHead").hidden = $("archPast").hidden = !past.length;
   $("archNextHead").hidden = $("archNext").hidden = !next.length;
   $("archTitle").innerHTML = "Unlimited" + (adm() ? '<span class="admin-tag">Admin</span>' : "");
+  $("adminTools").hidden = !adm(); $("wipeForm").hidden = true;
   closeModals(); $("archModal").hidden = false;
 }
 // resetting a solved puzzle takes two buttons: Reset puzzle, then Reset in the confirm box
@@ -1900,6 +1909,18 @@ $("colorBtn").addEventListener("click", () => {
   const root = document.documentElement; root.classList.add("instant");   // switch colors at once, no fade
   applyHue(); void root.offsetWidth; requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove("instant")));
   toast(HUES[n][0]);
+});
+// admin reset: after the password, every board's progress is wiped (admin mode, unlock, color and sound stay)
+$("wipeBtn").addEventListener("click", () => { $("wipeForm").hidden = false; $("wipeCode").focus(); });
+$("wipeForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = $("wipeCode").value.trim().toLowerCase(); $("wipeCode").value = "";
+  if (!adm() || h7("ad\u2022" + v) !== A7) { toast("Wrong password"); return; }
+  PUZZLES.forEach((_, i) => store.set(SAVE + i, null));
+  store.set(KT, null);
+  closeModals(); fireUntil = 0; load(INTRO);
+  $("startLives").textContent = LIVES(); $("helpModal").hidden = false;
+  toast("All progress reset");
 });
 $("adminLink").addEventListener("click", () => { $("adminForm").hidden = false; $("adminCode").focus(); });
 $("adminForm").addEventListener("submit", e => {
