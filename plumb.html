@@ -65,9 +65,18 @@ header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin
 .nav button { border: none; background: transparent; font-size: .8rem; font-family: var(--pixel); cursor: pointer; padding: 4px 5px; color: var(--a); }
 .nav button:disabled { opacity: .25; cursor: default; }
 .icons { display: flex; gap: 6px; }
-.pay-price { font-family: var(--pixel); font-size: 1.6rem; color: var(--a); text-align: center; margin: 4px 0 0; text-shadow: 3px 3px 0 var(--ad); }
-.pay-note { margin: 0; text-align: center; font-size: 1.05rem; line-height: 1.3; }
-.pay-small { margin: 0; text-align: center; font-size: .85rem; opacity: .7; }
+@media (max-width: 480px) { .lbl-long { display: none; } .icon-btn.text-btn { padding: 0 6px; } }
+.icon-btn.text-btn { width: auto; padding: 0 9px; font-family: var(--pixel); font-size: .42rem; text-transform: uppercase; color: var(--a); }
+.sheet.pay { align-items: center; text-align: center; gap: 12px; padding: 34px 26px 26px; width: min(100% - 8px, 420px); }
+.pay-lead { margin: 0; font-size: 1.05rem; color: var(--muted); }
+.pay-lead + .pay-title { margin-top: 6px; }
+.sheet.pay .pay-title { padding: 0; font-size: clamp(1.1rem, 5vw, 1.5rem); line-height: 1.5; text-shadow: 3px 3px 0 var(--ad), 0 0 14px var(--a); }
+.pay-note { margin: 0; font-size: 1.25rem; line-height: 1.25; }
+.pay-price { font-family: var(--pixel); font-size: 2.2rem; color: var(--a); margin: 10px 0 2px; text-shadow: 4px 4px 0 var(--ad), 0 0 18px var(--a); }
+.pay-small { margin: 0; font-size: .95rem; color: var(--muted); }
+.sheet.pay .btn.primary { min-width: 70%; margin-top: 8px; }
+.sheet.pay .btn:disabled { opacity: .55; cursor: default; }
+.confirm-actions { display: flex; gap: 10px; justify-content: center; }
 .icon-btn { border: none; background: var(--bezel); box-shadow: inset -2px -2px 0 var(--bezel-d), inset 2px 2px 0 var(--bezel-l); border-radius: 0; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; padding: 0; }
 .icon-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.6; stroke-linecap: square; stroke-linejoin: miter; }
 .timer { font-family: var(--pixel); font-size: .8rem; color: var(--a); min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; }
@@ -303,6 +312,7 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
       <button id="next" aria-label="Next puzzle">›</button>
     </div>
     <div class="icons">
+      <button class="icon-btn text-btn" id="unlimBtn">Unlimited</button>
       <button class="icon-btn" id="soundBtn" aria-label="Sound on"><svg viewBox="0 0 24 24" id="soundIcon"></svg></button>
       <button class="icon-btn" id="helpBtn" aria-label="How to play"><svg viewBox="0 0 24 24"><path d="M9.2 9a3 3 0 1 1 4.3 2.7c-.9.5-1.5 1.2-1.5 2.3M12 17.5v.01"/></svg></button>
     </div>
@@ -333,6 +343,7 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
       <div class="status">
         <span class="miss-label">Lives</span><span class="misses" id="misses"></span>
         <button class="link-btn" id="giveUpBtn">Give up</button>
+        <button class="link-btn" id="resetBtn" hidden>Reset puzzle</button>
       </div>
       <div class="actions">
         <button class="btn" id="letterBtn">Check letter</button>
@@ -363,13 +374,26 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
 </div>
 
 <div class="modal" id="payModal" hidden>
-  <div class="sheet" role="dialog" aria-labelledby="payTitle">
+  <div class="sheet pay" role="dialog" aria-labelledby="payTitle">
     <button class="close" data-close aria-label="Close">×</button>
-    <h2 id="payTitle">That's today's Cascade</h2>
-    <p class="pay-note">A new daily puzzle drops tomorrow. Want more right now?</p>
+    <p class="pay-lead" id="payLead" hidden>That's today's Cascade. A new daily drops tomorrow.</p>
+    <h2 id="payTitle" class="pay-title">Cascade Unlimited</h2>
+    <p class="pay-note">Unlock unlimited puzzles.</p>
     <p class="pay-price">$5</p>
-    <p class="pay-small">One time. Coming soon.</p>
-    <div class="actions" style="justify-content:center"><button class="btn primary" id="payBtn" disabled>Unlock</button></div>
+    <p class="pay-small">Pay once. No subscription.</p>
+    <button class="btn primary" id="payBtn" disabled>Unlock unlimited</button>
+    <p class="pay-small">Payments coming soon.</p>
+  </div>
+</div>
+
+<div class="modal" id="resetModal" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="resetTitle">
+    <h2 id="resetTitle">Reset this puzzle?</h2>
+    <p class="pay-note" style="font-size:1.05rem">Your solved board, time and lives are cleared so you can play it again from the start.</p>
+    <div class="confirm-actions">
+      <button class="btn" data-close>Keep it</button>
+      <button class="btn primary" id="resetYes">Reset</button>
+    </div>
   </div>
 </div>
 
@@ -1077,8 +1101,9 @@ function render() {
   $("checkBtn").disabled = !playing() || segSolved(r, s);
   $("letterBtn").disabled = !playing();
   $("giveUpBtn").hidden = !playing();
+  $("resetBtn").hidden = S.status !== "won";
   const list = playable(), at = list.indexOf(idx);
-  $("navLbl").textContent = idx === INTRO ? "Intro" : `Daily ${dayLabel()}`;
+  $("navLbl").innerHTML = idx === INTRO ? "Intro" : `<span class="lbl-long">Daily </span>${dayLabel()}`;
   $("prev").disabled = at <= 0; $("next").disabled = at === list.length - 1;
   $("timer").textContent = clock(S.time);
   $("pwClue").textContent = `Top: ${P[0].segs[0].clue}  Side: ${P[P.length - 1].segs[0].clue}`;
@@ -1675,7 +1700,18 @@ $("next").addEventListener("click", () => step(1));
 $("helpBtn").addEventListener("click", () => $("helpModal").hidden = false);
 $("soundBtn").addEventListener("click", () => { muted = !muted; store.set("plumb-muted", muted); renderSound(); });
 // once the intro and today's daily are both finished, the paywall comes up ($5 once; payment wiring comes later)
-function paywall() { if (store.get(PAID)) return false; closeModals(); $("payModal").hidden = false; return true; }
+function paywall(afterDaily = true) {
+  if (afterDaily && store.get(PAID)) return false;
+  closeModals(); $("payLead").hidden = !afterDaily; $("payModal").hidden = false; return true;
+}
+$("unlimBtn").addEventListener("click", () => paywall(false));
+// resetting a solved puzzle takes two buttons: Reset puzzle, then Reset in the confirm box
+$("resetBtn").addEventListener("click", () => { if (S.status === "won" && !busy) $("resetModal").hidden = false; });
+$("resetYes").addEventListener("click", () => {
+  closeModals();
+  if (S.status !== "won" || busy) return;
+  store.set(SAVE + idx, null); load(idx); toast("Puzzle reset");
+});
 $("nextBtn").addEventListener("click", () => {
   const other = playable().find(i => i !== idx && !doneWith(i));
   if (other !== undefined) { closeModals(); load(other); } else if (!paywall()) closeModals();
