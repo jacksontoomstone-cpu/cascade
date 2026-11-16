@@ -466,10 +466,9 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
       <div class="pw-clue" id="pwClue"></div>
     </div>
 
-    <div class="bar" aria-label="Points">
+    <div class="bar" role="img" aria-label="Water tank">
       <div class="bar-fill" id="barFill"></div>
       <div class="whirl" id="whirl" hidden></div>
-      <span class="bar-text"><b id="barScore">0 pts</b><span id="barNext"></span></span>
     </div>
     <div class="dam" id="dam" hidden aria-hidden="true">
       <svg viewBox="0 0 200 300" id="damSvg">
@@ -1514,11 +1513,11 @@ function render() {
       (sel && c === S.cur && !segSolved(r, s) ? " cur" : "") +
       (isSpecial(r) ? " pwt" : "") + (isSpecial(r) && lock && !crackedOf(r) ? " imprint" : "") +
       (litCells.has(cellKey(r, c)) ? " lit" : "") + (hotCells.has(cellKey(r, c)) ? " hot" : "") + (slapping.has(cellKey(r, c)) ? " await" : "");
-    t.setAttribute("aria-label", `Word ${r + 1}, worth ${worth(r)}, letter ${j - g.a + 1}${L ? ", " + L : ", empty"}`);
+    t.setAttribute("aria-label", `Word ${r + 1}, letter ${j - g.a + 1}${L ? ", " + L : ", empty"}`);
   }));
   const r = S.row, s = S.seg, g = P[r].segs[s];
   paint($("clue"), r);
-  $("clueLen").innerHTML = `<i class="swatch">${isSpecial(r) ? "" : worth(r)}</i>${r === 0 ? "<b>Top word</b> · " : P[r].side ? "<b>Side word</b> · " : isCompound(r) ? "<b>Compound ×2</b> · " : ""}${g.word.length} letters${segSolved(r, s) ? " · solved" : ""}`;
+  $("clueLen").innerHTML = `<i class="swatch"></i>${r === 0 ? "<b>Top word</b> · " : P[r].side ? "<b>Side word</b> · " : isCompound(r) ? "<b>Compound</b> · " : ""}${g.word.length} letters${segSolved(r, s) ? " · solved" : ""}`;
   $("clueWhole").textContent = isCompound(r) ? `Together: ${P[r].whole}` : "";
   $("clueText").textContent = g.clue;
   $("misses").innerHTML = Array.from({ length: LIVES() }, (_, i) => `<i class="${i < S.misses ? "used" : ""}"></i>`).join("");
@@ -1537,8 +1536,6 @@ function render() {
   // the points bar
   const into = S.score - earned() * BAR;
   if (!draining && !dripsLeft) $("barFill").style.height = into / BAR * 100 + "%";
-  $("barScore").textContent = `${S.score} pts`;
-  $("barNext").textContent = S.cracked && S.crackedSide ? `${BAR - into} to fill a column` : `${BAR - into} to next letter`;
   const fk = playing() ? `${S.row}:${S.seg}:${S.cur}` : "";
   if (fk && fk !== lastFollow) { lastFollow = fk; follow(); }
 }
@@ -1788,8 +1785,7 @@ function settle() {
     }
   });
   S.score += gain;
-  if (combo !== null) { toast(`Compound! ${W(combo)} +${gain}`); sfx("win"); }
-  else if (gain) toast(`+${gain} points`);
+  if (combo !== null) { toast(`Compound! ${W(combo)}`); sfx("win"); }   // points stay behind the scenes: the tank's water level shows them
   // each full bar stamps both special words at once
   const stamped = stampUp(), full = earned() > filledBefore;
   if (full && !calm() && !allSolved()) stamped.forEach(x => slapping.add(x.key));
