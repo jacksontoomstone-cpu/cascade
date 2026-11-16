@@ -1,0 +1,889 @@
+<title>Peel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Libre+Franklin:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: one centered play column — clue card, a pyramid of word rows (short on top, full word below), misses + actions, keyboard. */
+:root {
+  --bg: #ffffff;
+  --ink: #121212;
+  --muted: #6b6760;
+  --line: #d7d3cc;
+  --tile: #ffffff;
+  --key: #e6e2db;
+  --peel: #e8742a;        /* orange-peel accent */
+  --peel-soft: #fde6d4;
+  --peel-ink: #8a3a08;
+  --good: #3d8c5a;
+  --good-ink: #ffffff;
+  --bad: #c9473b;
+  --bad-soft: #f6dcd8;
+  --scrim: rgba(18,18,18,.45);
+  --card: #faf8f5;
+  --display: "DM Serif Display", Georgia, "Times New Roman", serif;
+  --body: "Libre Franklin", "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121213; --ink: #f2efe9; --muted: #a29d94; --line: #3a3835; --tile: #1b1b1c;
+    --key: #3a3836; --peel: #f08a45; --peel-soft: #3b2415; --peel-ink: #ffc39a;
+    --good: #4a9d68; --good-ink: #ffffff; --bad: #e2675b; --bad-soft: #3d1f1b; --scrim: rgba(0,0,0,.6); --card: #1b1a19;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121213; --ink: #f2efe9; --muted: #a29d94; --line: #3a3835; --tile: #1b1b1c;
+  --key: #3a3836; --peel: #f08a45; --peel-soft: #3b2415; --peel-ink: #ffc39a;
+  --good: #4a9d68; --good-ink: #ffffff; --bad: #e2675b; --bad-soft: #3d1f1b; --scrim: rgba(0,0,0,.6); --card: #1b1a19;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); -webkit-font-smoothing: antialiased; }
+button, input { font-family: inherit; color: inherit; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--peel); outline-offset: 2px; }
+
+.app {
+  max-width: 500px; margin: 0 auto; min-height: 100%;
+  display: flex; flex-direction: column;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 16px;
+}
+
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 12px 10px; }
+.brand { display: flex; align-items: baseline; gap: 8px; }
+.brand h1 { font-family: var(--display); font-weight: 400; font-size: 2rem; margin: 0; letter-spacing: -.01em; }
+.brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--peel); display: inline-block; transform: translateY(-2px); }
+.icons { display: flex; gap: 6px; }
+.icon-btn {
+  border: 1px solid var(--line); background: transparent; border-radius: 999px;
+  width: 34px; height: 34px; cursor: pointer; display: grid; place-items: center; padding: 0;
+}
+.icon-btn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.subbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  border-block: 1px solid var(--line); padding-block: 6px; font-size: .78rem; font-weight: 600;
+}
+.nav { display: flex; align-items: center; gap: 2px; }
+.nav .lbl { min-width: 104px; text-align: center; text-transform: uppercase; letter-spacing: .08em; font-variant-numeric: tabular-nums; }
+.nav button { border: none; background: transparent; font-size: 1.15rem; cursor: pointer; padding: 2px 8px; }
+.nav button:disabled { opacity: .25; cursor: default; }
+.diff { display: flex; align-items: center; gap: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.meter { display: flex; gap: 3px; }
+.meter i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.meter i.on { background: var(--peel); }
+.link-btn { border: none; background: transparent; cursor: pointer; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; font-size: .78rem; padding: 2px 0; }
+
+main { flex: 1; display: flex; flex-direction: column; gap: 18px; padding-top: 18px; }
+
+.clue {
+  background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+  padding: 14px 18px; min-height: 100px; display: flex; flex-direction: column; gap: 6px;
+}
+.clue .eyebrow { font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--peel-ink); display: flex; gap: 8px; align-items: center; }
+.clue .eyebrow .solved { color: var(--good); }
+.clue .text { font-family: var(--display); font-size: 1.45rem; line-height: 1.25; text-wrap: balance; }
+
+.board { --n: 5; --w: min(100%, calc(var(--n) * 66px)); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.pyramid { width: var(--w); display: flex; flex-direction: column; }
+.prow { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .35s ease; }
+.prow > .tiles { min-height: 0; padding-bottom: 8px; transition: padding .35s ease; }
+.prow.merged { grid-template-rows: 0fr; opacity: 0; pointer-events: none; }
+.prow.merged > .tiles { overflow: hidden; padding-bottom: 0; }
+.tiles { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 8px; perspective: 400px; }
+.tile.drop { position: relative; z-index: 2; transition: transform .42s cubic-bezier(.55,0,.8,.3); transform: translateY(var(--drop)); }
+.tile {
+  aspect-ratio: 1; max-width: 100%; border: 2px solid var(--line); background: var(--tile);
+  font-size: min(2rem, calc((100vw - 32px) / var(--n) * .5)); font-weight: 800; text-transform: uppercase;
+  display: grid; place-items: center; cursor: pointer; user-select: none; padding: 0; border-radius: 3px;
+  transition: background .15s, border-color .15s;
+}
+.tile.inword { background: var(--peel-soft); border-color: var(--peel-soft); }
+.tile.filled { border-color: var(--muted); }
+.tile.cur { border-color: var(--peel); box-shadow: inset 0 -4px 0 var(--peel); }
+.tile.locked { background: var(--good); border-color: var(--good); color: var(--good-ink); cursor: default; }
+.tile.revealed { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); cursor: default; }
+.tile.flip { animation: flip .5s both; }
+.tile.wrong { animation: wrong .45s; }
+.tile.pop { animation: pop .12s; }
+@keyframes pop { 50% { transform: scale(1.08); } }
+@keyframes flip { 0% { transform: rotateX(0); } 50% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
+@keyframes wrong { 0%,100% { transform: none; } 20% { transform: translateX(-4px); background: var(--bad); color: #fff; border-color: var(--bad); } 40% { transform: translateX(4px); background: var(--bad); color:#fff; border-color: var(--bad);} 60% { transform: translateX(-3px);} 80% { transform: translateX(2px);} }
+.tiles.shake { animation: shake .35s; }
+@keyframes shake { 25% { transform: translateX(-6px);} 75% { transform: translateX(6px);} }
+
+
+.status { display: flex; justify-content: center; align-items: center; gap: 10px; font-size: .8rem; color: var(--muted); }
+.misses { display: flex; gap: 6px; }
+.misses i { width: 12px; height: 12px; border-radius: 50%; background: var(--ink); transition: background .2s, transform .2s; }
+.misses i.used { background: var(--line); transform: scale(.75); }
+
+.actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.btn {
+  border: 1px solid var(--ink); background: transparent; border-radius: 999px;
+  padding: 10px 20px; font-weight: 600; font-size: .9rem; cursor: pointer;
+}
+.btn.primary { background: var(--ink); color: var(--bg); }
+.btn:disabled { opacity: .35; cursor: default; }
+.under { display: flex; justify-content: center; gap: 16px; font-size: .78rem; color: var(--muted); flex-wrap: wrap; }
+.under b { color: var(--ink); letter-spacing: .06em; }
+
+.kb { display: flex; flex-direction: column; gap: 7px; margin-top: auto; padding-top: 4px; }
+.kb .row { display: flex; gap: 5px; justify-content: center; }
+.kb button {
+  flex: 1; max-width: 43px; height: 54px; border: none; border-radius: 4px; background: var(--key);
+  font-weight: 700; font-size: .95rem; cursor: pointer; text-transform: uppercase; padding: 0;
+}
+.kb button.wide { max-width: 66px; flex: 1.5; font-size: .72rem; letter-spacing: .04em; }
+.kb .spacer { flex: .5; max-width: 20px; }
+
+.toast {
+  position: fixed; left: 50%; top: calc(90px + env(safe-area-inset-top, 0px)); transform: translateX(-50%);
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 4px; font-weight: 600; font-size: .88rem;
+  z-index: 30; pointer-events: none; white-space: nowrap;
+}
+
+.modal { position: fixed; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: 20; padding: 16px; }
+.sheet {
+  background: var(--bg); border-radius: 10px; width: min(100%, 440px); padding: 26px 22px 22px;
+  display: flex; flex-direction: column; gap: 16px; position: relative; max-height: 100%; overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0,0,0,.25);
+}
+.sheet h2 { font-family: var(--display); font-weight: 400; font-size: 1.9rem; margin: 0; text-wrap: balance; }
+.sheet h3 { margin: 0; font-size: .75rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.sheet p { margin: 0; line-height: 1.5; }
+.sheet .close { position: absolute; top: 10px; right: 10px; border: none; background: transparent; font-size: 1.4rem; cursor: pointer; width: 36px; height: 36px; }
+.sheet ul { margin: 0; padding-left: 1.1em; line-height: 1.55; display: flex; flex-direction: column; gap: 4px; }
+.ladder { display: flex; flex-direction: column; gap: 6px; }
+.ladder div { display: flex; gap: 12px; align-items: baseline; }
+.ladder .w { font-weight: 800; letter-spacing: .18em; font-size: 1.05rem; min-width: 8.5ch; }
+.ladder small { font-size: .85rem; color: var(--muted); line-height: 1.35; }
+.ladder div { animation: rise .4s both; } .ladder div:nth-child(2) { animation-delay: .12s; } .ladder div:nth-child(3) { animation-delay: .24s; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
+.stats b { display: block; font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stats span { font-size: .66rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.dist { display: flex; flex-direction: column; gap: 5px; font-size: .8rem; font-variant-numeric: tabular-nums; }
+.dist .r { display: grid; grid-template-columns: 4.6em 1fr; gap: 8px; align-items: center; }
+.dist .bar { background: var(--key); color: var(--ink); font-weight: 700; padding: 2px 6px; text-align: right; min-width: 22px; border-radius: 2px; }
+.dist .bar.me { background: var(--peel); color: #fff; }
+.share-pre { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: .9rem; white-space: pre-wrap; margin: 0; user-select: all; font-family: inherit; }
+.how-ex { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; background: var(--card); border-radius: 6px; border: 1px solid var(--line); font-weight: 800; letter-spacing: .25em; }
+.how-ex.front { align-items: flex-end; }
+
+/* puzzle maker */
+.field { display: flex; flex-direction: column; gap: 5px; font-size: .78rem; font-weight: 700; }
+.field input { font-size: 1rem; font-weight: 500; padding: 9px 11px; border: 1px solid var(--line); border-radius: 6px; background: var(--tile); }
+#mkWord { text-transform: uppercase; letter-spacing: .2em; font-weight: 800; }
+.seg { display: flex; border: 1px solid var(--ink); border-radius: 999px; overflow: hidden; }
+.seg button { flex: 1; border: none; background: transparent; padding: 8px 10px; font-weight: 600; font-size: .82rem; cursor: pointer; }
+.seg button.on { background: var(--ink); color: var(--bg); }
+.mk-ladder { font-weight: 800; letter-spacing: .2em; color: var(--peel-ink); min-height: 1.4em; }
+.err { color: var(--bad); font-size: .85rem; min-height: 1.2em; }
+.mk-list { list-style: none; padding: 0 !important; }
+.mk-list li { display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--line); padding-top: 8px; flex-wrap: wrap; }
+.mk-list li .nm { font-weight: 800; letter-spacing: .14em; flex: 1; min-width: 0; }
+.mk-list li .nm small { font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.mk-list button { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 5px 11px; font-size: .78rem; font-weight: 600; cursor: pointer; }
+
+@media (max-width: 380px) {
+  .kb button { height: 50px; }
+  .clue .text { font-size: 1.25rem; }
+  .nav .lbl { min-width: 88px; }
+}
+@media (max-height: 720px) {
+  main { gap: 12px; padding-top: 12px; }
+  .kb button { height: 46px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="app">
+  <header>
+    <div class="brand"><h1>Peel</h1><span class="dot" aria-hidden="true"></span></div>
+    <div class="icons">
+      <button class="icon-btn" id="makeBtn" aria-label="Make a puzzle"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="icon-btn" id="statsBtn" aria-label="Statistics"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V4M19 20v-6"/></svg></button>
+      <button class="icon-btn" id="soundBtn" aria-label="Sound on"><svg viewBox="0 0 24 24" id="soundIcon"></svg></button>
+      <button class="icon-btn" id="helpBtn" aria-label="How to play"><svg viewBox="0 0 24 24"><path d="M9.2 9a3 3 0 1 1 4.3 2.7c-.9.5-1.5 1.2-1.5 2.3M12 17.5v.01"/></svg></button>
+    </div>
+  </header>
+  <div class="subbar">
+    <div class="nav" id="dailyNav">
+      <button id="prev" aria-label="Previous day">‹</button>
+      <span class="lbl" id="navLbl">Today</span>
+      <button id="next" aria-label="Next day">›</button>
+    </div>
+    <div class="nav" id="customNav" hidden>
+      <button class="link-btn" id="backDaily">‹ Back to daily</button>
+    </div>
+    <div class="diff" id="diff"><span id="diffName">Monday</span><span class="meter" id="meter"></span></div>
+  </div>
+
+  <main>
+    <section class="clue" aria-live="polite">
+      <div class="eyebrow"><span id="clueLen">5 letters</span><span class="solved" id="clueSolved" hidden>✓ solved</span></div>
+      <div class="text" id="clueText"></div>
+    </section>
+
+    <section class="board" id="board">
+      <div class="pyramid" id="pyramid"></div>
+    </section>
+
+    <div class="status"><span>Misses left</span><span class="misses" id="misses"></span></div>
+
+    <div class="actions">
+      <button class="btn" id="hintBtn">Reveal a letter</button>
+      <button class="btn primary" id="checkBtn">Check</button>
+    </div>
+    <div class="under">
+      <button class="link-btn" id="giveUpBtn">Give up</button>
+      <span id="yesterday"></span>
+    </div>
+
+    <div class="kb" id="kb"></div>
+  </main>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<div class="modal" id="helpModal" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="helpTitle">
+    <button class="close" data-close aria-label="Close">×</button>
+    <h2 id="helpTitle">How to play</h2>
+    <p>One hidden word, three clues. Peel a letter off one end and you get a shorter word. Peel again for a shorter one still. The words stack up like a pyramid:</p>
+    <div class="how-ex front"><span>AIR</span><span>HAIR</span><span>CHAIR</span></div>
+    <ul>
+      <li>Tap a row to see its clue. The shortest word is on top and the full word is at the bottom.</li>
+      <li>Check one row at a time. Get it right and it drops down and merges into the row below, filling in those letters.</li>
+      <li>You have <b>4 misses</b>. Revealing a letter costs one.</li>
+      <li>The shorter the word, the easier its clue, so the short word is a good place to start.</li>
+      <li>Solve the full word to win.</li>
+    </ul>
+    <p>Puzzles get harder from Monday to Saturday. Some peel from the end instead, so the pyramid leans the other way:</p>
+    <div class="how-ex"><span>PLAN</span><span>PLANE</span><span>PLANET</span></div>
+    <button class="btn primary" data-close>Play</button>
+  </div>
+</div>
+
+<div class="modal" id="resultModal" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="resTitle">
+    <button class="close" data-close aria-label="Close">×</button>
+    <div id="resultPart" style="display:flex;flex-direction:column;gap:16px">
+      <h2 id="resTitle">Peeled!</h2>
+      <div class="ladder" id="ladder"></div>
+      <pre class="share-pre" id="sharePre"></pre>
+      <div class="actions" style="justify-content:flex-start">
+        <button class="btn primary" id="shareBtn">Copy result</button>
+        <button class="btn" id="otherBtn">Play the day before</button>
+      </div>
+    </div>
+    <div id="statsPart" style="display:flex;flex-direction:column;gap:14px">
+      <h2 id="statsTitle">Statistics</h2>
+      <div class="stats">
+        <div><b id="stPlayed">0</b><span>Played</span></div>
+        <div><b id="stWin">0</b><span>Win %</span></div>
+        <div><b id="stStreak">0</b><span>Streak</span></div>
+        <div><b id="stMax">0</b><span>Best streak</span></div>
+      </div>
+      <h3>Misses per solve</h3>
+      <div class="dist" id="dist"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="makeModal" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="mkTitle">
+    <button class="close" data-close aria-label="Close">×</button>
+    <h2 id="mkTitle">Make a puzzle</h2>
+    <label class="field" for="mkWord">Word (4 to 8 letters)<input id="mkWord" maxlength="8" autocomplete="off" spellcheck="false" placeholder="PLANET"></label>
+    <div class="seg" role="group" aria-label="Peel direction">
+      <button id="mkFront" class="on">Peel from the start</button>
+      <button id="mkBack">Peel from the end</button>
+    </div>
+    <div class="mk-ladder" id="mkLadder"></div>
+    <label class="field" for="mkC0"><span id="mkL0">Clue for the full word</span><input id="mkC0" autocomplete="off"></label>
+    <label class="field" for="mkC1"><span id="mkL1">Clue for the middle word</span><input id="mkC1" autocomplete="off"></label>
+    <label class="field" for="mkC2"><span id="mkL2">Clue for the short word</span><input id="mkC2" autocomplete="off"></label>
+    <p class="err" id="mkErr"></p>
+    <div class="actions" style="justify-content:flex-start"><button class="btn primary" id="mkSave">Save and play</button></div>
+    <h3>Your puzzles</h3>
+    <p id="mkEmpty" style="color:var(--muted);font-size:.88rem">Puzzles you make are saved in this browser. Use Copy code to send one to whoever runs the daily list.</p>
+    <ul class="mk-list" id="mkList"></ul>
+  </div>
+</div>
+
+<script>
+/* ---------- puzzles ----------
+   w: the full word. dir: "back" peels letters off the end; default peels off the start.
+   c[0] clues the full word, c[1] the word one letter shorter, c[2] two letters shorter.
+   Pools are keyed by weekday (0 = Sunday). Difficulty climbs Monday → Saturday,
+   and within a puzzle the longer the word, the harder its clue. */
+const POOLS = {
+  1: [ // Monday: 4 letters
+    { w: "BOAT", c: ["Vessel, or a gravy holder", "Porridge grain", "Word before \"home\" or \"last\""] },
+    { w: "SNOW", c: ["Con, or blanket the ground", "At this moment", "\"Ouch!\""] },
+    { w: "SKIN", c: ["Peel, as a banana", "Relatives", "Opposite of out"] },
+    { w: "CHIT", c: ["Small voucher or IOU", "Popular song", "\"Tag, you're ___!\""] },
+    { w: "SWAN", c: ["Graceful bird in a Tchaikovsky ballet", "Pale and sickly", "Word before \"apple\" or \"egg\""] },
+    { w: "CLAD", c: ["Dressed, in poetry", "Young boy", "Commercial, for short"] },
+    { w: "THIS", c: ["\"Get a load of ___!\"", "Not hers", "Not was"] },
+    { w: "FLAX", c: ["Plant that becomes linen", "Loose, not strict", "Tool for chopping wood"] },
+    { w: "WHAT", c: ["\"Come again?\"", "Beanie or beret", "\"Look ___ me!\""] },
+  ],
+  2: [ // Tuesday: 5 letters
+    { w: "CHAIR", c: ["Run the meeting", "Barber's sweepings", "What you breathe"] },
+    { w: "SPARK", c: ["Ignite, as interest", "Leave the car", "Noah's boat"] },
+    { w: "STONE", c: ["Fourteen pounds, in Britain", "Musical quality", "Number after zero"] },
+    { w: "PRICE", c: ["What everyone has, cynically", "Sushi grain", "Frozen water"] },
+    { w: "BRAID", c: ["Plait", "Police surprise visit", "Help"] },
+    { w: "WHEEL", c: ["Big ___ (VIP)", "Back of the foot", "Slippery fish"] },
+    { w: "GLAND", c: ["Thyroid, for one", "Touch down", "Plus"] },
+  ],
+  3: [ // Wednesday: 5 letters, some peel from the end
+    { w: "SCOLD", c: ["Read the riot act to", "Chilly", "Not new"] },
+    { w: "FORTH", dir: "back", c: ["\"So on and so ___\"", "Knox, for one", "In favor of"] },
+    { w: "WHEAT", c: ["Shredded ___", "Warmth", "Have dinner"] },
+    { w: "SCOWL", c: ["Look that could curdle milk", "Monk's hood", "Hooting bird"] },
+    { w: "PARTY", dir: "back", c: ["Something to throw or to join", "Piece", "Golf standard"] },
+    { w: "TROUT", c: ["Schubert quintet star", "Crushing defeat", "Not in"] },
+    { w: "TREND", c: ["What influencers chase", "Tear apart", "Finish"] },
+  ],
+  4: [ // Thursday: 6 letters
+    { w: "STABLE", c: ["Steady, or where a steed stays", "Put off, in Congress", "Capable"] },
+    { w: "CLOVER", c: ["What you're living in, if life is sweet", "Sweetheart", "Finished"] },
+    { w: "HEARTH", dir: "back", c: ["Home's center, figuratively", "Organ that beats", "Listen"] },
+    { w: "SCREAM", c: ["Munch masterpiece, with \"The\"", "Coffee whitener", "500 sheets of paper"] },
+    { w: "STRAIN", c: ["Overdo it", "Choo-choo", "Wet weather"] },
+    { w: "BRIDES", c: ["Train carriers?", "Carnival attractions", "Caesar's fateful March days, with \"the\""] },
+    { w: "SHEARS", c: ["Fleece removers", "Catches sounds", "Listening organs"] },
+  ],
+  5: [ // Friday: 6 letters, hard
+    { w: "ASTRAY", c: ["Off the straight and narrow", "Lost pet", "Waiter's carrier"] },
+    { w: "PASTEL", dir: "back", c: ["Easter-egg shade", "Glue", "Days gone by"] },
+    { w: "AMORAL", c: ["Without a compass, ethically speaking", "Lesson of a fable", "Spoken, not written"] },
+    { w: "SCARED", dir: "back", c: ["Out of one's wits, maybe", "Frighten", "Mark left by a wound"] },
+    { w: "PLEASE", c: ["Word that works like magic, to a child", "Rental contract", "Comfort"] },
+    { w: "BRANDY", dir: "back", c: ["Snifter filler", "Company behind a logo", "Muffin fiber"] },
+    { w: "ASTERN", c: ["Where the wake is", "Strict", "Seabird"] },
+  ],
+  6: [ // Saturday: 7 letters, hardest
+    { w: "SWALLOW", c: ["Fall for, hook, line and sinker", "Roll in the mud", "Permit"] },
+    { w: "CHEATER", c: ["Card sharp, perhaps", "Radiator", "Diner"] },
+    { w: "PLANETS", dir: "back", c: ["Holst suite, with \"The\"", "Earth, for one", "Jet"] },
+    { w: "SHALLOW", c: ["Like a kiddie pool, or a cad", "Make holy", "Let happen"] },
+    { w: "TRACING", c: ["Following the lines", "Competing on a track", "Getting an A on"] },
+    { w: "PLEASED", c: ["Tickled", "Rented", "Relaxed"] },
+    { w: "GROWING", c: ["Like pains in teenage legs", "Crew sport", "In debt"] },
+  ],
+  0: [ // Sunday: peels from the end
+    { w: "PLANET", dir: "back", c: ["Daily ___ (Clark Kent's paper)", "Aircraft", "Strategy"] },
+    { w: "BRAND", dir: "back", c: ["Mark on a steer", "Cereal fiber", "Lingerie item"] },
+    { w: "BOARD", dir: "back", c: ["Get on, as a train", "Male pig", "Feathery scarf"] },
+    { w: "PEARL", dir: "back", c: ["Oyster's prize", "Fruit shaped like a bell", "Green veggie in a pod"] },
+    { w: "SPARE", dir: "back", c: ["Ten pins in two rolls", "Mast or boom", "Resort with hot tubs"] },
+    { w: "MARSH", dir: "back", c: ["Wetland", "Red planet", "Scratch"] },
+    { w: "SPARED", dir: "back", c: ["Let off the hook", "Extra, as a tire", "Boxing practice"] },
+  ],
+};
+const DAYS = [
+  { name: "Sunday", lvl: 3 }, { name: "Monday", lvl: 1 }, { name: "Tuesday", lvl: 2 },
+  { name: "Wednesday", lvl: 3 }, { name: "Thursday", lvl: 4 }, { name: "Friday", lvl: 5 }, { name: "Saturday", lvl: 6 },
+];
+const MAX_MISS = 4;
+
+/* ---------- dates ---------- */
+const START = [2026, 8, 14]; // Monday, Sept 14 2026 is puzzle #1
+const dateOf = n => new Date(START[0], START[1], START[2] + n);
+const dayNumOf = d => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - dateOf(0)) / 864e5);
+const TODAY = dayNumOf(new Date());
+function puzzleFor(n) {
+  const wd = dateOf(n).getDay(), pool = POOLS[wd];
+  return pool[Math.floor(n / 7) % pool.length];
+}
+
+const $ = id => document.getElementById(id);
+// localStorage, with an in-memory copy for when it's blocked (private windows, previews)
+const mem = new Map();
+const store = {
+  get(k) {
+    try { const v = localStorage.getItem(k); if (v !== null) return JSON.parse(v); } catch {}
+    return mem.has(k) ? JSON.parse(mem.get(k)) : null;
+  },
+  set(k, v) { mem.set(k, JSON.stringify(v)); try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const dailyKey = n => "peel3-" + n;
+
+/* ---------- game state ---------- */
+let ref, P, S, KEY;   // ref: {kind:"daily", n} or {kind:"custom", id}
+
+const N = () => P.w.length;
+const range = () => [...Array(N()).keys()];
+const isBack = () => P.dir === "back";
+const span = k => isBack() ? [0, N() - k] : [k, N()];
+const tilesOf = k => { const [a, b] = span(k); return range().filter(i => i >= a && i < b); };
+const wordText = k => P.w.slice(...span(k));
+const wordSolved = k => tilesOf(k).every(i => S.locked[i]);
+const playing = () => S.status === "playing";
+const ROWS = [2, 1, 0]; // pyramid order: shortest word on top, full word at the bottom
+
+// Each row keeps its own letters; S.locked is shared by column, so a solved row fills the rows below it.
+const getL = (k, i) => S.locked[i] || !playing() ? P.w[i] : S.rows[k][i - span(k)[0]];
+const setL = (k, i, v) => { S.rows[k][i - span(k)[0]] = v; };
+const firstOpen = k => {
+  const t = tilesOf(k);
+  return t.find(i => !S.locked[i] && !getL(k, i)) ?? t.find(i => !S.locked[i]) ?? t[0];
+};
+
+function fresh() {
+  const s = { rows: [0, 1, 2].map(k => Array(N() - k).fill("")), locked: Array(N()).fill(false),
+              word: 2, cur: 0, misses: 0, hints: 0, log: [], status: "playing" };
+  s.cur = span(2)[0];
+  return s;
+}
+
+function load(r) {
+  if (r.kind === "custom") {
+    const p = customs().find(x => x.id === r.id);
+    if (!p) return load({ kind: "daily", n: TODAY });
+    P = p; KEY = "peel3-c-" + p.id;
+  } else {
+    r = { kind: "daily", n: Math.max(0, Math.min(TODAY, r.n)) };
+    P = puzzleFor(r.n); KEY = dailyKey(r.n);
+  }
+  ref = r;
+  S = store.get(KEY) || fresh();
+  if (!S.locked || S.locked.length !== N()) S = fresh();
+  if (!S.rows) { // saved by the older single-row board: keep finished games for stats, restart open ones
+    if (S.status === "playing") S = fresh(); else S.rows = fresh().rows;
+  }
+  dropping.clear();
+  buildBoard(); render();
+}
+function save() { store.set(KEY, S); }
+
+/* ---------- board ---------- */
+const pyr = $("pyramid");
+let rowEls = [], tileEls = [];
+const dropping = new Set(); // rows mid-merge: still drawn until they land
+
+function buildBoard() {
+  $("board").style.setProperty("--n", N());
+  pyr.innerHTML = ""; rowEls = []; tileEls = [];
+  ROWS.forEach(k => {
+    const wrap = document.createElement("div"); wrap.className = "prow";
+    const grid = document.createElement("div"); grid.className = "tiles";
+    tileEls[k] = {};
+    tilesOf(k).forEach(i => {
+      const t = document.createElement("button");
+      t.className = "tile"; t.style.gridColumn = i + 1;
+      t.addEventListener("click", () => select(k, i));
+      grid.appendChild(t); tileEls[k][i] = t;
+    });
+    wrap.appendChild(grid); pyr.appendChild(wrap); rowEls[k] = wrap;
+  });
+}
+
+function render() {
+  const k0 = S.word;
+  ROWS.forEach(k => {
+    const merged = k > 0 && wordSolved(k) && !dropping.has(k);
+    rowEls[k].className = "prow" + (merged ? " merged" : "");
+    tilesOf(k).forEach(i => {
+      const t = tileEls[k][i], L = getL(k, i);
+      const revealed = S.status === "lost" && !S.locked[i];
+      t.textContent = L;
+      t.className = "tile" +
+        (S.locked[i] ? " locked" : revealed ? " revealed" : "") +
+        (!S.locked[i] && !revealed && playing() && k === k0 ? " inword" : "") +
+        (L && !S.locked[i] && !revealed ? " filled" : "") +
+        (k === k0 && i === S.cur && playing() ? " cur" : "");
+      t.tabIndex = merged ? -1 : 0;
+      t.setAttribute("aria-label", `${N() - k}-letter word, letter ${i - span(k)[0] + 1}${L ? ", " + L : ", empty"}`);
+    });
+  });
+  const len = N() - k0;
+  $("clueLen").textContent = `${len} letters`;
+  $("clueText").textContent = P.c[k0];
+  $("clueSolved").hidden = !wordSolved(k0);
+  $("misses").innerHTML = Array.from({ length: MAX_MISS }, (_, i) => `<i class="${i < S.misses ? "used" : ""}"></i>`).join("");
+
+  const solved = wordSolved(k0);
+  $("checkBtn").textContent = !playing() ? (S.status === "won" ? "Solved" : "Answer revealed") : solved ? "Solved ✓" : `Check ${len}-letter word`;
+  $("checkBtn").disabled = !playing() || solved;
+  $("hintBtn").disabled = !playing();
+  $("giveUpBtn").hidden = !playing();
+
+  // header
+  const daily = ref.kind === "daily";
+  $("dailyNav").hidden = !daily; $("customNav").hidden = daily;
+  if (daily) {
+    const d = dateOf(ref.n), info = DAYS[d.getDay()];
+    $("navLbl").textContent = ref.n === TODAY ? "Today" : ref.n === TODAY - 1 ? "Yesterday"
+      : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    $("prev").disabled = ref.n === 0; $("next").disabled = ref.n >= TODAY;
+    $("diffName").textContent = info.name;
+    $("meter").innerHTML = Array.from({ length: 6 }, (_, i) => `<i class="${i < info.lvl ? "on" : ""}"></i>`).join("");
+    $("diff").hidden = false;
+    $("yesterday").innerHTML = ref.n === TODAY && TODAY > 0 ? `Yesterday's word: <b>${puzzleFor(TODAY - 1).w}</b>` : "";
+  } else {
+    $("diff").hidden = true; $("yesterday").textContent = "Your own puzzle";
+  }
+}
+
+/* ---------- input ---------- */
+function select(k, i) {
+  if (!playing() || (k > 0 && wordSolved(k))) return;
+  S.word = k; S.cur = i; render();
+}
+function nextOpen(from, d = 1) {
+  const t = tilesOf(S.word);
+  for (let i = from + d; t.includes(i); i += d) if (!S.locked[i]) return i;
+  return -1;
+}
+function type(ch) {
+  if (!playing()) return;
+  let i = S.cur;
+  if (S.locked[i]) { i = nextOpen(i); if (i < 0) return; }
+  setL(S.word, i, ch);
+  const n = nextOpen(i);
+  S.cur = n >= 0 ? n : i;
+  render();
+  animate([tileEls[S.word][i]], "pop");
+  save();
+}
+function back() {
+  if (!playing()) return;
+  const k = S.word, i = S.cur;
+  if (getL(k, i) && !S.locked[i]) setL(k, i, "");
+  else { const p = nextOpen(i, -1); if (p >= 0) { setL(k, p, ""); S.cur = p; } }
+  render(); save();
+}
+function move(d) { const n = S.cur + d; if (tilesOf(S.word).includes(n)) select(S.word, n); }
+function moveRow(d) { // +1 = up the pyramid, -1 = down
+  for (let k = S.word + d; k >= 0 && k <= 2; k += d) {
+    if (k > 0 && wordSolved(k)) continue;
+    const t = tilesOf(k);
+    return select(k, Math.min(Math.max(S.cur, t[0]), t[t.length - 1]));
+  }
+}
+
+function animate(els, cls, stagger = 0) {
+  els.forEach((t, j) => {
+    if (!t) return;
+    t.classList.remove(cls); void t.offsetWidth;
+    t.style.animationDelay = (j * stagger) + "ms";
+    t.classList.add(cls);
+    t.addEventListener("animationend", () => { t.classList.remove(cls); t.style.animationDelay = ""; }, { once: true });
+  });
+}
+
+// Rows that just became solved drop onto the next open row below, then fold away.
+function mergeDown(before) {
+  const newly = [1, 2].filter(k => wordSolved(k) && !before[k]);
+  if (!newly.length) { render(); return 0; }
+  newly.forEach(k => dropping.add(k));
+  render();
+  newly.forEach(k => {
+    let t = k - 1; while (t > 0 && wordSolved(t)) t--;
+    const dy = rowEls[t].getBoundingClientRect().top - rowEls[k].getBoundingClientRect().top;
+    tilesOf(k).forEach(i => {
+      const el = tileEls[k][i];
+      el.style.setProperty("--drop", dy + "px"); void el.offsetWidth; el.classList.add("drop");
+    });
+  });
+  setTimeout(() => {
+    newly.forEach(k => { dropping.delete(k); tilesOf(k).forEach(i => tileEls[k][i].classList.remove("drop")); });
+    render();
+  }, 460);
+  return 460;
+}
+
+function check() {
+  if (!playing()) return;
+  const k = S.word, idx = tilesOf(k);
+  if (wordSolved(k)) { toast("Already solved. Tap another word"); return; }
+  if (idx.some(i => !getL(k, i))) {
+    toast(`Fill in all ${idx.length} letters first`);
+    const g = rowEls[k].firstChild; g.classList.remove("shake"); void g.offsetWidth; g.classList.add("shake");
+    return;
+  }
+  const guess = idx.map(i => getL(k, i)).join("");
+  if (guess === wordText(k)) {
+    const before = [0, 1, 2].map(wordSolved);
+    idx.forEach(i => { S.locked[i] = true; });
+    S.log.push("c" + k);
+    if (wordSolved(0)) return win(before);
+    sfx("good");
+    const next = ROWS.find(j => !wordSolved(j));
+    S.word = next; S.cur = firstOpen(next);
+    mergeDown(before);
+    toast(`${guess} ✓  Now the ${N() - next}-letter word`);
+    save();
+  } else {
+    S.misses++; S.log.push("x");
+    sfx("bad");
+    animate(idx.filter(i => !S.locked[i]).map(i => tileEls[k][i]), "wrong");
+    if (S.misses >= MAX_MISS) return setTimeout(() => lose(), 450);
+    const left = MAX_MISS - S.misses;
+    toast(`Not ${guess}. ${left} miss${left === 1 ? "" : "es"} left`);
+    save();
+    setTimeout(() => {
+      idx.forEach(i => { if (!S.locked[i]) setL(k, i, ""); });
+      if (S.word === k) S.cur = firstOpen(k);
+      render(); save();
+    }, 450);
+  }
+}
+
+function hint() {
+  if (!playing()) return;
+  if (S.misses >= MAX_MISS - 1) { toast("A hint costs a miss, and you have one left"); return; }
+  const k = S.word, open = tilesOf(k).filter(i => !S.locked[i]);
+  // reveal the letter this row adds to the one above it
+  const i = isBack() ? open[open.length - 1] : open[0];
+  const before = [0, 1, 2].map(wordSolved);
+  S.locked[i] = true; S.misses++; S.hints++; S.log.push("h");
+  if (wordSolved(0)) return win(before);
+  if (wordSolved(k)) { S.word = ROWS.find(j => !wordSolved(j)); S.cur = firstOpen(S.word); }
+  else if (S.cur === i) { const n = nextOpen(i); if (n >= 0) S.cur = n; }
+  mergeDown(before);
+  animate([0, 1, 2].filter(j => tileEls[j][i] && !dropping.has(j)).map(j => tileEls[j][i]), "flip");
+  save();
+}
+
+let giveUpArmed = null;
+function giveUp() {
+  if (!playing()) return;
+  if (!giveUpArmed) {
+    $("giveUpBtn").textContent = "Tap again to give up";
+    giveUpArmed = setTimeout(() => { giveUpArmed = null; $("giveUpBtn").textContent = "Give up"; }, 3000);
+    return;
+  }
+  clearTimeout(giveUpArmed); giveUpArmed = null; $("giveUpBtn").textContent = "Give up";
+  S.log.push("g");
+  lose();
+}
+
+function win(before) {
+  S.status = "won"; S.locked = S.locked.map(() => true);
+  save(); sfx("win");
+  // everything above drops into the full word, then it takes a bow
+  const d = mergeDown(before);
+  setTimeout(() => animate(tilesOf(0).map(i => tileEls[0][i]), "flip", 80), d + 350);
+  setTimeout(() => showResult(), d + 1400);
+}
+function lose() {
+  S.status = "lost";
+  save(); render(); sfx("lose");
+  setTimeout(() => showResult(), 1100);
+}
+
+/* ---------- results & stats ---------- */
+const EMO = { c2: "🟨", c1: "🟧", c0: "🟩", x: "⬛", h: "💡", g: "🏳️" };
+function shareText() {
+  const head = ref.kind === "daily"
+    ? `Peel #${ref.n + 1} · ${DAYS[dateOf(ref.n).getDay()].name}`
+    : `Peel · a homemade ${N()}-letter puzzle`;
+  const tail = S.status === "won" ? `Solved with ${S.misses} miss${S.misses === 1 ? "" : "es"}` : "Stumped";
+  return `${head}\n${S.log.map(l => EMO[l]).join("")}\n${tail}`;
+}
+
+function dailyStats() {
+  let played = 0, won = 0, max = 0, run = 0;
+  const dist = [0, 0, 0, 0, 0]; // 0–3 misses, then losses
+  const states = [];
+  for (let n = 0; n <= TODAY; n++) {
+    const s = store.get(dailyKey(n)); states[n] = s;
+    const done = s && s.status !== "playing";
+    if (done) { played++; if (s.status === "won") { won++; dist[Math.min(s.misses, 3)]++; } else dist[4]++; }
+    run = s && s.status === "won" ? run + 1 : 0; max = Math.max(max, run);
+  }
+  let cur = 0, n = TODAY;
+  if (!(states[n] && states[n].status !== "playing")) n--;
+  while (n >= 0 && states[n] && states[n].status === "won") { cur++; n--; }
+  return { played, win: played ? Math.round(won / played * 100) : 0, cur, max, dist };
+}
+
+function showStats(withResult) {
+  $("resultPart").hidden = !withResult;
+  if (withResult) {
+    $("resTitle").textContent = S.status === "lost" ? "The word was " + P.w
+      : S.misses === 0 ? "Clean peel!" : S.misses === 1 ? "Peeled!" : S.misses === 2 ? "Got there." : "Phew, just made it.";
+    $("ladder").innerHTML = [0, 1, 2].map(j =>
+      `<div><span class="w">${wordText(j)}</span><small>${esc(P.c[j])}</small></div>`).join("");
+    $("sharePre").textContent = shareText();
+    const canPrev = ref.kind === "daily" && ref.n > 0;
+    $("otherBtn").hidden = !canPrev;
+  }
+  const st = dailyStats();
+  $("stPlayed").textContent = st.played; $("stWin").textContent = st.win;
+  $("stStreak").textContent = st.cur; $("stMax").textContent = st.max;
+  const mine = withResult && ref.kind === "daily" ? (S.status === "won" ? Math.min(S.misses, 3) : 4) : -1;
+  const top = Math.max(1, ...st.dist);
+  const labels = ["0 misses", "1 miss", "2 misses", "3 misses", "Stumped"];
+  $("dist").innerHTML = st.dist.map((v, i) =>
+    `<div class="r"><span>${labels[i]}</span><span class="bar${i === mine ? " me" : ""}" style="width:${Math.max(8, v / top * 100)}%">${v}</span></div>`).join("");
+  $("resultModal").hidden = false;
+}
+function showResult() { showStats(true); }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+let toastT;
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 1700);
+}
+
+/* ---------- sound ---------- */
+let muted = !!store.get("peel-muted"), ac;
+function tone(f, at, dur, type = "sine", vol = .1) {
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.value = f;
+  g.gain.setValueAtTime(0, ac.currentTime + at);
+  g.gain.linearRampToValueAtTime(vol, ac.currentTime + at + .01);
+  g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + at + dur);
+  o.connect(g).connect(ac.destination); o.start(ac.currentTime + at); o.stop(ac.currentTime + at + dur + .05);
+}
+function sfx(kind) {
+  if (muted) return;
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === "suspended") ac.resume();
+    if (kind === "good") { tone(660, 0, .15); tone(880, .1, .25); }
+    if (kind === "bad") { tone(170, 0, .22, "square", .05); }
+    if (kind === "win") [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .11, .35, "triangle", .09));
+    if (kind === "lose") { tone(330, 0, .3, "triangle", .08); tone(247, .22, .5, "triangle", .08); }
+  } catch {}
+}
+function renderSound() {
+  $("soundIcon").innerHTML = muted
+    ? '<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9l4 6M21 9l-4 6"/>'
+    : '<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>';
+  $("soundBtn").setAttribute("aria-label", muted ? "Sound off" : "Sound on");
+}
+
+/* ---------- puzzle maker ---------- */
+const customs = () => store.get("peel3-custom") || [];
+let mkDir = "front";
+function mkWords() {
+  const w = $("mkWord").value.toUpperCase().replace(/[^A-Z]/g, "");
+  if (w.length < 4) return { w, list: null };
+  const list = [0, 1, 2].map(k => mkDir === "back" ? w.slice(0, w.length - k) : w.slice(k));
+  return { w, list };
+}
+function mkRender() {
+  const { list } = mkWords();
+  $("mkLadder").textContent = list ? list.join("  →  ") : "";
+  ["full word", "middle word", "short word"].forEach((d, k) => {
+    $("mkL" + k).textContent = list ? `Clue for ${list[k]}` : `Clue for the ${d}`;
+  });
+  $("mkFront").classList.toggle("on", mkDir === "front");
+  $("mkBack").classList.toggle("on", mkDir === "back");
+  const items = customs();
+  $("mkEmpty").hidden = false;
+  $("mkList").innerHTML = items.map(p => `<li data-id="${p.id}">
+      <span class="nm">${esc(p.w)} <small>${p.dir === "back" ? "from the end" : "from the start"}</small></span>
+      <button data-act="play">Play</button><button data-act="copy">Copy code</button><button data-act="del">Remove</button></li>`).join("");
+}
+function mkSave() {
+  const { w, list } = mkWords();
+  const c = [0, 1, 2].map(k => $("mkC" + k).value.trim());
+  if (w.length < 4 || w.length > 8) return $("mkErr").textContent = "Use a word of 4 to 8 letters.";
+  if (c.some(x => !x)) return $("mkErr").textContent = "Write a clue for each of the three words.";
+  const p = { id: Date.now().toString(36), w, c };
+  if (mkDir === "back") p.dir = "back";
+  store.set("peel3-custom", [p, ...customs()]);
+  $("mkErr").textContent = "";
+  ["mkWord", "mkC0", "mkC1", "mkC2"].forEach(id => $(id).value = "");
+  closeModals(); load({ kind: "custom", id: p.id });
+  toast(`Saved. ${list.join(" → ")}`);
+}
+$("mkWord").addEventListener("input", mkRender);
+$("mkFront").addEventListener("click", () => { mkDir = "front"; mkRender(); });
+$("mkBack").addEventListener("click", () => { mkDir = "back"; mkRender(); });
+$("mkSave").addEventListener("click", mkSave);
+$("mkList").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const id = b.closest("li").dataset.id, p = customs().find(x => x.id === id);
+  if (b.dataset.act === "play") { closeModals(); load({ kind: "custom", id }); }
+  if (b.dataset.act === "del") {
+    store.set("peel3-custom", customs().filter(x => x.id !== id));
+    if (ref.kind === "custom" && ref.id === id) load({ kind: "daily", n: TODAY });
+    mkRender();
+  }
+  if (b.dataset.act === "copy") {
+    const code = `{ w: ${JSON.stringify(p.w)}, ${p.dir ? 'dir: "back", ' : ""}c: [${p.c.map(x => JSON.stringify(x)).join(", ")}] },`;
+    navigator.clipboard.writeText(code).then(() => toast("Puzzle code copied"))
+      .catch(() => { $("mkErr").textContent = code; });
+  }
+});
+
+/* ---------- keyboard ---------- */
+["qwertyuiop", "asdfghjkl", "zxcvbnm"].forEach((r, ri) => {
+  const row = document.createElement("div"); row.className = "row";
+  const spacer = () => Object.assign(document.createElement("div"), { className: "spacer" });
+  if (ri === 1) row.appendChild(spacer());
+  if (ri === 2) row.appendChild(keyBtn("Enter", "wide", check));
+  [...r].forEach(ch => row.appendChild(keyBtn(ch, "", () => type(ch.toUpperCase()))));
+  if (ri === 1) row.appendChild(spacer());
+  if (ri === 2) row.appendChild(keyBtn("⌫", "wide", back, "Delete"));
+  $("kb").appendChild(row);
+});
+function keyBtn(label, cls, fn, aria) {
+  const b = document.createElement("button");
+  b.textContent = label; if (cls) b.className = cls; if (aria) b.setAttribute("aria-label", aria);
+  b.addEventListener("click", () => { fn(); b.blur(); });
+  return b;
+}
+const anyModal = () => [...document.querySelectorAll(".modal")].some(m => !m.hidden);
+document.addEventListener("keydown", e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (anyModal()) { if (e.key === "Escape") closeModals(); return; }
+  if (/^[a-z]$/i.test(e.key)) { type(e.key.toUpperCase()); e.preventDefault(); }
+  else if (e.key === "Backspace") { back(); e.preventDefault(); }
+  else if (e.key === "Enter") { check(); e.preventDefault(); }
+  else if (e.key === "ArrowLeft") move(-1);
+  else if (e.key === "ArrowRight") move(1);
+  else if (e.key === "ArrowUp") { moveRow(1); e.preventDefault(); }
+  else if (e.key === "ArrowDown") { moveRow(-1); e.preventDefault(); }
+});
+
+/* ---------- wiring ---------- */
+$("checkBtn").addEventListener("click", check);
+$("hintBtn").addEventListener("click", hint);
+$("giveUpBtn").addEventListener("click", giveUp);
+$("prev").addEventListener("click", () => load({ kind: "daily", n: ref.n - 1 }));
+$("next").addEventListener("click", () => load({ kind: "daily", n: ref.n + 1 }));
+$("backDaily").addEventListener("click", () => load({ kind: "daily", n: TODAY }));
+$("helpBtn").addEventListener("click", () => $("helpModal").hidden = false);
+$("statsBtn").addEventListener("click", () => showStats(S.status !== "playing"));
+$("makeBtn").addEventListener("click", () => { mkRender(); $("makeModal").hidden = false; });
+$("soundBtn").addEventListener("click", () => { muted = !muted; store.set("peel-muted", muted); renderSound(); if (!muted) sfx("good"); });
+$("otherBtn").addEventListener("click", () => { closeModals(); load({ kind: "daily", n: ref.n - 1 }); });
+$("shareBtn").addEventListener("click", () => {
+  navigator.clipboard.writeText(shareText()).then(() => toast("Copied")).catch(() => {
+    const r = document.createRange(); r.selectNodeContents($("sharePre"));
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    toast("Result selected. Copy it to share");
+  });
+});
+function closeModals() { document.querySelectorAll(".modal").forEach(m => m.hidden = true); }
+document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", closeModals));
+document.querySelectorAll(".modal").forEach(m => m.addEventListener("click", e => { if (e.target === m) closeModals(); }));
+
+function start(data) {
+  renderSound();
+  load(data.ref || { kind: "daily", n: TODAY });
+  if (!store.get("peel-seen")) { $("helpModal").hidden = false; store.set("peel-seen", 1); }
+}
+window.claude?.hot?.snapshot?.(() => ({ ref }));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>

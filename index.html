@@ -1,0 +1,1201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>window.CASCADE_CONFIG = { lives: 5, fireSeconds: 10 };</script>
+<title>Cascade</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<style>
+/* Layout: an 8-bit arcade screen that fills the window. Password across the top of the board, clue and keys beside it on
+   wide screens, stacked on phones. One glowing ice-blue that gets darker down the board; cracking the password turns it all to fire. */
+:root {
+  --hue: 198;
+  --a: hsl(var(--hue) 95% 66%);
+  --ad: hsl(var(--hue) 85% 34%);
+  --cab: hsl(var(--hue) 60% 7%);
+  --screen: hsl(var(--hue) 70% 4%);
+  --bezel: hsl(var(--hue) 45% 22%);
+  --bezel-l: hsl(var(--hue) 45% 36%);
+  --bezel-d: hsl(var(--hue) 50% 12%);
+  --rod: hsl(var(--hue) 60% 16%);
+  --white: #f2f7f8;
+  --muted: hsl(var(--hue) 20% 68%);
+  --bad: #ff6a5a;
+  --scrim: rgba(3,8,12,.8);
+  --pixel: "Press Start 2P", "Courier New", monospace;
+  --term: "VT323", "Courier New", monospace;
+  color-scheme: dark;
+}
+:root[data-heat="1"], :root[data-heat="2"] { --hue: 14; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { color: var(--white); font-family: var(--term); font-size: 20px; overflow: hidden;
+  background: radial-gradient(70% 60% at 50% 40%, hsl(var(--hue) 70% 14%), transparent 75%), var(--cab); transition: background .4s; }
+/* fire vignette: the edges of the window glow once the password is cracked */
+body::after { content: ""; position: fixed; inset: 0; z-index: 14; pointer-events: none; opacity: 0; transition: opacity .4s;
+  box-shadow: inset 0 0 70px 10px hsl(16 100% 52%); }
+:root[data-heat="1"] body::after { opacity: .4; }
+:root[data-heat="2"] body::after { opacity: .95; animation: flicker .5s steps(4) infinite; }
+@keyframes flicker { 50% { opacity: .7; } }
+:root[data-heat="1"] :is(header, .clue, .pw, .ctrl), :root[data-heat="2"] :is(header, .clue, .pw, .ctrl) { background: rgba(14,4,0,.72); box-shadow: 0 0 0 6px rgba(14,4,0,.72); }
+:root[data-heat="1"] .clue .whole, :root[data-heat="2"] .clue .whole { color: var(--white); }
+#fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+#fx2 { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 16; pointer-events: none; }
+/* the password blast: one white-hot flash over the whole window */
+body::before { content: ""; position: fixed; inset: 0; z-index: 17; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 30%, #fff, hsl(20 100% 58%) 55%, hsl(4 100% 40%)); }
+body.blast::before { animation: blastflash .9s ease-out; }
+@keyframes blastflash { 0% { opacity: .95; } 100% { opacity: 0; } }
+button { font-family: inherit; color: inherit; }
+button:focus-visible { outline: 3px dashed var(--a); outline-offset: 2px; }
+
+.app {
+  position: relative; z-index: 1; height: 100%; max-width: 560px; margin: 0 auto;
+  display: flex; flex-direction: column;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 10px;
+}
+
+header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-block: 10px 13px; position: relative; }
+header::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: linear-gradient(90deg, hsl(var(--hue) 95% 72%) 25%, hsl(var(--hue) 90% 56%) 25% 50%, hsl(var(--hue) 85% 42%) 50% 75%, hsl(var(--hue) 80% 28%) 75%); }
+header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin: 0; text-transform: uppercase; color: var(--a); text-shadow: 3px 3px 0 var(--ad); }
+.nav { display: flex; align-items: center; white-space: nowrap; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; }
+.nav button { border: none; background: transparent; font-size: .8rem; font-family: var(--pixel); cursor: pointer; padding: 4px 5px; color: var(--a); }
+.nav button:disabled { opacity: .25; cursor: default; }
+.icons { display: flex; gap: 6px; }
+.icon-btn { border: none; background: var(--bezel); box-shadow: inset -2px -2px 0 var(--bezel-d), inset 2px 2px 0 var(--bezel-l); border-radius: 0; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; padding: 0; }
+.icon-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.6; stroke-linecap: square; stroke-linejoin: miter; }
+.timer { font-family: var(--pixel); font-size: .8rem; color: var(--a); min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; }
+
+main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding-top: 8px; }
+
+/* every word's brightness comes from --l, set from its height on the board */
+.heat { --k: hsl(var(--hue) 92% var(--l, 60%)); --kd: hsl(var(--hue) 85% calc(var(--l, 60%) * .6)); --ks: hsl(var(--hue) 70% calc(var(--l, 60%) * .24)); --kl: hsl(var(--hue) 96% calc(var(--l, 60%) * 1.22)); }
+
+.clue { flex: none; position: relative; min-height: 66px; padding-left: 60px; display: flex; flex-direction: column; justify-content: center; gap: 3px; }
+.clue .eyebrow { font-family: var(--pixel); font-size: .46rem; line-height: 1.5; text-transform: uppercase; color: var(--muted); }
+.clue .eyebrow b { font-weight: 400; color: var(--white); }
+.swatch {
+  position: absolute; left: 0; top: 6px; width: 50px; height: 50px; font-style: normal; background: var(--k); color: var(--on, #04121a);
+  box-shadow: inset -4px -4px 0 var(--kd), inset 4px 4px 0 rgba(255,255,255,.45), 0 0 14px -2px var(--k);
+  font-family: var(--pixel); font-size: .8rem; display: grid; place-items: center;
+}
+.clue .text { font-size: 1.5rem; line-height: .95; text-wrap: balance; }
+.clue .whole { font-size: 1.15rem; line-height: 1; color: var(--a); }
+
+.play { flex: none; display: flex; flex-direction: column; gap: 8px; }
+.boardwrap {
+  --c: 14; --r: 11; --gap: 2px; --rg: 4px;
+  --t: max(16px, min(36px, calc((min(100vw, 560px) - 88px - (var(--c) - 1) * var(--gap)) / (var(--c) + 1))));
+  --h: max(18px, min(calc(var(--t) * 1.3), calc((100dvh - 500px) / var(--r) - var(--rg))));
+  display: flex; justify-content: center; align-items: flex-start; gap: 6px;
+}
+/* the side word sits in its own little screen, set apart from the board */
+.sidebox { flex: none; margin-block: 7px; padding: 7px 3px; background: var(--screen); border-radius: 4px; box-shadow: 0 0 0 3px var(--bezel), 0 0 16px 3px hsl(var(--hue) 95% 50% / .3); }
+.sidegrid { display: grid; grid-template-columns: var(--t); grid-template-rows: repeat(var(--r), var(--h)); gap: var(--rg); }
+.board {
+  flex: none; position: relative; overflow: hidden; margin: 7px; background: var(--screen); border-radius: 6px;
+  box-shadow: 0 0 0 5px var(--bezel), 0 0 0 7px var(--bezel-d), 0 0 26px 8px hsl(var(--hue) 95% 50% / .35);
+  transition: box-shadow .3s;
+}
+:root[data-heat="1"] .board, :root[data-heat="2"] .board { box-shadow: 0 0 0 5px var(--bezel), 0 0 0 7px var(--bezel-d), 0 0 46px 16px hsl(14 100% 50% / .7); }
+/* behind the tiles: a slow pulse of light rising from below, and a faint receding grid */
+.board::before {
+  content: ""; position: absolute; inset: 0; animation: breathe 5s ease-in-out infinite;
+  background:
+    radial-gradient(90% 75% at 50% 112%, hsl(var(--hue) 95% 50% / .6), transparent 70%),
+    radial-gradient(50% 45% at 50% 0%, hsl(var(--hue) 95% 60% / .22), transparent 75%),
+    repeating-linear-gradient(0deg, hsl(var(--hue) 80% 55% / .1) 0 1px, transparent 1px calc(var(--h) + var(--rg)));
+}
+@keyframes breathe { 50% { opacity: .6; } }
+:root[data-heat="1"] .board::before, :root[data-heat="2"] .board::before { animation-duration: .9s; }
+/* scanlines over everything on the screen */
+.board::after { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.24) 0 1px, transparent 1px 3px); }
+.grid {
+  position: relative; display: grid; grid-template-columns: repeat(var(--c), var(--t)); grid-template-rows: repeat(var(--r), var(--h)); gap: var(--rg) var(--gap); padding: 7px 6px;
+  background: linear-gradient(90deg, transparent calc(50% - 1px), var(--rod) calc(50% - 1px), var(--rod) calc(50% + 1px), transparent calc(50% + 1px)) calc(6px - var(--gap) / 2) 0 / calc(var(--t) + var(--gap)) 100% repeat-x;
+}
+.tile {
+  position: relative; border: 2px solid var(--kd); border-radius: 0; padding: 0; color: var(--white); cursor: pointer; user-select: none;
+  background: var(--ks); font-family: var(--pixel); font-size: calc(var(--t) * .5); line-height: 1; display: grid; place-items: center;
+  transition: background .25s, border-color .25s;
+}
+/* pixel links join the letters of one word; a break in the links marks the two halves of a compound */
+.tile:not(.last)::after { content: ""; position: absolute; left: 100%; top: calc(50% - 3px); width: calc(var(--gap) + 4px); height: 6px; background: var(--kd); }
+.tile.active { background: var(--kd); border-color: var(--k); }
+.tile.cur { animation: blink 1s steps(2, jump-none) infinite; }
+@keyframes blink { 0% { background: var(--white); color: var(--screen); } 100% { background: var(--kd); } }
+.tile.locked { border-color: var(--k); background: linear-gradient(180deg, var(--kl), var(--k) 55%, var(--kd)); color: var(--on, #04121a); box-shadow: inset -3px -3px 0 var(--kd), inset 3px 3px 0 rgba(255,255,255,.45), 0 0 10px -1px var(--k); }
+.tile.locked.active { border-color: var(--white); }
+.tile.revealed { background: var(--screen); color: var(--muted); border-style: dashed; border-color: var(--muted); }
+.tile.revealed::after { display: none; }
+/* compound words: white outline and a steady glow, so they stand out as the big plays */
+.tile.cmp { border-color: var(--white); box-shadow: 0 0 9px 0 hsl(0 0% 100% / .55); }
+.tile.cmp::after { background: var(--white); }
+.tile.cmp.locked { border-color: var(--white); box-shadow: inset -3px -3px 0 var(--kd), inset 3px 3px 0 rgba(255,255,255,.5), 0 0 13px 1px var(--white); }
+/* a solved compound turns properly red, then cools back to the board's color */
+@property --hue { syntax: "<number>"; inherits: true; initial-value: 198; }
+.tile { transition: background .25s, border-color .25s, --hue 1.7s ease-in; }
+.tile.hot { --hue: 0; --l: 54% !important; --on: #fff; transition: none; }
+.tile.hot.cmp { border-color: hsl(0 100% 72%); box-shadow: 0 0 16px 3px hsl(0 100% 50%); }
+/* a solved word lights up hard for a second */
+.tile.lit { z-index: 3; animation: lit 1.05s ease-out both; }
+@keyframes lit { 0% { transform: scale(1); filter: brightness(1); } 18% { transform: scale(1.16); filter: brightness(2.3); box-shadow: 0 0 22px 7px var(--k); } 100% { transform: scale(1); filter: brightness(1); } }
+/* the password row: a stamped letter reads as pressed into the plate, and the row turns solid once cracked */
+.tile.pwt { border-color: var(--bezel-l); background: var(--bezel-d); box-shadow: inset 2px 2px 0 rgba(0,0,0,.55), inset -2px -2px 0 rgba(255,255,255,.08); }
+.tile.pwt::after { display: none; }
+.tile.pwt.active { background: var(--bezel); border-color: var(--a); }
+.tile.pwt.imprint { color: var(--a); border-color: var(--a); background: var(--screen); text-shadow: 0 0 9px var(--a); box-shadow: inset 2px 2px 0 rgba(0,0,0,.7), 0 0 10px -1px var(--a); }
+.tile.pwt.locked:not(.imprint) { border-color: var(--white); background: linear-gradient(180deg, var(--kl), var(--k) 55%, var(--kd)); box-shadow: 0 0 12px 1px var(--k); }
+.tile.land { animation: land .3s steps(3); }
+.tile.wrong { animation: wrong .45s steps(6); }
+@keyframes land { 0% { background: var(--white); transform: translateY(-4px); } 100% { transform: none; } }
+@keyframes wrong { 0%,100% { transform: none; } 20%,40% { background: var(--bad); color: var(--screen); } 20% { transform: translateX(-4px); } 40% { transform: translateX(4px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(2px); } }
+.faller {
+  position: absolute; z-index: 3; display: grid; place-items: center; pointer-events: none;
+  background: var(--k); color: var(--on, #04121a); font-family: var(--pixel); font-size: calc(var(--t) * .5); line-height: 1;
+  width: var(--t); height: var(--h); box-shadow: inset -3px -3px 0 var(--kd), inset 3px 3px 0 rgba(255,255,255,.7), 0 0 14px 2px var(--k);
+}
+
+.colbeam {
+  position: absolute; top: 0; bottom: 0; z-index: 2; pointer-events: none;
+  background: linear-gradient(180deg, hsl(var(--hue) 96% 72% / .9), hsl(var(--hue) 95% 50% / .35) 60%, transparent);
+  box-shadow: 0 0 22px 6px hsl(var(--hue) 95% 55% / .6);
+}
+
+.faller.mystery { z-index: 4; animation: mystery .36s steps(2) infinite, mysteryin .25s steps(3); }
+@keyframes mystery { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.12); } }
+@keyframes mysteryin { from { transform: translateY(14px) scale(.3); opacity: 0; } }
+
+.pw-clue { text-align: center; font-size: 1.05rem; line-height: 1; color: var(--muted); }
+
+/* the points bar: one color, dark to bright */
+.bar { position: relative; flex: none; height: 26px; background: var(--screen); box-shadow: 0 0 0 2px var(--bezel); overflow: hidden; }
+.bar-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, hsl(var(--hue) 85% 24%), hsl(var(--hue) 92% 44%), hsl(var(--hue) 96% 70%)); box-shadow: 0 0 12px hsl(var(--hue) 95% 60%); transition: width .45s steps(10); }
+.bar-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding-inline: 8px; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; text-shadow: 1px 1px 0 var(--screen), -1px -1px 0 var(--screen), 1px -1px 0 var(--screen), -1px 1px 0 var(--screen); }
+.bar-text b { font-weight: 400; }
+
+.ctrl { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.status { display: flex; align-items: center; gap: 10px; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; color: var(--muted); }
+.miss-label { display: none; }
+.misses { display: flex; gap: 2px; }
+.misses i { font-style: normal; font-size: 1.05rem; line-height: 1; color: var(--a); font-family: Arial, sans-serif; }
+.misses i::before { content: "♥"; }
+.misses i.used { color: var(--rod); }
+.link-btn { white-space: nowrap; border: none; background: transparent; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; padding: 2px 0; color: var(--muted); }
+
+.actions { display: flex; justify-content: center; gap: 8px; }
+.btn { border: none; border-radius: 0; background: var(--bezel); box-shadow: inset -3px -3px 0 var(--bezel-d), inset 3px 3px 0 var(--bezel-l); padding: 11px 12px; font-family: var(--pixel); font-size: .56rem; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--a); color: #04121a; box-shadow: inset -3px -3px 0 var(--ad), inset 3px 3px 0 rgba(255,255,255,.5), 0 0 12px -2px var(--a); }
+.btn:active { transform: translate(1px, 1px); }
+.btn:disabled { opacity: .35; cursor: default; }
+
+.kb { flex: none; display: flex; flex-direction: column; gap: 5px; margin-top: auto; }
+.kb .row { display: flex; gap: 4px; justify-content: center; }
+.kb button { flex: 1; max-width: 43px; height: 44px; border: none; border-radius: 0; background: var(--bezel); box-shadow: inset -3px -3px 0 var(--bezel-d), inset 3px 3px 0 var(--bezel-l); font-family: var(--pixel); font-size: .72rem; cursor: pointer; text-transform: uppercase; padding: 0; }
+.kb button:active { background: var(--a); color: #04121a; }
+.kb button.wide { max-width: 66px; flex: 1.5; font-size: .46rem; }
+.kb button[aria-label="Delete"] { font-family: Arial, sans-serif; font-size: 1.15rem; }
+.kb .spacer { flex: .5; max-width: 20px; }
+
+.toast { position: fixed; left: 50%; bottom: calc(176px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--screen); color: var(--a); border: 3px solid var(--a); padding: 9px 12px; font-family: var(--pixel); font-size: .55rem; text-transform: uppercase; z-index: 30; pointer-events: none; white-space: nowrap; box-shadow: 0 0 16px -2px var(--a); }
+
+.modal { position: fixed; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: 20; padding: 16px; }
+.sheet { background: var(--screen); border: 4px solid var(--white); outline: 4px solid var(--bezel); width: min(100% - 8px, 450px); padding: 22px 20px; display: flex; flex-direction: column; gap: 14px; position: relative; max-height: calc(100% - 8px); overflow-y: auto; }
+.sheet h2 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; line-height: 1.4; margin: 0; padding-right: 24px; text-transform: uppercase; color: var(--a); text-wrap: balance; }
+.sheet p { margin: 0; line-height: 1.05; font-size: 1.2rem; }
+.sheet ul { margin: 0; padding-left: 1em; line-height: 1.05; font-size: 1.2rem; display: flex; flex-direction: column; gap: 6px; }
+.sheet .close { position: absolute; top: 8px; right: 8px; border: none; background: transparent; font-family: var(--pixel); font-size: .9rem; cursor: pointer; width: 36px; height: 36px; }
+.answers { display: flex; flex-wrap: wrap; gap: 7px 12px; font-family: var(--pixel); font-size: .5rem; }
+.answers b { color: var(--kl); font-weight: 400; }
+.res-pw { font-family: var(--pixel); font-size: 1.1rem; letter-spacing: .08em; }
+.res-score { font-size: 1.3rem; color: var(--muted); }
+.share-pre { border: 2px dashed var(--muted); padding: 10px 12px; font-size: 1.1rem; line-height: 1.1; white-space: pre-wrap; margin: 0; user-select: all; font-family: inherit; }
+
+@media (min-width: 420px) { .miss-label { display: inline; } }
+@media (max-width: 419px) {
+  header { gap: 3px; } header h1 { font-size: .68rem; text-shadow: 2px 2px 0 var(--ad); } .icon-btn { width: 28px; height: 28px; } .timer { font-size: .7rem; } .nav button { padding: 4px 3px; } .icons { gap: 4px; } .timer { min-width: 0; }
+  .status { gap: 5px; } .misses { gap: 0; } .misses i { font-size: .72rem; } .ctrl { gap: 6px; } .actions { gap: 5px; } .btn { padding: 10px 8px; font-size: .5rem; }
+}
+@media (max-height: 720px) { .kb button { height: 36px; } .clue { min-height: 58px; } .clue .text { font-size: 1.45rem; } }
+
+/* wide screens fill the whole window: everything scales with its size */
+@media (min-width: 860px) {
+  .app { max-width: none; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
+  header h1 { font-size: clamp(1.15rem, 1.8vw, 1.9rem); }
+  .nav { font-size: .62rem; } .timer { font-size: clamp(.95rem, 1.5vw, 1.4rem); }
+  main { --side: clamp(300px, 27vw, 480px); display: grid; grid-template-columns: minmax(0, 1fr) var(--side); grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 12px 28px; padding-top: 12px; }
+  .play { grid-column: 1; grid-row: 1 / 4; align-self: center; }
+  .boardwrap { --gap: 3px; --rg: 5px; --t: max(20px, calc(min((100vw - var(--side) - 170px) / (var(--c) + 1) - var(--gap), ((100dvh - 200px) / var(--r) - var(--rg)) / 1.15))); --h: calc(var(--t) * 1.15); gap: 14px; }
+  .pw-clue { font-size: clamp(1.15rem, 1.5vw, 1.6rem); }
+  .bar { grid-column: 1 / -1; grid-row: 4; height: 30px; }
+  .bar-text { font-size: .6rem; }
+  .clue { grid-column: 2; grid-row: 1; }
+  .clue .text { font-size: clamp(1.9rem, 2.6vw, 3rem); }
+  .clue .whole { font-size: clamp(1.25rem, 1.6vw, 1.8rem); }
+  .ctrl { grid-column: 2; grid-row: 2; flex-wrap: wrap; }
+  .kb { grid-column: 2; grid-row: 3; align-self: end; margin-top: 0; }
+  .kb button { max-width: none; height: clamp(40px, 7vh, 72px); font-size: clamp(.7rem, 1vw, 1rem); }
+  .kb button.wide { max-width: none; }
+  .kb .spacer { max-width: 28px; }
+  .toast { bottom: auto; top: 68px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="app">
+  <header>
+    <h1>Cascade</h1>
+    <div class="nav">
+      <button id="prev" aria-label="Previous puzzle">‹</button>
+      <span id="navLbl">1 of 8</span>
+      <button id="next" aria-label="Next puzzle">›</button>
+    </div>
+    <div class="icons">
+      <button class="icon-btn" id="soundBtn" aria-label="Sound on"><svg viewBox="0 0 24 24" id="soundIcon"></svg></button>
+      <button class="icon-btn" id="helpBtn" aria-label="How to play"><svg viewBox="0 0 24 24"><path d="M9.2 9a3 3 0 1 1 4.3 2.7c-.9.5-1.5 1.2-1.5 2.3M12 17.5v.01"/></svg></button>
+    </div>
+    <span class="timer" id="timer" aria-label="Time">0:00</span>
+  </header>
+
+  <main>
+    <section class="clue heat" id="clue" aria-live="polite">
+      <div class="eyebrow" id="clueLen"></div>
+      <div class="text" id="clueText"></div>
+      <div class="whole" id="clueWhole"></div>
+    </section>
+
+    <div class="play">
+      <div class="boardwrap" id="boardwrap">
+        <aside class="sidebox" aria-label="Side word"><div class="sidegrid" id="sideGrid"></div></aside>
+        <section class="board" id="board"><div class="grid" id="grid"></div></section>
+      </div>
+      <div class="pw-clue" id="pwClue"></div>
+    </div>
+
+    <div class="bar" aria-label="Points">
+      <div class="bar-fill" id="barFill"></div>
+      <span class="bar-text"><b id="barScore">0 pts</b><span id="barNext"></span></span>
+    </div>
+
+    <div class="ctrl">
+      <div class="status">
+        <span class="miss-label">Lives</span><span class="misses" id="misses"></span>
+        <button class="link-btn" id="giveUpBtn">Give up</button>
+      </div>
+      <div class="actions">
+        <button class="btn" id="letterBtn">Check letter</button>
+        <button class="btn primary" id="checkBtn">Check</button>
+      </div>
+    </div>
+
+    <div class="kb" id="kb"></div>
+  </main>
+</div>
+
+<canvas id="fx" aria-hidden="true"></canvas>
+<canvas id="fx2" aria-hidden="true"></canvas>
+<div class="toast" id="toast" hidden></div>
+
+<div class="modal" id="helpModal" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="helpTitle">
+    <button class="close" data-close aria-label="Close">×</button>
+    <h2 id="helpTitle">How to play</h2>
+    <p>Clear the board. Two hidden words guard it: one across the top, and one down the left side.</p>
+    <ul>
+      <li>Tap a word to see its clue, then type your answer and press <b>Check</b>.</li>
+      <li>The brighter the word, the more it's worth.</li>
+      <li><b>Compound words</b> glow white, pay double and burn red when you get them. Each half has its own clue, and they're the hardest words on the board.</li>
+      <li>Every letter you get right drops straight down its line, and it sticks wherever it fits a word below.</li>
+      <li>Each full bar stamps a letter into both the top word and the side word. Tap either one to guess it any time.</li>
+      <li>Crack the top word and its letters crash down the board. Crack the side word and its letters shoot across the rows. Either one sets the screen on fire for 10 seconds.</li>
+      <li>Once both are cracked, every full bar fills in a whole column: the one with the fewest letters in it.</li>
+      <li>You have <b>5 lives</b>. A wrong guess costs one. <b>Check letter</b> also costs one, and locks in the right letter at your cursor.</li>
+    </ul>
+    <button class="btn primary" data-close>Play</button>
+  </div>
+</div>
+
+<div class="modal" id="resultModal" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="resTitle">
+    <button class="close" data-close aria-label="Close">×</button>
+    <h2 id="resTitle">Solved</h2>
+    <div class="res-pw" id="resPw"></div>
+    <p class="res-score" id="resScore"></p>
+    <div class="answers" id="answers"></div>
+    <pre class="share-pre" id="sharePre"></pre>
+    <div class="actions" style="justify-content:flex-start">
+      <button class="btn primary" id="shareBtn">Copy result</button>
+      <button class="btn" id="nextBtn">Next puzzle</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- puzzles ----------
+   First row: the 14-letter top word, as wide as the board. Last row: the 10-letter side word, one letter per word row.
+   Each word is ["WORD", column, row, [clue], ""]. A compound is ["BOOK|MARK", column, row, [clue, clue], "clue for the whole word"].
+   Top-word letters drop down columns; side-word letters sweep across rows. Words are placed so both land often. */
+const PUZZLES = [
+  [
+    ["OVERSIMPLIFIED", 0, 0, ["It's more complicated than that."], ""],
+    ["PAINTING", 0, 1, ["I hang in a museum after being framed"], ""],
+    ["SQUID", 9, 1, ["Ink-squirting sea creature"], ""],
+    ["TRAFFIC", 0, 2, ["I move at a crawl at 5 p.m. and everyone hates me"], ""],
+    ["DOMINO", 8, 2, ["I have spots, and when I fall, we all fall"], ""],
+    ["PICASSO", 0, 3, ["Painter of Guernica"], ""],
+    ["LADLE", 8, 3, ["Soup server with a long handle"], ""],
+    ["OHTANI", 0, 4, ["Dodgers star who hits and pitches"], ""],
+    ["DEIFIED", 7, 4, ["Palindrome for turned into a god"], ""],
+    ["DARE|DEVIL", 0, 5, ["Truth's alternative at a sleepover", "She wears Prada"], "Evel Knievel, or Marvel's blind lawyer"],
+    ["SILO", 10, 5, ["Tall tower of grain on a farm"], ""],
+    ["PAUL", 0, 6, ["Rudd of Ant-Man"], ""],
+    ["FROST|BITE", 5, 6, ["Robert, who took the road less traveled", "Sound ___, a politician's favorite snack"], "Everest's tax on your toes"],
+    ["CRY|BABY", 0, 7, ["Battle ___, the rallying shout", "Nobody puts her in a corner"], "Johnny Depp's 1990 musical, or a sore loser"],
+    ["CHIMES", 8, 7, ["I sing whenever the breeze asks me to"], ""],
+    ["FOLK|LORE", 0, 8, ["Bob Dylan's early genre", "A fandom's deep backstory"], "Taylor Swift's surprise 2020 album"],
+    ["BERET", 9, 8, ["Flat hat of a French painter"], ""],
+    ["MICRO|WAVE", 0, 9, ["Prefix for a tiny brewery", "Hello, from a distance"], "Popcorn's fast lane"],
+    ["LYNX", 10, 9, ["Tufted-eared wild cat"], ""],
+    ["SNEEZE", 0, 10, ["Everyone blesses me and nobody wants me near them"], ""],
+    ["LUTHER", 8, 10, ["He nailed 95 theses to a door"], ""],
+    ["IMPOSSIBLE", 0, 1, ["Tom Cruise accepts this mission anyway."], "side"],
+  ],
+  [
+    ["MISCOMMUNICATE", 0, 0, ["We really should have talked."], ""],
+    ["PLATO", 0, 1, ["Student of Socrates"], ""],
+    ["LUGGAGE", 6, 1, ["I go on every vacation and never get to see the sights"], ""],
+    ["HICCUP", 0, 2, ["I show up uninvited, and a good scare sends me away"], ""],
+    ["TONGUE", 8, 2, ["I can taste everything, and you bite me to keep quiet"], ""],
+    ["MANGO", 0, 3, ["Tropical fruit hiding a man"], ""],
+    ["FLIP|FLOP", 6, 3, ["Turn a house for profit", "Box-office disaster"], "Beach footwear, or a politician changing sides"],
+    ["TIGHT|ROPE", 0, 4, ["Cheap, or very close friends", "Hitchcock's one-take thriller"], "Philippe Petit's walkway"],
+    ["KATY", 10, 4, ["Perry of Firework"], ""],
+    ["OPAL", 0, 5, ["Milky gemstone with flashes of color"], ""],
+    ["CANDY|CANE", 5, 5, ["Halloween currency", "Charlie Chaplin's walking prop"], "Striped hook on a Christmas tree"],
+    ["MAKE|SHIFT", 0, 6, ["Ford, as opposed to Mustang", "Graveyard job"], "Duct-taped together for now"],
+    ["KIWI", 10, 6, ["Fuzzy fruit, or a flightless bird"], ""],
+    ["DIAMOND", 0, 7, ["Born under pressure, and I can cut almost anything"], ""],
+    ["OXYGEN", 8, 7, ["You can't see me, can't hold me, and can't live without me"], ""],
+    ["GOSSAMER", 0, 8, ["Filmy, delicate, cobwebby"], ""],
+    ["GRETA", 9, 8, ["Gerwig who directed Barbie"], ""],
+    ["TIRAMISU", 0, 9, ["Italian dessert with a coffee kick"], ""],
+    ["NADAL", 9, 9, ["King of Clay"], ""],
+    ["VEST", 0, 10, ["Sleeveless layer under a suit"], ""],
+    ["SLOW|POKE", 5, 10, ["Like molasses in January", "Hawaiian raw fish bowl"], "Why are we always waiting for this person?"],
+    ["LONELINESS", 0, 1, ["A crowd won't cure it."], "side"],
+  ],
+  [
+    ["UNDERACHIEVERS", 0, 0, ["So much potential."], ""],
+    ["KITE", 0, 1, ["I can only fly on a string"], ""],
+    ["KICK|STAND", 5, 1, ["Thrill, or the point of a punt", "Refuse to budge, with \"your ground\""], "A bike's lean-on-me"],
+    ["SNORING", 0, 2, ["You do it in your sleep and you're the only one who can't hear it"], ""],
+    ["MEMORY", 8, 2, ["I get worse with age and you can lose me without moving"], ""],
+    ["SELENA", 0, 3, ["Gomez of Only Murders in the Building"], ""],
+    ["YANKEES", 7, 3, ["Bronx Bombers"], ""],
+    ["JAIL|BREAK", 0, 4, ["Monopoly corner", "Spring ___ in Cancun"], "Shawshank's ending, or what you do to an iPhone"],
+    ["FERN", 10, 4, ["Shade-loving frond"], ""],
+    ["LAKERS", 0, 5, ["Showtime team of Los Angeles"], ""],
+    ["DIAPER", 7, 5, ["Changing-table item"], ""],
+    ["PEDESTAL", 0, 6, ["Statue's stand"], ""],
+    ["FRIDA", 9, 6, ["Kahlo of the self-portraits"], ""],
+    ["SLUSH|FUND", 0, 7, ["Gray mess on a winter sidewalk", "Hedge ___"], "Secret stash of political money"],
+    ["YAWN", 10, 7, ["I spread through a room without a single word"], ""],
+    ["BRIE", 0, 8, ["French cheese with an edible rind"], ""],
+    ["SLING|SHOT", 5, 8, ["David's Goliath killer", "Espresso unit"], "Dennis the Menace's back-pocket weapon"],
+    ["WARD|ROBE", 0, 9, ["Batman's young charge, legally", "Judge's courtroom wear"], "The way into Narnia"],
+    ["JOKIC", 9, 9, ["Serbian three-time NBA MVP"], ""],
+    ["DWAYNE", 0, 10, ["The Rock, to his mother"], ""],
+    ["TUBMAN", 8, 10, ["Harriet of the Underground Railroad"], ""],
+    ["CONFESSION", 0, 1, ["They say it's good for the soul."], "side"],
+  ],
+  [
+    ["ACKNOWLEDGMENT", 0, 0, ["Sometimes a nod will do."], ""],
+    ["CLAM", 0, 1, ["Proverbially happy shellfish"], ""],
+    ["SPACE|SUIT", 5, 1, ["Keyboard's longest key", "Clubs or spades"], "Armstrong's moonwalk outfit"],
+    ["GUN|POWDER", 0, 2, ["Tom Cruise's Top ___", "Fresh snow, to a skier"], "Guy Fawkes's plot ingredient"],
+    ["NEST", 10, 2, ["Robin's woven home"], ""],
+    ["CORK|SCREW", 0, 3, ["Irish county, or a bottle's plug", "Bungle, with \"up\""], "Sommelier's spiral"],
+    ["MINK", 10, 3, ["Luxury fur source"], ""],
+    ["DRAIN|PIPE", 0, 4, ["Exhaust completely", "Sherlock's smoke"], "Itsy Bitsy Spider's way up"],
+    ["KELP", 10, 4, ["Giant seaweed forest"], ""],
+    ["KAZOO", 0, 5, ["Instrument you hum into"], ""],
+    ["LAUGHTER", 6, 5, ["I'm contagious and doctors recommend me"], ""],
+    ["WRINKLE", 0, 6, ["Time puts me on your face and an iron takes me off your shirt"], ""],
+    ["KIMONO", 8, 6, ["Silk robe tied with an obi"], ""],
+    ["YACHT", 0, 7, ["Billionaire's floating home"], ""],
+    ["MRBEAST", 7, 7, ["YouTube's biggest giveaway star"], ""],
+    ["FLOOD|GATE", 0, 8, ["What Noah saw coming", "Scandal suffix after Water"], "Once it's open, nothing's holding back"],
+    ["YETI", 10, 8, ["Abominable resident of the Himalayas"], ""],
+    ["PUMA", 0, 9, ["Cougar by another name"], ""],
+    ["TELESCOPE", 5, 9, ["I bring the stars closer without moving them an inch"], ""],
+    ["JENNER", 0, 10, ["Kardashian half-sister's last name"], ""],
+    ["ZEALOUS", 7, 10, ["Fervent, gung-ho, over-the-top eager"], ""],
+    ["COMPROMISE", 0, 1, ["Nobody leaves happy."], "side"],
+  ],
+  [
+    ["PROCRASTINATOR", 0, 0, ["I'll get to it."], ""],
+    ["DREAM", 0, 1, ["You have me only with your eyes closed"], ""],
+    ["TRAPDOOR", 6, 1, ["Step on me and you'll drop in"], ""],
+    ["DRUM", 0, 2, ["You beat me and I make music"], ""],
+    ["BLUE|PRINT", 5, 2, ["Sad", "Inkjet output"], "Architect's plan"],
+    ["SPAM", 0, 3, ["I'm the email nobody asked for"], ""],
+    ["SPOT|LIGHT", 5, 3, ["Fido's name", "Not heavy"], "Center of attention"],
+    ["PROMISE", 0, 4, ["I break without anyone touching me"], ""],
+    ["TEAPOT", 8, 4, ["Short and stout, I scream when I'm hot"], ""],
+    ["PAN|CAKE", 0, 5, ["Peter of Neverland", "Piece of ___"], "IHOP stack"],
+    ["MIRROR", 8, 5, ["I show your face but have none of my own"], ""],
+    ["FRUGAL", 0, 6, ["Penny-pinching"], ""],
+    ["EMINEM", 7, 6, ["The real Slim Shady"], ""],
+    ["HAMMURABI", 0, 7, ["Babylonian lawgiver"], ""],
+    ["VLOG", 10, 7, ["YouTube diary"], ""],
+    ["LINCOLN", 0, 8, ["Gettysburg orator"], ""],
+    ["ENIGMA", 8, 8, ["Riddle wrapped in a mystery"], ""],
+    ["PIMPLE", 0, 9, ["I show up right before picture day"], ""],
+    ["EYE|BROW", 7, 9, ["Peeper", "Forehead"], "You raise one in doubt"],
+    ["DRAKE", 0, 10, ["Hotline Bling rapper"], ""],
+    ["TEAR|DROP", 6, 10, ["Rip", "Mic ___"], "A single sad trickle"],
+    ["DETERMINED", 0, 1, ["Nothing's stopping you."], "side"],
+  ],
+  [
+    ["OVERCROTECTIVE", 0, 0, ["Helicopter parent."], ""],
+    ["NEEDLE", 0, 1, ["I have an eye but can't see"], ""],
+    ["EPITAPH", 7, 1, ["Last words, set in stone"], ""],
+    ["BACK|PACK", 0, 2, ["Spine's side", "Wolf crew"], "First-day-of-school essential"],
+    ["MEME", 10, 2, ["Internet joke with a caption"], ""],
+    ["CANDLE", 0, 3, ["I shrink the longer I live"], ""],
+    ["GARBAGE", 7, 3, ["I get taken out every week but never on a date"], ""],
+    ["MOON|WALK", 0, 4, ["Show your rear", "Stroll"], "MJ's backward glide"],
+    ["ADELE", 9, 4, ["She said Hello from the other side"], ""],
+    ["SPONGE", 0, 5, ["Full of holes, still holds water"], ""],
+    ["VERTIGO", 7, 5, ["Dizziness up high"], ""],
+    ["BULL|DOG", 0, 6, ["Chicago team", "Pup"], "Wrinkly breed"],
+    ["RADISH", 8, 6, ["Peppery red root"], ""],
+    ["CAESAR", 0, 7, ["\"Et tu, Brute?\" victim"], ""],
+    ["BOTTLE", 8, 7, ["I have a neck but no head"], ""],
+    ["WEEKEND", 0, 8, ["I leave way too fast"], ""],
+    ["BATMAN", 8, 8, ["Gotham's guardian"], ""],
+    ["BIEBER", 0, 9, ["Baby singer, 2010"], ""],
+    ["PIG|TAIL", 7, 9, ["Miss Piggy", "Follow secretly"], "Braided bunch"],
+    ["JACK|POT", 0, 10, ["Captain Sparrow", "Pan's partner"], "Slot machine dream"],
+    ["STAMP", 9, 10, ["I go around the world but stay in a corner"], ""],
+    ["HEADPHONES", 0, 1, ["Not listening to you."], "side"],
+  ],
+  [
+    ["OVERSTIMULATED", 0, 0, ["Too many tabs open."], ""],
+    ["CHARGER", 0, 1, ["I vanish the moment you hit 1%"], ""],
+    ["SECRET", 8, 1, ["Share me and I'm gone"], ""],
+    ["SHADOW", 0, 2, ["I follow you everywhere but vanish in the dark"], ""],
+    ["SNEAKER", 7, 2, ["I have a tongue but taste nothing"], ""],
+    ["NARUTO", 1, 3, ["Ninja with whisker marks"], ""],
+    ["TIP|TOE", 8, 3, ["Waiter's extra", "Piggy"], "Sneak quietly"],
+    ["BURRITO", 0, 4, ["Chipotle order"], ""],
+    ["LATTE", 8, 4, ["Pumpkin spice drink"], ""],
+    ["PIANO", 0, 5, ["I have keys but can't open a single lock"], ""],
+    ["OVER|TIME", 6, 5, ["Done", "Clock reading"], "Extra minutes"],
+    ["SAND|BOX", 0, 6, ["Beach stuff", "Package"], "Playground pit"],
+    ["USHER", 9, 6, ["Super Bowl LVIII halftime act"], ""],
+    ["SPARTA", 0, 7, ["Leonidas's city"], ""],
+    ["SCOOTER", 7, 7, ["City sidewalk menace"], ""],
+    ["ANIME", 1, 8, ["Naruto's genre"], ""],
+    ["PEA|NUT", 8, 8, ["Pod veggie", "Crazy fan"], "Charlie Brown's comic, singular"],
+    ["BED|ROOM", 0, 9, ["Flower patch", "Elbow ___"], "Where you get sent when grounded"],
+    ["DOWNEY", 8, 9, ["Iron Man's actor"], ""],
+    ["SPORK", 0, 10, ["Utensil identity crisis"], ""],
+    ["FORTUNE", 7, 10, ["I'm cracked open after dinner and I lie about your future"], ""],
+    ["CONTESTANT", 0, 1, ["Come on down!"], "side"],
+  ],
+  [
+    ["RECOMMENDATION", 0, 0, ["You should try this."], ""],
+    ["ONION", 0, 1, ["I make you cry without saying a word"], ""],
+    ["LIP|STICK", 6, 1, ["Kiss part", "Hockey tool"], "Red-carpet essential"],
+    ["RIVER", 0, 2, ["I have a bank but no money"], ""],
+    ["APPETITE", 6, 2, ["The French say I come with eating"], ""],
+    ["RAIN|COAT", 0, 3, ["Purple ___, Prince song", "Layer of paint"], "Yellow slicker"],
+    ["CLOCK", 9, 3, ["I have hands but can't clap"], ""],
+    ["CAT|NAP", 1, 4, ["Garfield", "Siesta"], "Quick doze"],
+    ["REMOTE", 8, 4, ["I get lost in the couch and everyone blames you"], ""],
+    ["HIATUS", 0, 5, ["A show's long break"], ""],
+    ["SPOTIFY", 7, 5, ["It gets Wrapped every December"], ""],
+    ["STAIRS", 0, 6, ["I go up and down but never move"], ""],
+    ["SHAKIRA", 7, 6, ["Her hips don't lie"], ""],
+    ["RECLUSE", 0, 7, ["Never leaves the house"], ""],
+    ["NACHOS", 8, 7, ["Stadium chips with fake cheese"], ""],
+    ["WIFI", 0, 8, ["First thing you ask for at a café"], ""],
+    ["JELLY|FISH", 5, 8, ["PB&J's J", "Nemo"], "Beach stinger with no brain"],
+    ["POKER", 0, 9, ["Game of bluffing"], ""],
+    ["HOME|WORK", 6, 9, ["Base", "Job"], "What the dog ate"],
+    ["HANGRY", 0, 10, ["Mad because you're starving"], ""],
+    ["BALLOON", 7, 10, ["I'm full of air until someone pops by"], ""],
+    ["PERMISSION", 0, 1, ["Mother, may I?"], "side"],
+  ],
+  [
+    ["CHARACTERISTIC", 0, 0, ["So very you."], ""],
+    ["TOWEL", 0, 1, ["The more I dry, the wetter I get"], ""],
+    ["SPOILER", 7, 1, ["I ruin a story by telling the truth"], ""],
+    ["MOTEL", 0, 2, ["Motor plus hotel"], ""],
+    ["SWEATER", 7, 2, ["Ugly Christmas party wear"], ""],
+    ["EAR|RING", 0, 3, ["Corn unit", "Boxing venue"], "Lobe dangler"],
+    ["SHREK", 9, 3, ["Ogre with layers"], ""],
+    ["TOP|HAT", 0, 4, ["Spin toy", "Cap"], "Lincoln's headwear"],
+    ["POTATO", 7, 4, ["I have eyes but never see"], ""],
+    ["TOAST", 0, 5, ["Raise a glass"], ""],
+    ["BOOK|WORM", 6, 5, ["Reserve", "Bait"], "Library regular"],
+    ["SUSHI", 0, 6, ["Rolled rice and raw fish"], ""],
+    ["HAIR|CUT", 7, 6, ["Hare sound-alike", "Director's call"], "Barber's job"],
+    ["MONDAY", 0, 7, ["Everyone's least favorite recurring guest"], ""],
+    ["ZIPPER", 8, 7, ["Teeth, but nothing to chew"], ""],
+    ["MARIO", 1, 8, ["Plumber in red"], ""],
+    ["COW|BOY", 8, 8, ["Moo maker", "Lad"], "Rodeo rider"],
+    ["COFFIN", 0, 9, ["Whoever uses me never knows it"], ""],
+    ["OPRAH", 7, 9, ["\"You get a car!\" host"], ""],
+    ["SHORTCUT", 0, 10, ["I'm quicker, until I'm not"], ""],
+    ["SASSY", 9, 10, ["Cheeky, bold, fresh"], ""],
+    ["RESTAURANT", 0, 1, ["Table for two?"], "side"],
+  ],
+];
+const CFG = window.CASCADE_CONFIG || {};   // set at build time on Vercel (see build.sh); defaults when run anywhere else
+const LIVES = () => CFG.lives || 5;
+const STAMPS = 6;   // sets the bar size: about this many fills on the old point scale
+
+const $ = id => document.getElementById(id);
+// localStorage, with an in-memory copy for when it's blocked (private windows, previews)
+const mem = new Map();
+const store = {
+  get(k) {
+    try { const v = localStorage.getItem(k); if (v !== null) return JSON.parse(v); } catch {}
+    return mem.has(k) ? JSON.parse(mem.get(k)) : null;
+  },
+  set(k, v) { mem.set(k, JSON.stringify(v)); try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------- state ---------- */
+let idx, P, S, PW, ORDER, ORDER2, BAR, tiles = [], busy = false;
+const litCells = new Set();  // tiles flashing after a solve
+const hotCells = new Set();  // compound tiles glowing red before they cool
+const pending = new Set();  // cells locked in the state but whose letter is still falling
+const cellKey = (r, c) => r + ":" + c;
+const parse = rows => rows.map(([s, x, y, clues, whole]) => {
+  let a = 0;
+  const segs = s.split("|").map((word, i) => { const g = { word, a, b: a + word.length, clue: clues[i] }; a = g.b; return g; });
+  const side = whole === "side";   // the side word runs down the left, on columns of its own
+  return { w: s.replace(/\|/g, ""), x: side ? 100 : x, y, segs, whole: side ? "" : whole, side };
+});
+const W = r => P[r].w, X = r => P[r].x;
+const colsOf = r => [...W(r)].map((_, j) => X(r) + j);
+const segCols = (r, s) => { const g = P[r].segs[s]; return colsOf(r).slice(g.a, g.b); };
+const segAt = (r, c) => P[r].segs.findIndex(g => c - X(r) >= g.a && c - X(r) < g.b);
+// Height sets a word's value and brightness: glowing at the top of the board, deep and dark at the bottom
+const height = r => Math.max(0, P[r].y - 1) / (Math.max(...P.map(p => p.y)) - 1);
+const isCompound = r => P[r].segs.length > 1;
+const isSpecial = r => r === 0 || P[r].side;
+const crackedOf = r => r === 0 ? S.cracked : S.crackedSide;
+const baseWorth = r => Math.max(10, Math.round((100 - 90 * height(r)) / 5) * 5) * (isCompound(r) ? 2 : 1);   // compounds pay double
+const worth = r => isSpecial(r) ? 300 : Math.round(baseWorth(r) * 1.3 / 5) * 5;
+const light = r => isSpecial(r) ? 84 : Math.round(74 - 42 * height(r));
+const paint = (el, r) => { el.style.setProperty("--l", light(r) + "%"); el.style.setProperty("--on", light(r) > 50 ? "#04121a" : "#f2f7f8"); };
+const letterAt = (r, c) => W(r)[c - X(r)];
+const isLocked = (r, c) => S.locked[r][c - X(r)];
+const segSolved = (r, s) => segCols(r, s).every(c => isLocked(r, c));
+const rowSolved = r => colsOf(r).every(c => isLocked(r, c));
+const allSolved = () => P.every((_, r) => rowSolved(r));
+const playing = () => S.status === "playing";
+const totalCols = () => Math.max(...P.filter(p => !p.side).map(p => p.x + p.w.length));
+
+function fresh() {
+  return { typed: P.map(p => Array(p.w.length).fill("")), locked: P.map(p => Array(p.w.length).fill(false)),
+           row: 1, seg: 0, cur: P[1].x, misses: 0, log: [], status: "playing", time: 0, started: false, score: 0, paid: P.map(() => false), cracked: false, crackedSide: false };
+}
+function load(i) {
+  idx = i; P = parse(PUZZLES[i]); pending.clear(); busy = false;
+  PW = P[0].w; litCells.clear(); hotCells.clear();
+  ORDER = [...PW].map((_, n) => n).sort((a, b) => (a * 37 + i * 11) % 17 - (b * 37 + i * 11) % 17);   // letters unlock out of order
+  ORDER2 = [...P[P.length - 1].w].map((_, n) => n).sort((a, b) => (a * 41 + i * 7) % 13 - (b * 41 + i * 7) % 13);
+  // a full bar stamps a letter into both special words; words pay 30% over this scale, so the bar fills fast
+  BAR = Math.floor(P.reduce((sum, _, r) => sum + (isSpecial(r) ? 0 : baseWorth(r)), 0) * .95 / STAMPS / 5) * 5;
+  S = store.get("plumb13-" + i) || fresh();
+  fireUntil = 0;
+  build();
+  if (playing() && stampUp().length) save();   // catches a saved game up on letters it has already earned
+  render();
+}
+function save() { store.set("plumb13-" + idx, S); }
+
+/* ---------- board ---------- */
+function build() {
+  const b = $("boardwrap"), g = $("grid"), sg = $("sideGrid");
+  b.style.setProperty("--c", totalCols()); b.style.setProperty("--r", Math.max(...P.map(p => p.y)) + 1);
+  g.innerHTML = ""; sg.innerHTML = ""; tiles = P.map(() => ({}));
+  P.forEach((p, r) => colsOf(r).forEach(c => {
+    const t = document.createElement("button"); t.className = "tile";
+    t.style.gridRow = p.side ? c - 100 + 2 : p.y + 1; t.style.gridColumn = p.side ? 1 : c + 1; paint(t, r);
+    t.addEventListener("click", () => select(r, c));
+    (p.side ? sg : g).appendChild(t); tiles[r][c] = t;
+  }));
+}
+const earned = () => Math.floor(S.score / BAR);
+// Stamp every letter the score has earned into both special words, always leaving one letter to guess
+function stampUp() {
+  const out = [], si = P.length - 1, now = earned();
+  const stamp = (r, order, at) => order.slice(0, Math.min(now, order.length - 1)).forEach(i => {
+    if (!S.locked[r][i]) { S.locked[r][i] = true; out.push(tiles[r][at + i]); }
+  });
+  if (!S.cracked) stamp(0, ORDER, 0);
+  if (!S.crackedSide) stamp(si, ORDER2, 100);
+  return out;
+}
+
+function render() {
+  P.forEach((_, r) => colsOf(r).forEach(c => {
+    const t = tiles[r][c], j = c - X(r), s = segAt(r, c), g = P[r].segs[s];
+    const lock = S.locked[r][j] && !pending.has(cellKey(r, c));
+    const revealed = !playing() && !S.locked[r][j];
+    const L = lock || revealed ? W(r)[j] : S.typed[r][j];
+    const sel = r === S.row && s === S.seg && playing();
+    t.textContent = L;
+    t.className = "tile heat" + (isCompound(r) ? " cmp" : "") + (j === g.a ? " first" : "") + (j === g.b - 1 ? " last" : "") +
+      (lock ? " locked" : revealed ? " revealed" : "") + (sel ? " active" : "") +
+      (sel && c === S.cur && !segSolved(r, s) ? " cur" : "") +
+      (isSpecial(r) ? " pwt" : "") + (isSpecial(r) && lock && !crackedOf(r) ? " imprint" : "") +
+      (litCells.has(cellKey(r, c)) ? " lit" : "") + (hotCells.has(cellKey(r, c)) ? " hot" : "");
+    t.setAttribute("aria-label", `Word ${r + 1}, worth ${worth(r)}, letter ${j - g.a + 1}${L ? ", " + L : ", empty"}`);
+  }));
+  const r = S.row, s = S.seg, g = P[r].segs[s];
+  paint($("clue"), r);
+  $("clueLen").innerHTML = `<i class="swatch">${worth(r)}</i>${r === 0 ? "<b>Top word</b> · " : P[r].side ? "<b>Side word</b> · " : isCompound(r) ? "<b>Compound ×2</b> · " : ""}${g.word.length} letters${segSolved(r, s) ? " · solved" : ""}`;
+  $("clueWhole").textContent = isCompound(r) ? `Together: ${P[r].whole}` : "";
+  $("clueText").textContent = g.clue;
+  $("misses").innerHTML = Array.from({ length: LIVES() }, (_, i) => `<i class="${i < S.misses ? "used" : ""}"></i>`).join("");
+  $("checkBtn").disabled = !playing() || segSolved(r, s);
+  $("letterBtn").disabled = !playing();
+  $("giveUpBtn").hidden = !playing();
+  $("navLbl").textContent = `${idx + 1} of ${PUZZLES.length}`;
+  $("prev").disabled = idx === 0; $("next").disabled = idx === PUZZLES.length - 1;
+  $("timer").textContent = clock(S.time);
+  $("pwClue").textContent = `Top: ${P[0].segs[0].clue}  Side: ${P[P.length - 1].segs[0].clue}`;
+  setHeat();
+  // the points bar
+  const into = S.score - earned() * BAR;
+  $("barFill").style.width = into / BAR * 100 + "%";
+  $("barScore").textContent = `${S.score} pts`;
+  $("barNext").textContent = S.cracked && S.crackedSide ? `${BAR - into} to fill a column` : `${BAR - into} to next letter`;
+}
+
+/* ---------- input ---------- */
+function select(r, c) { if (!playing() || busy) return; S.started = true; S.row = r; S.seg = segAt(r, c); S.cur = c; render(); }
+function nextOpen(from, d = 1) {
+  const cols = segCols(S.row, S.seg);
+  for (let c = from + d; cols.includes(c); c += d) if (!isLocked(S.row, c)) return c;
+  return -1;
+}
+function firstOpen(r, s) {
+  const cols = segCols(r, s);
+  return cols.find(c => !isLocked(r, c) && !S.typed[r][c - X(r)]) ?? cols.find(c => !isLocked(r, c)) ?? cols[0];
+}
+function goToNext() { // the rest of this word first, then the first unsolved piece from the top down
+  const k = P[S.row].segs.findIndex((_, i) => !segSolved(S.row, i));
+  if (k >= 0) { S.seg = k; S.cur = firstOpen(S.row, k); return; }
+  for (const r of [...P.keys()].slice(1).concat(0)) for (let s = 0; s < P[r].segs.length; s++)
+    if (!segSolved(r, s)) { S.row = r; S.seg = s; S.cur = firstOpen(r, s); return; }
+}
+
+function type(ch) {
+  if (!playing() || busy || segSolved(S.row, S.seg)) return;
+  S.started = true;
+  let c = S.cur;
+  if (isLocked(S.row, c)) { c = nextOpen(c); if (c < 0) return; }
+  S.typed[S.row][c - X(S.row)] = ch;
+  const n = nextOpen(c);
+  S.cur = n >= 0 ? n : c;
+  if (n < 0) {   // end of this half: carry on into the next unsolved half of the same word
+    const k = P[S.row].segs.findIndex((_, i) => i > S.seg && !segSolved(S.row, i));
+    if (k >= 0) { S.seg = k; S.cur = firstOpen(S.row, k); }
+  }
+  render(); save();
+}
+function back() {
+  if (!playing() || busy) return;
+  const r = S.row, c = S.cur;
+  if (!isLocked(r, c) && S.typed[r][c - X(r)]) S.typed[r][c - X(r)] = "";
+  else {
+    const p = nextOpen(c, -1);
+    if (p >= 0) { S.typed[r][p - X(r)] = ""; S.cur = p; }
+    else {   // start of a half: step back into the previous unsolved half
+      const k = P[r].segs.map((_, i) => i).filter(i => i < S.seg && !segSolved(r, i)).pop();
+      if (k !== undefined) {
+        const open = segCols(r, k).filter(cc => !isLocked(r, cc)), q = open[open.length - 1];
+        S.seg = k; S.cur = q; S.typed[r][q - X(r)] = "";
+      }
+    }
+  }
+  render(); save();
+}
+function move(d) { const c = S.cur + d; if (colsOf(S.row).includes(c)) select(S.row, c); }
+function moveRow(d) {
+  if (P[S.row].side) return move(d);
+  const r = S.row + d; if (r < 0 || r >= P.length) return;
+  const cols = colsOf(r);
+  select(r, Math.min(Math.max(S.cur, cols[0]), cols[cols.length - 1]));
+}
+
+function check() {
+  if (!playing() || busy) return;
+  const r = S.row, shown = c => isLocked(r, c) ? letterAt(r, c) : S.typed[r][c - X(r)];
+  if (!segCols(r, S.seg).every(shown)) {
+    const k = P[r].segs.findIndex((_, i) => !segSolved(r, i) && segCols(r, i).every(shown));
+    if (k >= 0) { S.seg = k; S.cur = firstOpen(r, k); }
+  }
+  const s = S.seg, cols = segCols(r, s), word = P[r].segs[s].word;
+  if (segSolved(r, s)) return;
+  if (cols.some(c => !shown(c))) { toast(`Fill in all ${cols.length} letters first`); return; }
+  const guess = cols.map(shown).join("");
+  if (guess === word) {
+    const newly = cols.filter(c => !isLocked(r, c));
+    newly.forEach(c => { S.locked[r][c - X(r)] = true; });
+    S.log.push("c");
+    sfx("good");
+    if (isSpecial(r)) {   // cracking a special word sends all its letters through the board
+      if (r === 0) S.cracked = true; else S.crackedSide = true;
+      blast(); toast(`${W(r)} cracked!`);
+      return r === 0 ? drop(r, cols) : sweep(r);
+    }
+    drop(r, newly);
+  } else {
+    S.misses++; S.log.push("x");
+    sfx("bad");
+    cols.filter(c => !isLocked(r, c)).forEach(c => { const t = tiles[r][c]; t.classList.remove("wrong"); void t.offsetWidth; t.classList.add("wrong"); });
+    if (S.misses >= LIVES()) { setTimeout(lose, 450); return; }
+    const left = LIVES() - S.misses;
+    toast(`Not ${guess}. ${left} ${left === 1 ? "life" : "lives"} left`);
+    busy = true; save();
+    setTimeout(() => {
+      busy = false;
+      cols.forEach(c => { if (!isLocked(r, c)) S.typed[r][c - X(r)] = ""; });
+      S.cur = firstOpen(r, s);
+      render(); save();
+    }, 450);
+  }
+}
+
+// Stuck: spend a life to lock in the correct letter at the cursor, and it falls like any other
+function peek() {
+  if (!playing() || busy) return;
+  const r = S.row, c = S.cur;
+  if (isSpecial(r)) { toast("These letters only come from the bar"); return; }
+  if (isLocked(r, c)) { toast("That letter is already locked in"); return; }
+  if (S.misses >= LIVES() - 1) { toast("That would cost your last life"); return; }
+  S.locked[r][c - X(r)] = true; S.misses++; S.log.push("h");
+  sfx("good");
+  drop(r, [c]);
+}
+
+/* ---------- falling letters ---------- */
+// Every newly locked letter falls down its column. It sticks in each word below where it fits.
+function drop(r, cols) {
+  const landings = cols.map(c => {
+    const hits = [];
+    for (let j = r + 1; j < P.length; j++) {
+      if (P[j].y > P[r].y && colsOf(j).includes(c) && letterAt(j, c) === letterAt(r, c) && !isLocked(j, c)) {
+        S.locked[j][c - X(j)] = true; pending.add(cellKey(j, c)); hits.push(j);
+      }
+    }
+    return { c, hits };
+  });
+  if (!allSolved()) { if (segSolved(S.row, S.seg)) goToNext(); else S.cur = firstOpen(S.row, S.seg); }
+  save();
+  busy = true; render();
+  if (calm()) { pending.clear(); return settle(); }
+
+  const box = $("board").getBoundingClientRect();
+  const rowTop = j => tiles[j][X(j)].getBoundingClientRect().top - box.top;
+  const end = box.height + 4, last = [];
+  landings.forEach(({ c, hits }, n) => {
+    const src = tiles[r][c].getBoundingClientRect();
+    const y0 = src.top - box.top, dist = end - y0;
+    const T = 300 + dist * 1.1, wait = n * 70;
+    const f = document.createElement("div");
+    f.className = "faller heat"; paint(f, r); f.textContent = letterAt(r, c);
+    f.style.left = (src.left - box.left) + "px"; f.style.top = y0 + "px";
+    $("board").appendChild(f);
+    const a = f.animate(
+      [{ transform: "translateY(0)", easing: "cubic-bezier(.33,0,.67,.33)" }, { transform: `translateY(${dist}px)` }],
+      { duration: T, delay: wait, fill: "both" });
+    a.onfinish = () => f.remove();
+    last.push(a.finished.catch(() => {}));
+    hits.forEach((j, h) => {
+      // quadratic ease-in: distance d is reached at T * sqrt(d / dist)
+      const at = wait + T * Math.sqrt((rowTop(j) - y0) / dist);
+      const token = idx;
+      setTimeout(() => {
+        if (token !== idx) return;
+        pending.delete(cellKey(j, c));
+        render();
+        const t = tiles[j][c]; t.classList.remove("land"); void t.offsetWidth; t.classList.add("land");
+        sfx("tick", h);
+      }, at);
+    });
+  });
+  const token = idx;
+  Promise.all(last).then(() => { if (token === idx) settle(); });
+}
+
+// The side word's rare trick: each letter shoots across its row and sticks wherever it fits
+function sweep(r) {
+  const hits = [];
+  colsOf(r).forEach((c, j) => {
+    const ch = letterAt(r, c);
+    P.forEach((p, k) => {
+      if (isSpecial(k) || p.y !== j + 1) return;
+      colsOf(k).forEach(cc => {
+        if (letterAt(k, cc) === ch && !isLocked(k, cc)) { S.locked[k][cc - X(k)] = true; pending.add(cellKey(k, cc)); hits.push({ j, k, cc }); }
+      });
+    });
+  });
+  if (!allSolved()) goToNext();
+  save();
+  busy = true; render();
+  if (calm()) { pending.clear(); return settle(); }
+
+  const board = $("board"), box = board.getBoundingClientRect(), token = idx, runs = [];
+  colsOf(r).forEach((c, j) => {
+    const k = P.findIndex((p, n) => !isSpecial(n) && p.y === j + 1);
+    const top = tiles[k][X(k)].getBoundingClientRect().top - box.top, t = tiles[k][X(k)].getBoundingClientRect().width;
+    const f = document.createElement("div");
+    f.className = "faller heat"; paint(f, r); f.textContent = letterAt(r, c);
+    f.style.left = -t + "px"; f.style.top = top + "px";
+    board.appendChild(f);
+    const T = 560, wait = j * 55, dist = box.width + t * 2;
+    const a = f.animate([{ transform: "translateX(0)" }, { transform: `translateX(${dist}px)` }], { duration: T, delay: wait, fill: "both", easing: "linear" });
+    a.onfinish = () => f.remove();
+    runs.push(a.finished.catch(() => {}));
+    hits.filter(h => h.j === j).forEach(h => {
+      const x = tiles[h.k][h.cc].getBoundingClientRect().left - box.left + t;
+      setTimeout(() => {
+        if (token !== idx) return;
+        pending.delete(cellKey(h.k, h.cc));
+        render();
+        const el = tiles[h.k][h.cc]; el.classList.remove("land"); void el.offsetWidth; el.classList.add("land");
+        sfx("tick", j % 5);
+      }, wait + T * x / dist);
+    });
+  });
+  Promise.all(runs).then(() => { if (token === idx) settle(); });
+}
+
+function settle() {
+  pending.clear(); busy = false;
+  // every finished word pays out and flashes; each full bar stamps a letter
+  let gain = 0, combo = null;
+  P.forEach((_, r) => {
+    if (rowSolved(r) && !S.paid[r]) {
+      S.paid[r] = true; gain += worth(r);
+      if (isCompound(r)) { combo = r; flash(r, hotCells, 1300); } else flash(r);
+    }
+  });
+  S.score += gain;
+  if (combo !== null) { toast(`Compound! ${W(combo)} +${gain}`); sfx("win"); }
+  else if (gain) toast(`+${gain} points`);
+  // each full bar stamps both special words at once
+  const stamped = stampUp();
+  if (allSolved()) return win();
+  if (S.cracked && S.crackedSide && S.colBase == null) { S.colBase = earned(); S.cols = 0; }   // bars count from here
+  render(); save();
+  if (stamped.length) {
+    if (combo === null) { sfx("win"); toast("New letters stamped"); }
+    stamped.forEach(t => { t.classList.remove("land"); void t.offsetWidth; t.classList.add("land"); });
+  }
+  if (S.colBase != null && earned() - S.colBase > S.cols) fillCol();
+}
+
+// With both special words cracked, a full bar fills the column with the fewest letters in it
+function fillCol() {
+  const count = new Map();   // column -> [filled, open]
+  P.forEach((_, r) => { if (!isSpecial(r)) colsOf(r).forEach(c => { const e = count.get(c) || [0, 0]; e[isLocked(r, c) ? 0 : 1]++; count.set(c, e); }); });
+  let best = null;
+  count.forEach(([f, o], c) => { if (o && (!best || f < best.f || (f === best.f && o > best.o))) best = { c, f, o }; });
+  if (!best) return;
+  S.cols++;
+  const c = best.c, rows = P.map((_, r) => r).filter(r => !isSpecial(r) && colsOf(r).includes(c) && !isLocked(r, c));
+  rows.forEach(r => { S.locked[r][c - X(r)] = true; pending.add(cellKey(r, c)); });
+  if (!allSolved()) { if (segSolved(S.row, S.seg)) goToNext(); else S.cur = firstOpen(S.row, S.seg); }
+  save(); busy = true; render();
+  toast(`Column drop! ${rows.length} ${rows.length === 1 ? "letter" : "letters"}`); sfx("win");
+  if (calm()) { pending.clear(); return settle(); }
+  // a mystery block pops up at the top of the column, flickers through symbols, then sinks slowly and fills every gap
+  const board = $("board"), box = board.getBoundingClientRect(), token = idx;
+  const any = P.findIndex((p, r) => !isSpecial(r) && colsOf(r).includes(c));
+  const ref = (colsOf(0).includes(c) ? tiles[0][c] : tiles[any][c]).getBoundingClientRect();
+  const y0 = ref.top - box.top, x0 = ref.left - box.left, end = box.height + 4, dist = end - y0;
+  const f = document.createElement("div");
+  f.className = "faller heat mystery"; paint(f, 0); f.textContent = "?";
+  f.style.left = x0 + "px"; f.style.top = y0 + "px";
+  board.appendChild(f);
+  const marks = ["?", "!", "#", "*", "@", "&", "%", "$", "+"];
+  let m = 0;
+  const spin = setInterval(() => { f.textContent = marks[++m % marks.length]; if (m % 3 === 0) sfx("tick", m % 5); }, 90);
+  const HOLD = 1500, T = 600 + dist * 4.2;
+  setTimeout(() => {
+    clearInterval(spin);
+    if (token !== idx) return f.remove();
+    f.classList.remove("mystery"); f.textContent = "!";
+    const beam = document.createElement("div"); beam.className = "colbeam";
+    beam.style.left = x0 + "px"; beam.style.width = ref.width + "px"; beam.style.top = y0 + "px"; beam.style.bottom = "auto"; beam.style.height = dist + "px";
+    board.insertBefore(beam, f);
+    beam.animate([{ transform: "scaleY(0)", opacity: 1 }, { transform: "scaleY(1)", opacity: 1, offset: .92 }, { transform: "scaleY(1)", opacity: 0 }],
+      { duration: T + 300, easing: "linear", fill: "both" }).onfinish = () => beam.remove();
+    beam.style.transformOrigin = "top";
+    f.animate([{ transform: "translateY(0)" }, { transform: `translateY(${dist}px)` }], { duration: T, easing: "linear", fill: "both" }).onfinish = () => f.remove();
+    rows.forEach((r, n) => {
+      const top = tiles[r][c].getBoundingClientRect().top - box.top;
+      setTimeout(() => {
+        if (token !== idx) return;
+        pending.delete(cellKey(r, c)); render();
+        const t = tiles[r][c]; t.classList.remove("land"); void t.offsetWidth; t.classList.add("land"); lick(t);
+        sfx("tick", n % 5);
+      }, T * Math.max(0, top - y0) / dist);
+    });
+    setTimeout(() => { if (token === idx) settle(); }, T + 350);
+  }, HOLD);
+}
+
+// A solved word lights up for a moment, letter by letter
+function flash(r, cells = litCells, hold = 1150) {
+  const token = idx;
+  colsOf(r).forEach((c, n) => {
+    const k = cellKey(r, c); cells.add(k);
+    tiles[r][c].style.animationDelay = n * 35 + "ms";
+    setTimeout(() => {
+      if (token !== idx) return;
+      cells.delete(k); tiles[r][c].style.animationDelay = ""; render();
+    }, hold + n * 35);
+  });
+}
+
+function win() {
+  S.status = "won"; save(); render(); sfx("win");
+  setTimeout(showResult, 1400);
+}
+function lose() {
+  S.status = "lost"; save(); render(); sfx("lose");
+  setTimeout(showResult, 1100);
+}
+
+let giveUpArmed = null;
+function giveUp() {
+  if (!playing() || busy) return;
+  if (!giveUpArmed) {
+    $("giveUpBtn").textContent = "Tap again to give up";
+    giveUpArmed = setTimeout(() => { giveUpArmed = null; $("giveUpBtn").textContent = "Give up"; }, 3000);
+    return;
+  }
+  clearTimeout(giveUpArmed); giveUpArmed = null; $("giveUpBtn").textContent = "Give up";
+  lose();
+}
+
+/* ---------- fire ---------- */
+// Cracking the top or side word sets the whole screen on fire for 10 seconds
+const fx = $("fx"), fxc = fx.getContext("2d");
+const flame = document.createElement("canvas"); flame.width = flame.height = 64;
+{ const g = flame.getContext("2d"), r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, "rgba(255,190,120,1)"); r.addColorStop(.35, "rgba(255,90,20,.7)"); r.addColorStop(1, "rgba(160,10,0,0)");
+  g.fillStyle = r; g.fillRect(0, 0, 64, 64); }
+let sparks = [], burning = false, fireUntil = 0, fireTimer;
+const FIRE_MS = (CFG.fireSeconds || 10) * 1000;
+function setHeat() {
+  const lvl = playing() && Date.now() < fireUntil ? 2 : 0;
+  document.documentElement.dataset.heat = lvl;
+  if (lvl && !burning && !calm()) { burning = true; requestAnimationFrame(burn); }
+}
+function blast() {
+  fireUntil = Date.now() + FIRE_MS;
+  clearTimeout(fireTimer); fireTimer = setTimeout(setHeat, FIRE_MS + 50);
+  document.body.classList.remove("blast"); void document.body.offsetWidth; document.body.classList.add("blast");
+  sfx("blast");
+  if (calm()) return;
+  const w = innerWidth, h = innerHeight;
+  for (let n = 0; n < 340; n++) sparks.push({ x: Math.random() * w, y: h + Math.random() * 60, vx: (Math.random() - .5) * 5, vy: -(6 + Math.random() * 15), r: 40 + Math.random() * 90, life: 1, fade: .012 + Math.random() * .014 });
+  setHeat();
+}
+
+// A freshly stamped letter gets a little fire of its own
+const fx2 = $("fx2"), fy = fx2.getContext("2d");
+let licks = [], fires = [], licking = false;
+function lick(el) {
+  if (calm()) return;
+  const a = el.getBoundingClientRect();
+  fires.push({ l: a.left, r: a.right, t: a.top, b: a.bottom, end: performance.now() + 1500 });
+  if (!licking) { licking = true; requestAnimationFrame(lickLoop); }
+}
+function lickLoop(now) {
+  const w = innerWidth, h = innerHeight;
+  if (fx2.width !== w || fx2.height !== h) { fx2.width = w; fx2.height = h; }
+  fy.clearRect(0, 0, w, h); fy.globalCompositeOperation = "lighter";
+  fires = fires.filter(f => f.end > now);
+  fires.forEach(f => {
+    for (let n = 0; n < 4; n++) {
+      const edge = Math.random() < .75;
+      licks.push({ x: edge ? f.l + Math.random() * (f.r - f.l) : Math.random() < .5 ? f.l : f.r, y: edge ? f.b + 2 : f.t + Math.random() * (f.b - f.t),
+        vx: (Math.random() - .5) * .8, vy: -(.8 + Math.random() * 1.8), r: 5 + Math.random() * 8, life: 1, fade: .026 + Math.random() * .03 });
+    }
+  });
+  licks = licks.filter(p => p.life > 0);
+  licks.forEach(p => {
+    p.x += p.vx; p.y += p.vy; p.life -= p.fade;
+    const d = p.r * (.4 + p.life * .8);
+    fy.globalAlpha = Math.max(0, p.life) * .6;
+    fy.drawImage(flame, p.x - d, p.y - d, d * 2, d * 2);
+  });
+  if (!fires.length && !licks.length) { licking = false; fy.clearRect(0, 0, w, h); return; }
+  requestAnimationFrame(lickLoop);
+}
+
+function burn() {
+  const lvl = +document.documentElement.dataset.heat, w = innerWidth, h = innerHeight;
+  if (fx.width !== w || fx.height !== h) { fx.width = w; fx.height = h; }
+  fxc.clearRect(0, 0, w, h); fxc.globalCompositeOperation = "lighter";
+  for (let n = 0; n < (lvl === 2 ? 16 : lvl ? 3 : 0); n++) {
+    const side = lvl === 2 && Math.random() < .3;
+    sparks.push({ x: side ? (Math.random() < .5 ? 0 : w) : Math.random() * w, y: side ? Math.random() * h : h + 12,
+      vx: (Math.random() - .5) * 1.4, vy: -(1.6 + Math.random() * (lvl === 2 ? 4.4 : 2.4)), r: lvl === 2 ? 22 + Math.random() * 44 : 5 + Math.random() * 9, life: 1, fade: .011 + Math.random() * .016 });
+  }
+  sparks = sparks.filter(p => p.life > 0);
+  sparks.forEach(p => {
+    p.x += p.vx + Math.sin(p.y / 26) * .5; p.y += p.vy; p.life -= p.fade;
+    const d = p.r * (.45 + p.life * .75);
+    fxc.globalAlpha = Math.max(0, p.life) * .45;
+    fxc.drawImage(flame, p.x - d, p.y - d, d * 2, d * 2);
+  });
+  if (!lvl && !sparks.length) { burning = false; fxc.clearRect(0, 0, w, h); return; }
+  requestAnimationFrame(burn);
+}
+
+/* ---------- timer ---------- */
+// counts from your first tap or keypress, and pauses while a window is open or the page is hidden
+const clock = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+setInterval(() => {
+  if (!S || !playing() || !S.started || document.hidden || anyModal()) return;
+  S.time++; $("timer").textContent = clock(S.time);
+  if (S.time % 5 === 0) save();
+}, 1000);
+
+/* ---------- results ---------- */
+function shareText() {
+  const marks = S.log.map(l => ({ c: "🟩", x: "⬛", h: "💡" }[l])).join("");
+  return `Cascade ${idx + 1}\n${marks}\n${S.status === "won" ? `Board cleared in ${clock(S.time)} · ${S.score} points · ${LIVES() - S.misses} ${LIVES() - S.misses === 1 ? "life" : "lives"} left` : `Stumped at ${S.score} points`}`;
+}
+function showResult() {
+  $("resTitle").textContent = S.status === "lost" ? "Out of lives" : "Board cleared";
+  $("resPw").textContent = `${PW} · ${W(P.length - 1)}`;
+  $("resScore").textContent = `${S.score} points · ${clock(S.time)}`;
+  $("answers").innerHTML = P.map((p, r) => `<b class="heat" style="--l:${light(r)}%">${p.w}</b>`).join("");
+  $("sharePre").textContent = shareText();
+  $("nextBtn").hidden = idx === PUZZLES.length - 1;
+  $("resultModal").hidden = false;
+}
+
+let toastT;
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 1700);
+}
+
+/* ---------- sound ---------- */
+let muted = !!store.get("plumb-muted"), ac;
+function tone(f, at, dur, type = "sine", vol = .1) {
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.value = f;
+  g.gain.setValueAtTime(0, ac.currentTime + at);
+  g.gain.linearRampToValueAtTime(vol, ac.currentTime + at + .01);
+  g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + at + dur);
+  o.connect(g).connect(ac.destination); o.start(ac.currentTime + at); o.stop(ac.currentTime + at + dur + .05);
+}
+function sfx(kind, step = 0) {
+  if (muted) return;
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === "suspended") ac.resume();
+    if (kind === "good") tone(660, 0, .15);
+    if (kind === "tick") tone(520 + step * 120, 0, .1, "triangle", .07);
+    if (kind === "bad") tone(170, 0, .22, "square", .05);
+    if (kind === "blast") { tone(70, 0, 1.1, "sawtooth", .12); [392, 523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, .1 + i * .08, .5, "triangle", .09)); }
+    if (kind === "win") [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .11, .35, "triangle", .09));
+    if (kind === "lose") { tone(330, 0, .3, "triangle", .08); tone(247, .22, .5, "triangle", .08); }
+  } catch {}
+}
+function renderSound() {
+  $("soundIcon").innerHTML = muted
+    ? '<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9l4 6M21 9l-4 6"/>'
+    : '<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>';
+  $("soundBtn").setAttribute("aria-label", muted ? "Sound off" : "Sound on");
+}
+
+/* ---------- keyboard ---------- */
+function keyBtn(label, cls, fn, aria) {
+  const b = document.createElement("button");
+  b.textContent = label; if (cls) b.className = cls; if (aria) b.setAttribute("aria-label", aria);
+  b.addEventListener("click", () => { fn(); b.blur(); });
+  return b;
+}
+["qwertyuiop", "asdfghjkl", "zxcvbnm"].forEach((r, ri) => {
+  const row = document.createElement("div"); row.className = "row";
+  const spacer = () => Object.assign(document.createElement("div"), { className: "spacer" });
+  if (ri === 1) row.appendChild(spacer());
+  if (ri === 2) row.appendChild(keyBtn("Enter", "wide", check));
+  [...r].forEach(ch => row.appendChild(keyBtn(ch, "", () => type(ch.toUpperCase()))));
+  if (ri === 1) row.appendChild(spacer());
+  if (ri === 2) row.appendChild(keyBtn("⌫", "wide", back, "Delete"));
+  $("kb").appendChild(row);
+});
+const anyModal = () => [...document.querySelectorAll(".modal")].some(m => !m.hidden);
+document.addEventListener("keydown", e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (anyModal()) { if (e.key === "Escape") closeModals(); return; }
+  if (/^[a-z]$/i.test(e.key)) { type(e.key.toUpperCase()); e.preventDefault(); }
+  else if (e.key === "Backspace") { back(); e.preventDefault(); }
+  else if (e.key === "Enter") { check(); e.preventDefault(); }
+  else if (e.key === "ArrowLeft") move(-1);
+  else if (e.key === "ArrowRight") move(1);
+  else if (e.key === "ArrowUp") { moveRow(-1); e.preventDefault(); }
+  else if (e.key === "ArrowDown") { moveRow(1); e.preventDefault(); }
+});
+
+/* ---------- wiring ---------- */
+$("checkBtn").addEventListener("click", check);
+$("letterBtn").addEventListener("click", peek);
+$("giveUpBtn").addEventListener("click", giveUp);
+$("prev").addEventListener("click", () => load(idx - 1));
+$("next").addEventListener("click", () => load(idx + 1));
+$("helpBtn").addEventListener("click", () => $("helpModal").hidden = false);
+$("soundBtn").addEventListener("click", () => { muted = !muted; store.set("plumb-muted", muted); renderSound(); });
+$("nextBtn").addEventListener("click", () => { closeModals(); load(idx + 1); });
+$("shareBtn").addEventListener("click", () => {
+  navigator.clipboard.writeText(shareText()).then(() => toast("Copied")).catch(() => {
+    const r = document.createRange(); r.selectNodeContents($("sharePre"));
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    toast("Result selected. Copy it to share");
+  });
+});
+function closeModals() { document.querySelectorAll(".modal").forEach(m => m.hidden = true); }
+document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", closeModals));
+document.querySelectorAll(".modal").forEach(m => m.addEventListener("click", e => { if (e.target === m) closeModals(); }));
+
+function start(data) {
+  renderSound();
+  load(typeof data.idx === "number" ? data.idx : 0);
+  if (!store.get("plumb-seen")) { $("helpModal").hidden = false; store.set("plumb-seen", 1); }
+}
+window.claude?.hot?.snapshot?.(() => ({ idx }));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
+
+</html>
