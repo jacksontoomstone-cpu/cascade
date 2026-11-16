@@ -1399,7 +1399,9 @@ function drainTank(stamped, power = false) {
   dripsDone().then(() => {
   if (token !== idx) return finishDrain();
   fill.style.height = "100%";   // top it off first
-  const T0 = 1400, DRAIN = viaDam ? 1500 : 2700;
+  // with the pump showing, water leaves the pond and keeps one steady speed all the way: inlet, riser, then out the hoses
+  const T0 = 1400, inMs = viaDam ? pxLen("wIn") / FLOW : 0, upMs = viaDam ? pxLen("wRise") / FLOW : 0;
+  const DRAIN = viaDam ? inMs + upMs : 2700;
   setTimeout(() => {
     if (token !== idx) return finishDrain();
     fill.classList.add("drain"); fill.style.height = "0%";
@@ -1409,8 +1411,8 @@ function drainTank(stamped, power = false) {
     // that lead somewhere: to the vial of each letter being placed, or up to the power-up
     const toTop = stamped.some(x => x.r === 0), toSide = stamped.some(x => x.r !== 0);
     const go = (ms, fn) => setTimeout(() => { if (token === idx) fn(); }, ms);
-    $("wIn").classList.add("on"); go(450, () => $("turbine").classList.add("spin"));
-    go(650, () => $("wRise").classList.add("on"));
+    flowOn("wIn", inMs); go(inMs * .6, () => $("turbine").classList.add("spin"));
+    go(inMs, () => flowOn("wRise", upMs));
   }, T0);
   setTimeout(() => {
     $("whirl").hidden = true; fill.classList.remove("drain");
@@ -1447,6 +1449,9 @@ function drainTank(stamped, power = false) {
   }, T0 + DRAIN);
   });
 }
+const FLOW = .95;   // water speed through every pipe and hose, in pixels per millisecond
+const pxLen = id => { const el = $(id), b = el.getBBox(), k = $("dam").getBoundingClientRect().width / STW; return Math.max(b.width, b.height) * k; };
+function flowOn(id, ms) { const el = $(id); el.style.transition = `stroke-dashoffset ${Math.max(60, ms)}ms linear`; el.classList.add("on"); }
 // The pump reaches out: a hose grows from the vial to the letter's tile, clamps on, pumps the letter in, then snaps back
 function hose({ t, key, r }, token) {
   return new Promise(done => {
@@ -1470,8 +1475,8 @@ function hose({ t, key, r }, token) {
     document.body.appendChild(svg);
     const dash = (el, from, to, ms, ease) => el.animate([{ strokeDashoffset: from }, { strokeDashoffset: to }], { duration: ms, easing: ease, fill: "forwards" });
     water.style.strokeDasharray = "1 1"; water.style.strokeDashoffset = 1;
-    const OUT = 530;   // how long the stream takes to reach the tile
-    dash(water, 1, 0, OUT, "cubic-bezier(.2,.7,.3,1)");
+    const OUT = water.getTotalLength() / FLOW;   // same steady speed the water had coming out of the pond
+    dash(water, 1, 0, OUT, "linear");
     setTimeout(() => {
       if (token !== idx) { svg.remove(); return done(); }
       flow.style.opacity = 1;
