@@ -13,29 +13,31 @@
   --hue: var(--base-hue);
   --base-sk: 1;   /* saturation scale: 1 for colors, near 0 for silver */
   --sk: var(--base-sk);
-  --a: hsl(var(--hue) calc(95% * var(--sk)) 66%);
-  --ad: hsl(var(--hue) calc(85% * var(--sk)) 34%);
-  --cab: hsl(var(--hue) calc(60% * var(--sk)) 7%);
-  --screen: hsl(var(--hue) calc(70% * var(--sk)) 4%);
-  --bezel: hsl(var(--hue) calc(45% * var(--sk)) 22%);
-  --bezel-l: hsl(var(--hue) calc(45% * var(--sk)) 36%);
-  --bezel-d: hsl(var(--hue) calc(50% * var(--sk)) 12%);
-  --rod: hsl(var(--hue) calc(60% * var(--sk)) 16%);
+  --lift: var(--base-lift, 0%);     /* brightens the dark panels (silver) */
+  --lift-a: var(--base-lift-a, 0%); /* brightens the glow color (silver) */
+  --a: hsl(var(--hue) calc(95% * var(--sk)) calc(66% + var(--lift-a)));
+  --ad: hsl(var(--hue) calc(85% * var(--sk)) calc(34% + var(--lift)));
+  --cab: hsl(var(--hue) calc(60% * var(--sk)) calc(7% + var(--lift)));
+  --screen: hsl(var(--hue) calc(70% * var(--sk)) calc(4% + var(--lift)));
+  --bezel: hsl(var(--hue) calc(45% * var(--sk)) calc(22% + var(--lift)));
+  --bezel-l: hsl(var(--hue) calc(45% * var(--sk)) calc(36% + var(--lift)));
+  --bezel-d: hsl(var(--hue) calc(50% * var(--sk)) calc(12% + var(--lift)));
+  --rod: hsl(var(--hue) calc(60% * var(--sk)) calc(16% + var(--lift)));
   --white: #f2f7f8;
-  --muted: hsl(var(--hue) calc(20% * var(--sk)) 68%);
+  --muted: hsl(var(--hue) calc(20% * var(--sk)) calc(68% + var(--lift-a)));
   --bad: #ff6a5a;
   --scrim: rgba(3,8,12,.8);
   --pixel: "Press Start 2P", "Courier New", monospace;
   --term: "VT323", "Courier New", monospace;
   color-scheme: dark;
 }
-:root[data-heat="1"], :root[data-heat="2"] { --hue: 14; --sk: 1; }
+:root[data-heat="1"], :root[data-heat="2"] { --hue: 14; --sk: 1; --lift: 0%; --lift-a: 0%; }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { height: 100%; }
 body { color: var(--white); font-family: var(--term); font-size: 20px; overflow: hidden;
-  background: radial-gradient(70% 60% at 50% 40%, hsl(var(--hue) calc(70% * var(--sk)) 14%), transparent 75%), var(--cab); transition: background .4s; }
+  background: radial-gradient(70% 60% at 50% 40%, hsl(var(--hue) calc(70% * var(--sk)) calc(14% + var(--lift))), transparent 75%), var(--cab); transition: background .4s; }
 /* fire vignette: the edges of the window glow once the password is cracked */
 body::after { content: ""; position: fixed; inset: 0; z-index: 14; pointer-events: none; opacity: 0; transition: opacity .4s;
   box-shadow: inset 0 0 70px 10px hsl(16 100% 52%); }
@@ -62,7 +64,7 @@ button:focus-visible { outline: 3px dashed var(--a); outline-offset: 2px; }
 }
 
 header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-block: 10px 13px; position: relative; }
-header::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: linear-gradient(90deg, hsl(var(--hue) calc(95% * var(--sk)) 72%) 25%, hsl(var(--hue) calc(90% * var(--sk)) 56%) 25% 50%, hsl(var(--hue) calc(85% * var(--sk)) 42%) 50% 75%, hsl(var(--hue) calc(80% * var(--sk)) 28%) 75%); }
+header::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: linear-gradient(90deg, hsl(var(--hue) calc(95% * var(--sk)) calc(72% + var(--lift-a))) 25%, hsl(var(--hue) calc(90% * var(--sk)) calc(56% + var(--lift-a))) 25% 50%, hsl(var(--hue) calc(85% * var(--sk)) calc(42% + var(--lift-a))) 50% 75%, hsl(var(--hue) calc(80% * var(--sk)) calc(28% + var(--lift))) 75%); }
 header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin: 0; text-transform: uppercase; color: var(--a); text-shadow: 3px 3px 0 var(--ad); }
 .nav { display: flex; align-items: center; white-space: nowrap; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; }
 .nav button { border: none; background: transparent; font-size: .8rem; font-family: var(--pixel); cursor: pointer; padding: 4px 5px; color: var(--a); }
@@ -120,11 +122,11 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
   display: flex; justify-content: center; align-items: flex-start; gap: 6px;
 }
 /* the side word sits in its own little screen, set apart from the board */
-.sidebox { flex: none; margin-block: 7px; padding: 7px 3px; background: var(--screen); border-radius: 4px; box-shadow: 0 0 0 3px var(--bezel), 0 0 16px 3px hsl(var(--hue) calc(95% * var(--sk)) 50% / .3); }
+.sidebox { flex: none; margin-block: 7px; padding: 7px 3px; background: var(--screen); border-radius: 4px; box-shadow: 0 0 0 3px var(--bezel), 0 0 16px 3px hsl(var(--hue) calc(95% * var(--sk)) calc(50% + var(--lift-a)) / .3); }
 .sidegrid { display: grid; grid-template-columns: var(--t); grid-template-rows: repeat(var(--r), var(--h)); gap: var(--rg); }
 .board {
   flex: none; position: relative; overflow: hidden; margin: 7px; background: var(--screen); border-radius: 6px;
-  box-shadow: 0 0 0 5px var(--bezel), 0 0 0 7px var(--bezel-d), 0 0 26px 8px hsl(var(--hue) calc(95% * var(--sk)) 50% / .35);
+  box-shadow: 0 0 0 5px var(--bezel), 0 0 0 7px var(--bezel-d), 0 0 26px 8px hsl(var(--hue) calc(95% * var(--sk)) calc(50% + var(--lift-a)) / .35);
   transition: box-shadow .3s;
 }
 :root[data-heat="1"] .board, :root[data-heat="2"] .board { box-shadow: 0 0 0 5px var(--bezel), 0 0 0 7px var(--bezel-d), 0 0 46px 16px hsl(14 100% 50% / .7); }
@@ -132,9 +134,9 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
 .board::before {
   content: ""; position: absolute; inset: 0; animation: breathe 5s ease-in-out infinite;
   background:
-    radial-gradient(90% 75% at 50% 112%, hsl(var(--hue) calc(95% * var(--sk)) 50% / .6), transparent 70%),
-    radial-gradient(50% 45% at 50% 0%, hsl(var(--hue) calc(95% * var(--sk)) 60% / .22), transparent 75%),
-    repeating-linear-gradient(0deg, hsl(var(--hue) calc(80% * var(--sk)) 55% / .1) 0 1px, transparent 1px calc(var(--h) + var(--rg)));
+    radial-gradient(90% 75% at 50% 112%, hsl(var(--hue) calc(95% * var(--sk)) calc(50% + var(--lift-a)) / .6), transparent 70%),
+    radial-gradient(50% 45% at 50% 0%, hsl(var(--hue) calc(95% * var(--sk)) calc(60% + var(--lift-a)) / .22), transparent 75%),
+    repeating-linear-gradient(0deg, hsl(var(--hue) calc(80% * var(--sk)) calc(55% + var(--lift-a)) / .1) 0 1px, transparent 1px calc(var(--h) + var(--rg)));
 }
 @keyframes breathe { 50% { opacity: .6; } }
 :root[data-heat="1"] .board::before, :root[data-heat="2"] .board::before { animation-duration: .9s; }
@@ -188,8 +190,8 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
 
 .colbeam {
   position: absolute; top: 0; bottom: 0; z-index: 2; pointer-events: none;
-  background: linear-gradient(180deg, hsl(var(--hue) calc(96% * var(--sk)) 72% / .9), hsl(var(--hue) calc(95% * var(--sk)) 50% / .35) 60%, transparent);
-  box-shadow: 0 0 22px 6px hsl(var(--hue) calc(95% * var(--sk)) 55% / .6);
+  background: linear-gradient(180deg, hsl(var(--hue) calc(96% * var(--sk)) calc(72% + var(--lift-a)) / .9), hsl(var(--hue) calc(95% * var(--sk)) calc(50% + var(--lift-a)) / .35) 60%, transparent);
+  box-shadow: 0 0 22px 6px hsl(var(--hue) calc(95% * var(--sk)) calc(55% + var(--lift-a)) / .6);
 }
 
 .faller.mystery { z-index: 4; animation: mystery .36s steps(2) infinite, mysteryin .25s steps(3); }
@@ -200,7 +202,7 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
 
 /* the points bar: one color, dark to bright */
 .bar { position: relative; flex: none; height: 26px; background: var(--screen); box-shadow: 0 0 0 2px var(--bezel); overflow: hidden; }
-.bar-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, hsl(var(--hue) calc(85% * var(--sk)) 24%), hsl(var(--hue) calc(92% * var(--sk)) 44%), hsl(var(--hue) calc(96% * var(--sk)) 70%)); box-shadow: 0 0 12px hsl(var(--hue) calc(95% * var(--sk)) 60%); transition: width .45s steps(10); }
+.bar-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, hsl(var(--hue) calc(85% * var(--sk)) calc(24% + var(--lift))), hsl(var(--hue) calc(92% * var(--sk)) calc(44% + var(--lift-a))), hsl(var(--hue) calc(96% * var(--sk)) calc(70% + var(--lift-a)))); box-shadow: 0 0 12px hsl(var(--hue) calc(95% * var(--sk)) calc(60% + var(--lift-a))); transition: width .45s steps(10); }
 .bar-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding-inline: 8px; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; text-shadow: 1px 1px 0 var(--screen), -1px -1px 0 var(--screen), 1px -1px 0 var(--screen), -1px 1px 0 var(--screen); }
 .bar-text b { font-weight: 400; }
 
@@ -1012,12 +1014,13 @@ const KA = "cx-a1", A7 = "45eydu";
 const adm = () => store.get(KA) === "a1." + A7;
 const upcoming = () => adm() ? DAILY.filter(i => i !== dailyIdx() && !pastDailies().includes(i)) : [];
 // board colors for Unlimited: the color button steps through these
-const HUES = [["Blue", 198, 1], ["Teal", 172, 1], ["Green", 135, 1], ["Gold", 45, 1], ["Pink", 322, 1], ["Purple", 268, 1], ["Silver", 210, .1]];
+const HUES = [["Blue", 198, 1], ["Teal", 172, 1], ["Green", 135, 1], ["Gold", 45, 1], ["Pink", 322, 1], ["Purple", 268, 1], ["Silver", 212, .3, 15, 22]];
 const KH = "cx-color";
 const hueAt = () => { const n = ok7() ? store.get(KH) : 0; return Number.isInteger(n) && HUES[n] ? n : 0; };
 function applyHue() {
-  const [name, h, k] = HUES[hueAt()], st = document.documentElement.style;
+  const [name, h, k, lift = 0, liftA = 0] = HUES[hueAt()], st = document.documentElement.style;
   st.setProperty("--base-hue", h); st.setProperty("--base-sk", k);
+  st.setProperty("--base-lift", lift + "%"); st.setProperty("--base-lift-a", liftA + "%");
   $("colorBtn").hidden = !ok7(); $("colorBtn").setAttribute("aria-label", `Board color: ${name}`); $("colorBtn").title = name;
 }
 const STAMPS = 6;   // sets the bar size: about this many fills on the old point scale
