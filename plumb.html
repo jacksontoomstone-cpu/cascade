@@ -271,6 +271,9 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 .hose-bore { fill: none; stroke: var(--cab); stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
 .hose-flow { fill: none; stroke: hsl(var(--hue) calc(90% * var(--sk)) calc(84% + var(--lift-a))); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: .03 .05; animation: hoseflow .5s linear infinite; opacity: 0; transition: opacity .15s; }
 @keyframes hoseflow { to { stroke-dashoffset: -.08; } }
+.tilefill { position: fixed; z-index: 24; pointer-events: none; overflow: hidden; }
+.tilefill i { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: linear-gradient(180deg, hsl(var(--hue) calc(92% * var(--sk)) calc(58% + var(--lift-a))), hsl(var(--hue) calc(85% * var(--sk)) calc(36% + var(--lift))));
+  box-shadow: inset 0 2px 0 hsl(var(--hue) calc(90% * var(--sk)) calc(84% + var(--lift-a))), 0 0 10px hsl(var(--hue) calc(92% * var(--sk)) calc(58% + var(--lift-a))); }
 .hose-splash { fill: none; stroke: hsl(var(--hue) calc(90% * var(--sk)) calc(84% + var(--lift-a))); stroke-width: 2; }
 .hose-water { stroke-width: 7 !important; fill: none; stroke: hsl(var(--hue) calc(92% * var(--sk)) calc(58% + var(--lift-a))); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 3px hsl(var(--hue) calc(92% * var(--sk)) calc(58% + var(--lift-a)))); }
 .tile.await { color: transparent !important; text-shadow: none !important; }
@@ -1486,17 +1489,24 @@ function hose({ t, key, r }, token) {
       ring.style.transformBox = "fill-box"; ring.style.transformOrigin = "center";
       ring.animate([{ transform: "scale(.7)", opacity: 1 }, { transform: "scale(4)", opacity: 0 }], { duration: 450, easing: "ease-out", fill: "forwards" });
       sfx("tick", 1);
+      // the tile fills with water from the bottom up, like a rising water level, then the letter appears
+      const tr = t.getBoundingClientRect(), box = document.createElement("div"), lvl = document.createElement("i");
+      box.className = "tilefill"; Object.assign(box.style, { left: tr.left + "px", top: tr.top + "px", width: tr.width + "px", height: tr.height + "px" });
+      box.appendChild(lvl); document.body.appendChild(box);
+      const RISE = Math.max(350, tr.height / FLOW * 4);   // a little slower than the stream, so you can watch it rise
+      lvl.animate([{ height: "0%" }, { height: "100%" }], { duration: RISE, easing: "linear", fill: "forwards" });
       setTimeout(() => {
-        if (token !== idx) { svg.remove(); return done(); }
+        if (token !== idx) { box.remove(); svg.remove(); return done(); }
         slapping.delete(key); render();
         t.classList.remove("slap"); void t.offsetWidth; t.classList.add("slap"); sfx("tick", 4);
-      }, 200);
+        box.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, fill: "forwards" }).onfinish = () => box.remove();
+      }, RISE);
       // a beat to hold, then the stream pulls back into the pump
       setTimeout(() => {
         flow.style.opacity = 0;
         dash(water, 0, 1, 190, "cubic-bezier(.6,0,.9,.4)");
         setTimeout(() => { svg.remove(); done(); }, 210);
-      }, 1000);
+      }, RISE + 450);
     }, OUT);
   });
 }
