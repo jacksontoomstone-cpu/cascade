@@ -4,12 +4,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rubik:wght@500;600;700;800&family=VT323&display=swap">
 <style>
 /* Layout: an 8-bit arcade screen that fills the window. Password across the top of the board, clue and keys beside it on
    wide screens, stacked on phones. One glowing ice-blue that gets darker down the board; cracking the password turns it all to fire. */
 :root {
-  --hue: 198;
+  --base-hue: 198;
+  --hue: var(--base-hue);
   --a: hsl(var(--hue) 95% 66%);
   --ad: hsl(var(--hue) 85% 34%);
   --cab: hsl(var(--hue) 60% 7%);
@@ -74,6 +75,16 @@ header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin
 .pay-note { margin: 0; font-size: 1.25rem; line-height: 1.25; }
 .pay-price { font-family: var(--pixel); font-size: 2.2rem; color: var(--a); margin: 10px 0 2px; text-shadow: 4px 4px 0 var(--ad), 0 0 18px var(--a); }
 .pay-small { margin: 0; font-size: .95rem; color: var(--muted); }
+.sheet .admin-link { margin-top: 6px; font-size: .45rem; opacity: .6; }
+.admin-row { display: flex; gap: 8px; width: 100%; }
+.admin-row input { flex: 1; min-width: 0; border: 3px solid var(--bezel-l); background: var(--cab); color: var(--white); font-family: var(--term); font-size: 1.2rem; padding: 6px 10px; border-radius: 0; }
+.admin-row input:focus { outline: none; border-color: var(--a); }
+.admin-row .btn { padding: 8px 12px; }
+.swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+.swatch-btn { width: 40px; height: 40px; border: none; border-radius: 0; cursor: pointer; background: hsl(var(--h) 95% 60%);
+  box-shadow: inset -4px -4px 0 hsl(var(--h) 85% 34%), inset 4px 4px 0 hsl(var(--h) 95% 82%); }
+.swatch-btn[aria-pressed="true"] { outline: 3px solid var(--white); outline-offset: 3px; }
+.admin-tag { font-family: var(--pixel); font-size: .45rem; color: #04121a; background: var(--a); padding: 3px 6px; vertical-align: middle; margin-left: 8px; }
 .sheet.pay .btn.primary { min-width: 70%; margin-top: 8px; }
 .sheet.pay .btn:disabled { opacity: .55; cursor: default; }
 .sheet .arch-head { margin: 4px 0 0; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; color: var(--muted); }
@@ -278,6 +289,46 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
   .bar { height: 22px; } .btn { padding: 8px 8px; }
 }
 
+/* phones: readability first. Clean bold letters instead of the pixel fonts, no scanlines, slightly softer tiles.
+   The CASCADE logo keeps its pixel font so it still feels like an arcade game. */
+@media (max-width: 859px) {
+  :root { --pixel: "Rubik", system-ui, -apple-system, sans-serif; --term: "Rubik", system-ui, -apple-system, sans-serif; }
+  body { -webkit-font-smoothing: antialiased; }
+  header h1, .sheet.start .start-title, .sheet.pay .pay-title { font-family: "Press Start 2P", monospace; }
+  .nav { font-size: .8rem; font-weight: 700; } .nav button { font-size: 1.15rem; }
+  .timer { font-size: 1rem; font-weight: 700; }
+  .icon-btn.text-btn { font-size: .7rem; font-weight: 700; }
+  .clue .eyebrow { font-size: .72rem; font-weight: 600; letter-spacing: .04em; }
+  .clue .eyebrow b { font-weight: 800; }
+  .swatch { font-size: 1rem; font-weight: 800; border-radius: 4px; }
+  .clue .text { font-size: 1.15rem; font-weight: 600; line-height: 1.2; }
+  .clue .whole { font-size: .95rem; font-weight: 500; line-height: 1.2; }
+  .pw-clue { font-size: .85rem; line-height: 1.25; }
+  .bar-text { font-size: .74rem; font-weight: 700; }
+  .status, .link-btn { font-size: .74rem; font-weight: 600; }
+  .btn { font-size: .76rem; font-weight: 700; padding: 10px 11px; border-radius: 4px; }
+  .toast { font-size: .82rem; font-weight: 700; border-radius: 4px; }
+  .tile, .faller { font-size: calc(var(--t) * .64); font-weight: 700; border-radius: 3px; }
+  .board::after { display: none; }   /* scanlines blur small letters */
+  .sheet h2 { font-size: 1.15rem; font-weight: 800; }
+  .sheet p, .sheet ul { font-size: 1rem; line-height: 1.3; }
+  .start-rules { font-size: 1.1rem; line-height: 1.3; }
+  .pay-lead { font-size: .95rem; } .pay-note { font-size: 1.1rem; } .pay-small { font-size: .85rem; }
+  .pay-price { font-size: 2.4rem; font-weight: 800; }
+  .sheet .arch-head { font-size: .72rem; font-weight: 700; } .arch-grid .btn { font-size: .78rem; }
+  .res-meter span { font-size: 1rem; font-weight: 800; }
+  .res-stats b { font-size: 1.4rem; font-weight: 800; } .res-stats small { font-size: .9rem; }
+  .sheet .close { font-size: 1.3rem; }
+}
+@media (max-width: 419px) {
+  header { gap: 4px; } .nav { font-size: .68rem; } .nav button { font-size: 1rem; padding: 4px 2px; }
+  .timer { font-size: .82rem; } .icon-btn.text-btn { font-size: .6rem; padding: 0 6px; }
+}
+@media (max-width: 359px) {
+  header { gap: 2px; } header h1 { font-size: .56rem; } .icon-btn { width: 25px; height: 25px; } .icons { gap: 3px; }
+  .icon-btn.text-btn { padding: 0 4px; font-size: .56rem; } .nav button { padding: 4px 1px; }
+}
+
 /* wide screens fill the whole window: everything scales with its size */
 @media (min-width: 860px) {
   .app { max-width: none; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
@@ -389,6 +440,11 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
     <button class="btn primary" id="payBtn" disabled>Unlock unlimited</button>
     <p class="pay-small" id="paySoon">Payments coming soon.</p>
     <p class="pay-small" id="payVia" hidden>Secure checkout by Stripe.</p>
+    <button class="link-btn admin-link" id="adminLink">Admin</button>
+    <form class="admin-row" id="adminForm" hidden>
+      <input id="adminCode" type="password" placeholder="Admin code" autocomplete="off" aria-label="Admin code">
+      <button class="btn" type="submit">Enter</button>
+    </form>
   </div>
 </div>
 
@@ -396,6 +452,10 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
   <div class="sheet" role="dialog" aria-labelledby="archTitle">
     <button class="close" data-close aria-label="Close">×</button>
     <h2 id="archTitle">Unlimited</h2>
+    <p class="arch-head">Board color</p>
+    <div class="swatches" id="swatches"></div>
+    <p class="arch-head" id="archNextHead" hidden>Upcoming dailies (admin)</p>
+    <div class="arch-grid" id="archNext" hidden></div>
     <p class="arch-head" id="archPastHead">Past dailies</p>
     <div class="arch-grid" id="archPast"></div>
     <p class="arch-head">Classics</p>
@@ -922,7 +982,7 @@ const LIVES = () => CFG.lives || 5;
 const SAVE = "plumb15-";   // bumped from plumb14- to clear everyone's old progress
 // Players see two boards: the intro, which never changes, and today's daily. Every other board is archived (no way to reach it).
 const INTRO = 18;
-const DAILY_START = "2026-11-17";   // the first day with a daily puzzle
+const DAILY_START = "2026-11-16";   // the first day with a daily puzzle
 const DAILY = [19, 20];             // board for each day from DAILY_START; add one index per new day
 const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const today = () => window.CASCADE_TODAY || dayKey(new Date());   // the player's own calendar day
@@ -943,11 +1003,23 @@ function pastDailies() {
   return DAILY.slice(0, Math.max(0, Math.min(n, DAILY.length))).reverse();   // newest first, never today's or later
 }
 const classics = () => Array.from({ length: INTRO }, (_, i) => i);
-const extras = () => [...pastDailies(), ...classics()];
+const extras = () => [...upcoming(), ...pastDailies(), ...classics()];
 const K7 = "cx-v7";
 // the stored value has to match this code, so typing true or 1 into storage does nothing
-const q7 = () => { let h = 2166136261; for (const ch of "c4sc\u00e4de\u2022v7\u2022" + "2026-11-17") h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return "v7." + (h >>> 0).toString(36); };
-const ok7 = () => store.get(K7) === q7();
+const h7 = t => { let h = 2166136261; for (const ch of "c4sc\u00e4de\u2022" + t) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return (h >>> 0).toString(36); };
+const q7 = () => "v7." + h7("v7\u2022" + "2026-11-17");
+const ok7 = () => store.get(K7) === q7() || adm();
+// admin mode: the code itself never appears here, only its scrambled form
+const KA = "cx-a1", A7 = "45eydu";
+const adm = () => store.get(KA) === "a1." + A7;
+const upcoming = () => adm() ? DAILY.filter(i => i !== dailyIdx() && !pastDailies().includes(i)) : [];
+const HUES = [["Blue", 198], ["Teal", 172], ["Green", 135], ["Gold", 45], ["Pink", 322], ["Purple", 268]];
+const KH = "cx-hue";
+function applyHue() {
+  const h = ok7() ? store.get(KH) : null;
+  if (typeof h === "number") document.documentElement.style.setProperty("--base-hue", h);
+  else document.documentElement.style.removeProperty("--base-hue");
+}
 const STAMPS = 6;   // sets the bar size: about this many fills on the old point scale
 
 const $ = id => document.getElementById(id);
@@ -1023,7 +1095,8 @@ function build() {
   P.forEach((p, r) => colsOf(r).forEach(c => {
     const t = document.createElement("button"); t.className = "tile";
     t.style.gridRow = p.side ? c - 100 + 2 : p.y + 1; t.style.gridColumn = p.side ? 1 : c + 1; paint(t, r);
-    t.addEventListener("click", () => { openKb(); select(r, c); });
+    // a tapped word is already on screen, so tapping never moves or zooms the board
+    t.addEventListener("click", () => { openKb(); if (playing() && !busy) lastFollow = `${r}:${segAt(r, c)}:${c}`; select(r, c); });
     (p.side ? sg : g).appendChild(t); tiles[r][c] = t;
   }));
   zoom = 1; autoZoomed = false; fit(); b.scrollTo(0, 0); lastFollow = "";
@@ -1690,16 +1763,12 @@ kbIn.addEventListener("input", () => {
 kbIn.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); check(); } });
 kbIn.addEventListener("focus", () => { document.documentElement.classList.add("typing"); resetKb(); setTimeout(keyZoom, 60); });
 kbIn.addEventListener("blur", () => { document.documentElement.classList.remove("typing"); setTimeout(keyZoom, 60); });
-// while the keyboard is up there's little room, so zoom the board to readable letters and follow the word;
-// put the keyboard away and it goes back to the whole board
-const READABLE = 26;
+// when the keyboard comes or goes, the board just refits the space it has: no automatic zoom or scrolling.
+// Any zoom you pinched yourself is kept.
 function keyZoom() {
   if (!phone.matches) return;
-  const typing = document.activeElement === kbIn;
+  if (autoZoomed) { zoom = 1; autoZoomed = false; }
   fit();
-  if (typing && baseT * zoom < READABLE) { zoom = READABLE / baseT; autoZoomed = true; fit(); }
-  else if (!typing && autoZoomed) { zoom = 1; autoZoomed = false; fit(); }
-  lastFollow = ""; if (typing) follow();
 }
 // keep the keyboard up when tapping Check, Check letter or another word
 document.querySelectorAll(".ctrl button, #boardwrap").forEach(el => el.addEventListener("mousedown", e => {
@@ -1732,7 +1801,7 @@ $("soundBtn").addEventListener("click", () => { muted = !muted; store.set("plumb
 // once the intro and today's daily are both finished, the paywall comes up ($5 once; payment wiring comes later)
 function paywall(afterDaily = true) {
   if (afterDaily && ok7()) return false;
-  closeModals(); $("payLead").hidden = !afterDaily; $("payModal").hidden = false; return true;
+  closeModals(); $("payLead").hidden = !afterDaily; $("adminForm").hidden = true; $("payModal").hidden = false; return true;
 }
 $("unlimBtn").addEventListener("click", () => ok7() ? openArchive() : paywall(false));
 $("payBtn").addEventListener("click", () => { if (PAY_LINK) location.href = PAY_LINK; });
@@ -1748,9 +1817,20 @@ function openArchive() {
       el.appendChild(b);
     });
   };
-  const past = pastDailies();
-  fill($("archPast"), past); fill($("archOld"), classics());
+  const past = pastDailies(), next = upcoming();
+  fill($("archPast"), past); fill($("archOld"), classics()); fill($("archNext"), next);
   $("archPastHead").hidden = $("archPast").hidden = !past.length;
+  $("archNextHead").hidden = $("archNext").hidden = !next.length;
+  const cur = store.get(KH) ?? 198;
+  $("swatches").innerHTML = "";
+  HUES.forEach(([name, h]) => {
+    const b = document.createElement("button");
+    b.className = "swatch-btn"; b.style.setProperty("--h", h);
+    b.setAttribute("aria-label", `${name} board`); b.setAttribute("aria-pressed", h === cur);
+    b.addEventListener("click", () => { store.set(KH, h); applyHue(); openArchive(); });
+    $("swatches").appendChild(b);
+  });
+  $("archTitle").innerHTML = "Unlimited" + (adm() ? '<span class="admin-tag">Admin</span>' : "");
   closeModals(); $("archModal").hidden = false;
 }
 // resetting a solved puzzle takes two buttons: Reset puzzle, then Reset in the confirm box
@@ -1785,6 +1865,13 @@ function boardName(i, short = false) {
   if (DAILY.includes(i)) return day(dateOf(i));
   return short ? `<span class="lbl-long">Classic </span>#${i + 1}` : `Classic #${i + 1}`;
 }
+$("adminLink").addEventListener("click", () => { $("adminForm").hidden = false; $("adminCode").focus(); });
+$("adminForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = $("adminCode").value.trim().toLowerCase(); $("adminCode").value = "";
+  if (h7("ad\u2022" + v) !== A7) { toast("Wrong code"); return; }
+  store.set(KA, "a1." + A7); renderUnlim(); applyHue(); openArchive(); toast("Admin mode on");
+});
 function renderUnlim() {
   $("unlimBtn").textContent = ok7() ? "Archive" : "Unlimited";
   $("payBtn").disabled = !PAY_LINK;
@@ -1802,7 +1889,7 @@ function claimUnlock() {
 
 function start(data) {
   renderSound();
-  const fresh7 = claimUnlock(); renderUnlim();
+  const fresh7 = claimUnlock(); renderUnlim(); applyHue();
   // new players start on the intro; once it's done they open on today's daily
   load(typeof data.idx === "number" ? data.idx : doneWith(INTRO) && dailyIdx() !== null ? dailyIdx() : INTRO);
   if (fresh7) { openArchive(); toast("Unlimited unlocked. Thanks!"); return; }
