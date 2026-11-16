@@ -184,12 +184,12 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
 .tile.pwt.locked:not(.imprint) { border-color: var(--white); background: linear-gradient(180deg, var(--kl), var(--k) 55%, var(--kd)); box-shadow: 0 0 12px 1px var(--k); }
 html.instant, html.instant *, html.instant *::before, html.instant *::after { transition: none !important; }
 /* intro hint: a cartoon arrow pointing at a compound word, gone once a compound is solved */
-.tip { position: absolute; z-index: 6; pointer-events: none; animation: tipbob 1.1s ease-in-out infinite alternate; }
-.tip svg { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(2px 3px 0 rgba(0,0,0,.55)); }
-.tip b { position: absolute; right: 0; bottom: 100%; margin-bottom: 2px; white-space: nowrap; transform: rotate(-5deg); transform-origin: right bottom;
-  font-family: var(--pixel); font-weight: 400; font-size: max(9px, calc(var(--t) * .34)); line-height: 1.3; text-transform: uppercase;
-  color: #1a1206; background: #ffe066; border: 3px solid #1a1206; border-radius: 10px; padding: 4px 8px; box-shadow: 3px 3px 0 rgba(0,0,0,.55); }
-@keyframes tipbob { from { transform: translateX(0); } to { transform: translateX(7px); } }
+.tip { position: absolute; z-index: 6; pointer-events: none; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 2px;
+  animation: tipbob 1.1s ease-in-out infinite alternate; }
+.tip svg { display: block; width: 100%; flex: 1 1 auto; min-height: 0; overflow: visible; }
+.tip b { align-self: center; white-space: nowrap; font-family: var(--pixel); font-weight: 400; font-size: max(6px, calc(var(--t) * .16)); line-height: 1.2; text-transform: uppercase;
+  color: #04121a; background: var(--a); border: 2px solid var(--cab); border-radius: 6px; padding: 2px 4px; box-shadow: 0 0 8px -1px var(--a); }
+@keyframes tipbob { from { transform: translateX(0); } to { transform: translateX(4px); } }
 .tile.land { animation: land .3s steps(3); }
 .tile.wrong { animation: wrong .45s steps(6); }
 @keyframes land { 0% { background: var(--white); transform: translateY(-4px); } 100% { transform: none; } }
@@ -1247,16 +1247,18 @@ function placeTip() {
   const board = $("board"), bb = board.getBoundingClientRect(), last = tiles[best.r][P[best.r].x + P[best.r].w.length - 1].getBoundingClientRect();
   if (!tipEl) {
     tipEl = document.createElement("div"); tipEl.className = "tip"; tipEl.setAttribute("aria-hidden", "true");
-    tipEl.innerHTML = `<b>Compound words</b><svg viewBox="0 0 120 60"><path d="M112 10 C 92 2, 60 8, 46 26 C 38 36, 30 42, 16 42" fill="none" stroke="#1a1206" stroke-width="15" stroke-linecap="round"/>
-      <path d="M30 26 L 8 42 L 32 56" fill="none" stroke="#1a1206" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M112 10 C 92 2, 60 8, 46 26 C 38 36, 30 42, 16 42" fill="none" stroke="#ffe066" stroke-width="8" stroke-linecap="round"/>
-      <path d="M30 26 L 8 42 L 32 56" fill="none" stroke="#ffe066" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    tipEl.innerHTML = `<b>Compound words</b><svg viewBox="0 0 100 30" preserveAspectRatio="none"><path d="M94 12 C 70 4, 40 24, 12 15" fill="none" stroke="var(--cab)" stroke-width="11" stroke-linecap="round"/>
+      <path d="M24 5 L 6 15 L 24 26" fill="none" stroke="var(--cab)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M94 12 C 70 4, 40 24, 12 15" fill="none" stroke="var(--a)" stroke-width="5" stroke-linecap="round"/>
+      <path d="M24 5 L 6 15 L 24 26" fill="none" stroke="var(--a)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     board.appendChild(tipEl);
   }
-  const w = Math.min(bb.right - last.right - 6, last.width * 3.2);
-  tipEl.style.width = w + "px";
+  // it fills the empty cells to the right of the word, one row tall
+  const grid = $("grid").getBoundingClientRect(), pad = 6;
   tipEl.style.left = (last.right - bb.left + 3) + "px";
-  tipEl.style.top = (last.top - bb.top + last.height / 2 - w * 0.35) + "px";   // the arrowhead sits 35% down the drawing
+  tipEl.style.width = Math.max(30, grid.right - pad - last.right - 6) + "px";
+  tipEl.style.top = (last.top - bb.top) + "px";
+  tipEl.style.height = last.height + "px";
 }
 if (window.ResizeObserver) new ResizeObserver(() => { if (P) placeTip(); }).observe($("board"));
 function render() {
