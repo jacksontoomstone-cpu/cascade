@@ -9,7 +9,7 @@
 /* Layout: an 8-bit arcade screen that fills the window. Password across the top of the board, clue and keys beside it on
    wide screens, stacked on phones. One glowing ice-blue that gets darker down the board; cracking the password turns it all to fire. */
 :root {
-  --hue: 198;
+  --hue: 135;
   --a: hsl(var(--hue) 95% 66%);
   --ad: hsl(var(--hue) 85% 34%);
   --cab: hsl(var(--hue) 60% 7%);
@@ -1152,7 +1152,14 @@ function check() {
   if (cols.some(c => !shown(c))) { toast(`Fill in all ${cols.length} letters first`); return; }
   const guess = cols.map(shown).join("");
   if (guess === word) {
-    const newly = cols.filter(c => !isLocked(r, c));
+    // a compound's other half counts too when it's already typed in correctly, so one Enter locks the whole word
+    let all = cols;
+    P[r].segs.forEach((g, i) => {
+      if (i === s || segSolved(r, i)) return;
+      const cc = segCols(r, i);
+      if (cc.every(shown) && cc.map(shown).join("") === g.word) { all = all.concat(cc); S.log.push("c"); }
+    });
+    const newly = all.filter(c => !isLocked(r, c));
     newly.forEach(c => { S.locked[r][c - X(r)] = true; });
     S.log.push("c");
     sfx("good");
