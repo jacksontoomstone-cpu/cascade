@@ -11,29 +11,31 @@
 :root {
   --base-hue: 198;
   --hue: var(--base-hue);
-  --a: hsl(var(--hue) 95% 66%);
-  --ad: hsl(var(--hue) 85% 34%);
-  --cab: hsl(var(--hue) 60% 7%);
-  --screen: hsl(var(--hue) 70% 4%);
-  --bezel: hsl(var(--hue) 45% 22%);
-  --bezel-l: hsl(var(--hue) 45% 36%);
-  --bezel-d: hsl(var(--hue) 50% 12%);
-  --rod: hsl(var(--hue) 60% 16%);
+  --base-sk: 1;   /* saturation scale: 1 for colors, near 0 for silver */
+  --sk: var(--base-sk);
+  --a: hsl(var(--hue) calc(95% * var(--sk)) 66%);
+  --ad: hsl(var(--hue) calc(85% * var(--sk)) 34%);
+  --cab: hsl(var(--hue) calc(60% * var(--sk)) 7%);
+  --screen: hsl(var(--hue) calc(70% * var(--sk)) 4%);
+  --bezel: hsl(var(--hue) calc(45% * var(--sk)) 22%);
+  --bezel-l: hsl(var(--hue) calc(45% * var(--sk)) 36%);
+  --bezel-d: hsl(var(--hue) calc(50% * var(--sk)) 12%);
+  --rod: hsl(var(--hue) calc(60% * var(--sk)) 16%);
   --white: #f2f7f8;
-  --muted: hsl(var(--hue) 20% 68%);
+  --muted: hsl(var(--hue) calc(20% * var(--sk)) 68%);
   --bad: #ff6a5a;
   --scrim: rgba(3,8,12,.8);
   --pixel: "Press Start 2P", "Courier New", monospace;
   --term: "VT323", "Courier New", monospace;
   color-scheme: dark;
 }
-:root[data-heat="1"], :root[data-heat="2"] { --hue: 14; }
+:root[data-heat="1"], :root[data-heat="2"] { --hue: 14; --sk: 1; }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { height: 100%; }
 body { color: var(--white); font-family: var(--term); font-size: 20px; overflow: hidden;
-  background: radial-gradient(70% 60% at 50% 40%, hsl(var(--hue) 70% 14%), transparent 75%), var(--cab); transition: background .4s; }
+  background: radial-gradient(70% 60% at 50% 40%, hsl(var(--hue) calc(70% * var(--sk)) 14%), transparent 75%), var(--cab); transition: background .4s; }
 /* fire vignette: the edges of the window glow once the password is cracked */
 body::after { content: ""; position: fixed; inset: 0; z-index: 14; pointer-events: none; opacity: 0; transition: opacity .4s;
   box-shadow: inset 0 0 70px 10px hsl(16 100% 52%); }
@@ -60,7 +62,7 @@ button:focus-visible { outline: 3px dashed var(--a); outline-offset: 2px; }
 }
 
 header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-block: 10px 13px; position: relative; }
-header::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: linear-gradient(90deg, hsl(var(--hue) 95% 72%) 25%, hsl(var(--hue) 90% 56%) 25% 50%, hsl(var(--hue) 85% 42%) 50% 75%, hsl(var(--hue) 80% 28%) 75%); }
+header::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: linear-gradient(90deg, hsl(var(--hue) calc(95% * var(--sk)) 72%) 25%, hsl(var(--hue) calc(90% * var(--sk)) 56%) 25% 50%, hsl(var(--hue) calc(85% * var(--sk)) 42%) 50% 75%, hsl(var(--hue) calc(80% * var(--sk)) 28%) 75%); }
 header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin: 0; text-transform: uppercase; color: var(--a); text-shadow: 3px 3px 0 var(--ad); }
 .nav { display: flex; align-items: center; white-space: nowrap; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; }
 .nav button { border: none; background: transparent; font-size: .8rem; font-family: var(--pixel); cursor: pointer; padding: 4px 5px; color: var(--a); }
@@ -80,10 +82,7 @@ header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin
 .admin-row input { flex: 1; min-width: 0; border: 3px solid var(--bezel-l); background: var(--cab); color: var(--white); font-family: var(--term); font-size: 1.2rem; padding: 6px 10px; border-radius: 0; }
 .admin-row input:focus { outline: none; border-color: var(--a); }
 .admin-row .btn { padding: 8px 12px; }
-.swatches { display: flex; flex-wrap: wrap; gap: 10px; }
-.swatch-btn { width: 40px; height: 40px; border: none; border-radius: 0; cursor: pointer; background: hsl(var(--h) 95% 60%);
-  box-shadow: inset -4px -4px 0 hsl(var(--h) 85% 34%), inset 4px 4px 0 hsl(var(--h) 95% 82%); }
-.swatch-btn[aria-pressed="true"] { outline: 3px solid var(--white); outline-offset: 3px; }
+.color-btn i { display: block; width: 14px; height: 14px; background: var(--a); box-shadow: inset -3px -3px 0 var(--ad), 0 0 8px -1px var(--a); }
 .admin-tag { font-family: var(--pixel); font-size: .45rem; color: #04121a; background: var(--a); padding: 3px 6px; vertical-align: middle; margin-left: 8px; }
 .sheet.pay .btn.primary { min-width: 70%; margin-top: 8px; }
 .sheet.pay .btn:disabled { opacity: .55; cursor: default; }
@@ -100,7 +99,7 @@ header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin
 main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding-top: 8px; }
 
 /* every word's brightness comes from --l, set from its height on the board */
-.heat { --k: hsl(var(--hue) 92% var(--l, 60%)); --kd: hsl(var(--hue) 85% calc(var(--l, 60%) * .6)); --ks: hsl(var(--hue) 70% calc(var(--l, 60%) * .24)); --kl: hsl(var(--hue) 96% calc(var(--l, 60%) * 1.22)); }
+.heat { --k: hsl(var(--hue) calc(92% * var(--sk)) var(--l, 60%)); --kd: hsl(var(--hue) calc(85% * var(--sk)) calc(var(--l, 60%) * .6)); --ks: hsl(var(--hue) calc(70% * var(--sk)) calc(var(--l, 60%) * .24)); --kl: hsl(var(--hue) calc(96% * var(--sk)) calc(var(--l, 60%) * 1.22)); }
 
 .clue { flex: none; position: relative; min-height: 66px; padding-left: 60px; display: flex; flex-direction: column; justify-content: center; gap: 3px; }
 .clue .eyebrow { font-family: var(--pixel); font-size: .46rem; line-height: 1.5; text-transform: uppercase; color: var(--muted); }
@@ -121,11 +120,11 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
   display: flex; justify-content: center; align-items: flex-start; gap: 6px;
 }
 /* the side word sits in its own little screen, set apart from the board */
-.sidebox { flex: none; margin-block: 7px; padding: 7px 3px; background: var(--screen); border-radius: 4px; box-shadow: 0 0 0 3px var(--bezel), 0 0 16px 3px hsl(var(--hue) 95% 50% / .3); }
+.sidebox { flex: none; margin-block: 7px; padding: 7px 3px; background: var(--screen); border-radius: 4px; box-shadow: 0 0 0 3px var(--bezel), 0 0 16px 3px hsl(var(--hue) calc(95% * var(--sk)) 50% / .3); }
 .sidegrid { display: grid; grid-template-columns: var(--t); grid-template-rows: repeat(var(--r), var(--h)); gap: var(--rg); }
 .board {
   flex: none; position: relative; overflow: hidden; margin: 7px; background: var(--screen); border-radius: 6px;
-  box-shadow: 0 0 0 5px var(--bezel), 0 0 0 7px var(--bezel-d), 0 0 26px 8px hsl(var(--hue) 95% 50% / .35);
+  box-shadow: 0 0 0 5px var(--bezel), 0 0 0 7px var(--bezel-d), 0 0 26px 8px hsl(var(--hue) calc(95% * var(--sk)) 50% / .35);
   transition: box-shadow .3s;
 }
 :root[data-heat="1"] .board, :root[data-heat="2"] .board { box-shadow: 0 0 0 5px var(--bezel), 0 0 0 7px var(--bezel-d), 0 0 46px 16px hsl(14 100% 50% / .7); }
@@ -133,9 +132,9 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
 .board::before {
   content: ""; position: absolute; inset: 0; animation: breathe 5s ease-in-out infinite;
   background:
-    radial-gradient(90% 75% at 50% 112%, hsl(var(--hue) 95% 50% / .6), transparent 70%),
-    radial-gradient(50% 45% at 50% 0%, hsl(var(--hue) 95% 60% / .22), transparent 75%),
-    repeating-linear-gradient(0deg, hsl(var(--hue) 80% 55% / .1) 0 1px, transparent 1px calc(var(--h) + var(--rg)));
+    radial-gradient(90% 75% at 50% 112%, hsl(var(--hue) calc(95% * var(--sk)) 50% / .6), transparent 70%),
+    radial-gradient(50% 45% at 50% 0%, hsl(var(--hue) calc(95% * var(--sk)) 60% / .22), transparent 75%),
+    repeating-linear-gradient(0deg, hsl(var(--hue) calc(80% * var(--sk)) 55% / .1) 0 1px, transparent 1px calc(var(--h) + var(--rg)));
 }
 @keyframes breathe { 50% { opacity: .6; } }
 :root[data-heat="1"] .board::before, :root[data-heat="2"] .board::before { animation-duration: .9s; }
@@ -189,8 +188,8 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
 
 .colbeam {
   position: absolute; top: 0; bottom: 0; z-index: 2; pointer-events: none;
-  background: linear-gradient(180deg, hsl(var(--hue) 96% 72% / .9), hsl(var(--hue) 95% 50% / .35) 60%, transparent);
-  box-shadow: 0 0 22px 6px hsl(var(--hue) 95% 55% / .6);
+  background: linear-gradient(180deg, hsl(var(--hue) calc(96% * var(--sk)) 72% / .9), hsl(var(--hue) calc(95% * var(--sk)) 50% / .35) 60%, transparent);
+  box-shadow: 0 0 22px 6px hsl(var(--hue) calc(95% * var(--sk)) 55% / .6);
 }
 
 .faller.mystery { z-index: 4; animation: mystery .36s steps(2) infinite, mysteryin .25s steps(3); }
@@ -201,7 +200,7 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
 
 /* the points bar: one color, dark to bright */
 .bar { position: relative; flex: none; height: 26px; background: var(--screen); box-shadow: 0 0 0 2px var(--bezel); overflow: hidden; }
-.bar-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, hsl(var(--hue) 85% 24%), hsl(var(--hue) 92% 44%), hsl(var(--hue) 96% 70%)); box-shadow: 0 0 12px hsl(var(--hue) 95% 60%); transition: width .45s steps(10); }
+.bar-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, hsl(var(--hue) calc(85% * var(--sk)) 24%), hsl(var(--hue) calc(92% * var(--sk)) 44%), hsl(var(--hue) calc(96% * var(--sk)) 70%)); box-shadow: 0 0 12px hsl(var(--hue) calc(95% * var(--sk)) 60%); transition: width .45s steps(10); }
 .bar-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding-inline: 8px; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; text-shadow: 1px 1px 0 var(--screen), -1px -1px 0 var(--screen), 1px -1px 0 var(--screen), -1px 1px 0 var(--screen); }
 .bar-text b { font-weight: 400; }
 
@@ -369,6 +368,7 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
     </div>
     <div class="icons">
       <button class="icon-btn text-btn" id="unlimBtn">Unlimited</button>
+      <button class="icon-btn color-btn" id="colorBtn" aria-label="Board color" hidden><i></i></button>
       <button class="icon-btn" id="soundBtn" aria-label="Sound on"><svg viewBox="0 0 24 24" id="soundIcon"></svg></button>
       <button class="icon-btn" id="helpBtn" aria-label="How to play"><svg viewBox="0 0 24 24"><path d="M9.2 9a3 3 0 1 1 4.3 2.7c-.9.5-1.5 1.2-1.5 2.3M12 17.5v.01"/></svg></button>
     </div>
@@ -452,8 +452,6 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
   <div class="sheet" role="dialog" aria-labelledby="archTitle">
     <button class="close" data-close aria-label="Close">×</button>
     <h2 id="archTitle">Unlimited</h2>
-    <p class="arch-head">Board color</p>
-    <div class="swatches" id="swatches"></div>
     <p class="arch-head" id="archNextHead" hidden>Upcoming dailies (admin)</p>
     <div class="arch-grid" id="archNext" hidden></div>
     <p class="arch-head" id="archPastHead">Past dailies</p>
@@ -1013,12 +1011,14 @@ const ok7 = () => store.get(K7) === q7() || adm();
 const KA = "cx-a1", A7 = "45eydu";
 const adm = () => store.get(KA) === "a1." + A7;
 const upcoming = () => adm() ? DAILY.filter(i => i !== dailyIdx() && !pastDailies().includes(i)) : [];
-const HUES = [["Blue", 198], ["Teal", 172], ["Green", 135], ["Gold", 45], ["Pink", 322], ["Purple", 268]];
-const KH = "cx-hue";
+// board colors for Unlimited: the color button steps through these
+const HUES = [["Blue", 198, 1], ["Teal", 172, 1], ["Green", 135, 1], ["Gold", 45, 1], ["Pink", 322, 1], ["Purple", 268, 1], ["Silver", 210, .1]];
+const KH = "cx-color";
+const hueAt = () => { const n = ok7() ? store.get(KH) : 0; return Number.isInteger(n) && HUES[n] ? n : 0; };
 function applyHue() {
-  const h = ok7() ? store.get(KH) : null;
-  if (typeof h === "number") document.documentElement.style.setProperty("--base-hue", h);
-  else document.documentElement.style.removeProperty("--base-hue");
+  const [name, h, k] = HUES[hueAt()], st = document.documentElement.style;
+  st.setProperty("--base-hue", h); st.setProperty("--base-sk", k);
+  $("colorBtn").hidden = !ok7(); $("colorBtn").setAttribute("aria-label", `Board color: ${name}`); $("colorBtn").title = name;
 }
 const STAMPS = 6;   // sets the bar size: about this many fills on the old point scale
 
@@ -1821,15 +1821,6 @@ function openArchive() {
   fill($("archPast"), past); fill($("archOld"), classics()); fill($("archNext"), next);
   $("archPastHead").hidden = $("archPast").hidden = !past.length;
   $("archNextHead").hidden = $("archNext").hidden = !next.length;
-  const cur = store.get(KH) ?? 198;
-  $("swatches").innerHTML = "";
-  HUES.forEach(([name, h]) => {
-    const b = document.createElement("button");
-    b.className = "swatch-btn"; b.style.setProperty("--h", h);
-    b.setAttribute("aria-label", `${name} board`); b.setAttribute("aria-pressed", h === cur);
-    b.addEventListener("click", () => { store.set(KH, h); applyHue(); openArchive(); });
-    $("swatches").appendChild(b);
-  });
   $("archTitle").innerHTML = "Unlimited" + (adm() ? '<span class="admin-tag">Admin</span>' : "");
   closeModals(); $("archModal").hidden = false;
 }
@@ -1865,6 +1856,10 @@ function boardName(i, short = false) {
   if (DAILY.includes(i)) return day(dateOf(i));
   return short ? `<span class="lbl-long">Classic </span>#${i + 1}` : `Classic #${i + 1}`;
 }
+$("colorBtn").addEventListener("click", () => {
+  if (!ok7()) return;
+  const n = (hueAt() + 1) % HUES.length; store.set(KH, n); applyHue(); toast(HUES[n][0]);
+});
 $("adminLink").addEventListener("click", () => { $("adminForm").hidden = false; $("adminCode").focus(); });
 $("adminForm").addEventListener("submit", e => {
   e.preventDefault();
