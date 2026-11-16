@@ -399,9 +399,6 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 @media (min-width: 860px) {
   .app { max-width: none; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
   header h1 { font-size: clamp(1.15rem, 1.8vw, 1.9rem); }
-  :root { --term: "Rubik", system-ui, -apple-system, sans-serif; }
-  body { -webkit-font-smoothing: antialiased; }
-  .clue .text, .clue .whole, .pw-clue { font-weight: 600; letter-spacing: -.01em; }
   .board::after { opacity: .45; }
   .nav { font-size: .62rem; } .timer { font-size: clamp(.95rem, 1.5vw, 1.4rem); }
   main { --side: clamp(300px, 27vw, 480px); display: grid; grid-template-columns: minmax(0, 1fr) var(--side); grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 12px 28px; padding-top: 12px; }
@@ -1361,7 +1358,7 @@ function layoutDam() {
   const L = ctrl.left, Rt = main.right - parseFloat(getComputedStyle(mainEl).paddingRight || 0), T = ctrl.bottom + 16;
   const w = Math.min(168, Rt - L - 20), h = Math.min(500, tb.bottom - T);
   if (kbShown || w < 60 || h < 160 || !tb.height) { dam.hidden = pipe.hidden = true; return; }
-  const left = L + (Rt - L - w) / 2;
+  const left = Math.min(tb.right + 22, Rt - w);   // tucked in right beside the puzzle
   dam.hidden = pipe.hidden = false;
   dam.style.setProperty("--s", Math.min(56, (w - 8) / 2, (h - 40) / 7.2) + "px");
   Object.assign(dam.style, { left: left + "px", width: w + "px", top: (tb.bottom - h) + "px", height: h + "px" });
