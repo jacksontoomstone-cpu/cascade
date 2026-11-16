@@ -213,9 +213,36 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 .pw-clue { text-align: center; font-size: 1.05rem; line-height: 1; color: var(--muted); }
 
 /* the points bar: one color, dark to bright */
-.bar { position: relative; flex: none; height: 26px; background: var(--screen); box-shadow: 0 0 0 2px var(--bezel); overflow: hidden; }
-.bar-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, hsl(var(--hue) calc(85% * var(--sk)) calc(24% + var(--lift))), hsl(var(--hue) calc(92% * var(--sk)) calc(44% + var(--lift-a))), hsl(var(--hue) calc(96% * var(--sk)) calc(70% + var(--lift-a)))); box-shadow: 0 0 12px hsl(var(--hue) calc(95% * var(--sk)) calc(60% + var(--lift-a))); transition: width .45s steps(10); }
-.bar-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding-inline: 8px; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; text-shadow: 1px 1px 0 var(--screen), -1px -1px 0 var(--screen), 1px -1px 0 var(--screen), -1px 1px 0 var(--screen); }
+.bar { position: relative; flex: none; height: 34px; overflow: hidden; border-radius: 0 0 10px 10px;
+  background: linear-gradient(90deg, rgba(255,255,255,.07), transparent 12%, transparent 88%, rgba(255,255,255,.07)), var(--screen);
+  box-shadow: 0 0 0 2px var(--bezel), inset 0 -3px 0 rgba(0,0,0,.4); }
+/* the tank's glass: a shine down the front */
+.bar::after { content: ""; position: absolute; inset: 3px 0 auto 0; height: 4px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.18) 20%, transparent 45%); pointer-events: none; z-index: 2; }
+.bar-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; transition: height .7s cubic-bezier(.3,1.35,.5,1);
+  background: linear-gradient(180deg, hsl(var(--hue) calc(92% * var(--sk)) calc(56% + var(--lift-a))), hsl(var(--hue) calc(85% * var(--sk)) calc(26% + var(--lift))));
+  box-shadow: 0 0 14px hsl(var(--hue) calc(95% * var(--sk)) calc(60% + var(--lift-a)) / .6); }
+/* rolling waves on the water's surface */
+.bar-fill::before { content: ""; position: absolute; left: -24px; right: -24px; top: -5px; height: 6px;
+  background: radial-gradient(ellipse 12px 6px at 50% 100%, hsl(var(--hue) calc(92% * var(--sk)) calc(56% + var(--lift-a))) 96%, transparent 100%) 0 0 / 24px 6px repeat-x;
+  animation: waves 1.6s linear infinite; }
+@keyframes waves { to { transform: translateX(24px); } }
+.bar-fill.drain { transition: height .95s cubic-bezier(.65,0,.9,.35); }
+/* drain: a whirlpool spins at the bottom while the water runs out */
+.whirl { position: absolute; left: 50%; bottom: -10px; width: 46px; height: 22px; margin-left: -23px; border-radius: 50%; z-index: 1; pointer-events: none;
+  background: conic-gradient(from 0deg, transparent, rgba(255,255,255,.55), transparent 35%, rgba(255,255,255,.4), transparent 70%, rgba(255,255,255,.5), transparent);
+  animation: whirl .35s linear infinite; }
+@keyframes whirl { to { transform: rotate(360deg); } }
+/* letters dripping off the board into the tank, and flying from the tank onto the top and side words */
+.drip { position: fixed; z-index: 30; pointer-events: none; display: grid; place-items: center; width: 18px; height: 20px;
+  background: var(--k); color: var(--on, #04121a); font-family: var(--pixel); font-size: 10px; line-height: 1;
+  box-shadow: inset -2px -2px 0 var(--kd), inset 2px 2px 0 rgba(255,255,255,.7), 0 0 10px 1px var(--k); }
+.splash { position: fixed; z-index: 29; pointer-events: none; width: 26px; height: 8px; margin: -4px 0 0 -13px; border-radius: 50%;
+  border: 2px solid hsl(var(--hue) calc(92% * var(--sk)) calc(56% + var(--lift-a))); animation: splash .45s ease-out forwards; }
+@keyframes splash { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.8, 1.3); opacity: 0; } }
+.tile.await { color: transparent !important; text-shadow: none !important; }
+.tile.slap { animation: slap .38s cubic-bezier(.2,1.6,.4,1); z-index: 3; }
+@keyframes slap { 0% { transform: scale(1.9) rotate(-8deg); filter: brightness(2.2); } 60% { transform: scale(.88) rotate(2deg); } 100% { transform: none; } }
+.bar-text { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; padding-inline: 8px; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; text-shadow: 1px 1px 0 var(--screen), -1px -1px 0 var(--screen), 1px -1px 0 var(--screen), -1px 1px 0 var(--screen); }
 .bar-text b { font-weight: 400; }
 
 .ctrl { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -299,7 +326,7 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
   header { padding-block: 6px 10px; } main { gap: 4px; padding-top: 4px; } .play { gap: 3px; }
   .clue { min-height: 56px; } .clue .text { font-size: 1.3rem; } .swatch { width: 44px; height: 44px; top: 4px; } .clue { padding-left: 52px; }
   .pw-clue { font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .bar { height: 22px; } .btn { padding: 8px 8px; }
+  .bar { height: 30px; } .btn { padding: 8px 8px; }
 }
 
 /* phones: readability first. Clean bold letters instead of the pixel fonts, no scanlines, slightly softer tiles.
@@ -351,7 +378,7 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
   .play { grid-column: 1; grid-row: 1 / 4; align-self: center; }
   .boardwrap { --gap: 3px; --rg: 5px; --t: max(20px, calc(min((100vw - var(--side) - 170px) / (var(--c) + 1) - var(--gap), ((100dvh - 200px) / var(--r) - var(--rg)) / 1.15))); --h: calc(var(--t) * 1.15); gap: 14px; }
   .pw-clue { font-size: clamp(1.15rem, 1.5vw, 1.6rem); }
-  .bar { grid-column: 1 / -1; grid-row: 4; height: 30px; }
+  .bar { grid-column: 1 / -1; grid-row: 4; height: 44px; }
   .bar-text { font-size: .6rem; }
   .clue { grid-column: 2; grid-row: 1; }
   .clue .text { font-size: clamp(1.9rem, 2.6vw, 3rem); }
@@ -406,6 +433,7 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 
     <div class="bar" aria-label="Points">
       <div class="bar-fill" id="barFill"></div>
+      <div class="whirl" id="whirl" hidden></div>
       <span class="bar-text"><b id="barScore">0 pts</b><span id="barNext"></span></span>
     </div>
 
@@ -1126,6 +1154,7 @@ function fresh() {
            row: 1, seg: 0, cur: P[1].x, misses: 0, log: [], status: "playing", time: 0, started: false, score: 0, paid: P.map(() => false), cracked: false, crackedSide: false };
 }
 function load(i) {
+  if (typeof draining !== "undefined" && draining) { draining = false; slapping.clear(); }
   if (!playable().includes(i) && !(ok7() && extras().includes(i))) i = INTRO;   // archived and future boards stay locked
   idx = i; P = parse(PUZZLES[i]); pending.clear(); busy = false;
   PW = P[0].w; litCells.clear(); hotCells.clear();
@@ -1223,11 +1252,63 @@ function follow() {
   if (dx || dy) wrap.scrollBy({ left: dx, top: dy, behavior: calm() ? "auto" : "smooth" });
 }
 const earned = () => Math.floor(S.score / BAR);
+/* ---------- the tank ----------
+   Letters that fall off the bottom of the board drip into the tank. Points raise the water; when it's full the tank
+   drains, and the water turns into letters that fly up and slap onto the top and side words. */
+let draining = false;
+const slapping = new Set();   // stamped cells waiting for their letter to land
+function tankBox() { const b = document.querySelector(".bar"); const r = b.getBoundingClientRect(); return r.height ? r : null; }
+function drip(ch, x, fromY, row) {
+  const tb = tankBox(); if (!tb || calm()) return;
+  const level = tb.bottom - $("barFill").getBoundingClientRect().height;
+  const cx = Math.min(tb.right - 14, Math.max(tb.left + 14, x));
+  const d = document.createElement("div"); d.className = "drip heat"; paint(d, row); d.textContent = ch;
+  d.style.left = (cx - 9) + "px"; d.style.top = (fromY - 10) + "px";
+  document.body.appendChild(d);
+  const dist = Math.max(0, level - fromY - 4);
+  d.animate([{ transform: "translateY(0) scale(.8)", opacity: 1 }, { transform: `translateY(${dist}px) scale(.55)`, opacity: .9 }],
+    { duration: 220 + dist * 1.2, easing: "cubic-bezier(.4,0,1,.6)" }).onfinish = () => {
+    d.remove();
+    const sp = document.createElement("div"); sp.className = "splash";
+    sp.style.left = cx + "px"; sp.style.top = level + "px"; document.body.appendChild(sp);
+    setTimeout(() => sp.remove(), 500);
+  };
+}
+function drainTank(stamped) {
+  const fill = $("barFill"), token = idx;
+  draining = true;
+  fill.style.height = "100%";   // top it off first
+  setTimeout(() => {
+    if (token !== idx) return finishDrain();
+    $("whirl").hidden = false; fill.classList.add("drain"); fill.style.height = "0%";
+    sfx("tick", 0); setTimeout(() => sfx("tick", 2), 250); setTimeout(() => sfx("tick", 4), 500);
+  }, 650);
+  setTimeout(() => {
+    $("whirl").hidden = true; fill.classList.remove("drain");
+    if (token !== idx) return finishDrain();
+    const tb = tankBox(), sx = tb ? tb.left + tb.width / 2 : innerWidth / 2, sy = tb ? tb.bottom - 6 : innerHeight;
+    stamped.forEach(({ t, key, r }, n) => setTimeout(() => {
+      if (token !== idx) return;
+      const to = t.getBoundingClientRect();
+      const f = document.createElement("div"); f.className = "drip heat"; paint(f, r); f.textContent = t.textContent;
+      f.style.left = (sx - 9) + "px"; f.style.top = (sy - 10) + "px"; document.body.appendChild(f);
+      const dx = to.left + to.width / 2 - sx, dy = to.top + to.height / 2 - sy, k = Math.max(1, to.width / 18);
+      f.animate([{ transform: "translate(0,0) scale(.6)" }, { transform: `translate(${dx * .5}px, ${dy * .5 - 60}px) scale(${k * .8}) rotate(-10deg)`, offset: .55 },
+        { transform: `translate(${dx}px, ${dy}px) scale(${k}) rotate(0deg)` }], { duration: 520, easing: "cubic-bezier(.3,.1,.6,1)" }).onfinish = () => {
+        f.remove(); slapping.delete(key); render();
+        t.classList.remove("slap"); void t.offsetWidth; t.classList.add("slap"); sfx("tick", 3 + n % 4);
+        if (!slapping.size) finishDrain();
+      };
+    }, n * 120));
+    if (!stamped.length) finishDrain();
+  }, 1650);
+}
+function finishDrain() { draining = false; slapping.clear(); $("whirl").hidden = true; $("barFill").classList.remove("drain"); render(); }
 // Stamp every letter the score has earned into both special words, always leaving one letter to guess
 function stampUp() {
   const out = [], si = P.length - 1, now = earned();
   const stamp = (r, order, at) => order.slice(0, Math.min(now, order.length - 1)).forEach(i => {
-    if (!S.locked[r][i]) { S.locked[r][i] = true; out.push(tiles[r][at + i]); }
+    if (!S.locked[r][i]) { S.locked[r][i] = true; out.push({ t: tiles[r][at + i], key: cellKey(r, at + i), r }); }
   });
   if (!S.cracked) stamp(0, ORDER, 0);
   if (!S.crackedSide) stamp(si, ORDER2, 100);
@@ -1273,7 +1354,7 @@ function render() {
       (lock ? " locked" : revealed ? " revealed" : "") + (sel ? " active" : "") +
       (sel && c === S.cur && !segSolved(r, s) ? " cur" : "") +
       (isSpecial(r) ? " pwt" : "") + (isSpecial(r) && lock && !crackedOf(r) ? " imprint" : "") +
-      (litCells.has(cellKey(r, c)) ? " lit" : "") + (hotCells.has(cellKey(r, c)) ? " hot" : "");
+      (litCells.has(cellKey(r, c)) ? " lit" : "") + (hotCells.has(cellKey(r, c)) ? " hot" : "") + (slapping.has(cellKey(r, c)) ? " await" : "");
     t.setAttribute("aria-label", `Word ${r + 1}, worth ${worth(r)}, letter ${j - g.a + 1}${L ? ", " + L : ", empty"}`);
   }));
   const r = S.row, s = S.seg, g = P[r].segs[s];
@@ -1296,7 +1377,7 @@ function render() {
   setHeat();
   // the points bar
   const into = S.score - earned() * BAR;
-  $("barFill").style.width = into / BAR * 100 + "%";
+  if (!draining) $("barFill").style.height = into / BAR * 100 + "%";
   $("barScore").textContent = `${S.score} pts`;
   $("barNext").textContent = S.cracked && S.crackedSide ? `${BAR - into} to fill a column` : `${BAR - into} to next letter`;
   const fk = playing() ? `${S.row}:${S.seg}:${S.cur}` : "";
@@ -1470,7 +1551,7 @@ function drop(r, cols) {
     const a = f.animate(
       [{ transform: "translateY(0)", easing: "cubic-bezier(.33,0,.67,.33)" }, { transform: `translateY(${dist}px)` }],
       { duration: T, delay: wait, fill: "both" });
-    a.onfinish = () => f.remove();
+    a.onfinish = () => { f.remove(); drip(f.textContent, src.left + src.width / 2, box.bottom, r); };
     last.push(a.finished.catch(() => {}));
     hits.forEach((j, h) => {
       // quadratic ease-in: distance d is reached at T * sqrt(d / dist)
@@ -1534,8 +1615,8 @@ function sweep(r) {
 
 function settle() {
   pending.clear(); busy = false;
-  // every finished word pays out and flashes; each full bar stamps a letter
-  let gain = 0, combo = null;
+  // every finished word pays out and flashes; each full tank stamps a letter
+  let gain = 0, combo = null; const filledBefore = earned();
   P.forEach((_, r) => {
     if (rowSolved(r) && !S.paid[r]) {
       S.paid[r] = true; gain += worth(r);
@@ -1546,14 +1627,14 @@ function settle() {
   if (combo !== null) { toast(`Compound! ${W(combo)} +${gain}`); sfx("win"); }
   else if (gain) toast(`+${gain} points`);
   // each full bar stamps both special words at once
-  const stamped = stampUp();
+  const stamped = stampUp(), full = earned() > filledBefore;
+  if (full && !calm() && !allSolved()) stamped.forEach(x => slapping.add(x.key));
   if (allSolved()) return win();
   if (S.cracked && S.crackedSide && S.colBase == null) { S.colBase = earned(); S.cols = 0; }   // bars count from here
   render(); save();
-  if (stamped.length) {
-    if (combo === null) { sfx("win"); toast("New letters stamped"); }
-    stamped.forEach(t => { t.classList.remove("land"); void t.offsetWidth; t.classList.add("land"); });
-  }
+  if (full && !calm()) drainTank(stamped);
+  else if (stamped.length) stamped.forEach(({ t }) => { t.classList.remove("land"); void t.offsetWidth; t.classList.add("land"); });
+  if (stamped.length && combo === null) toast("New letters!");
   if (S.colBase != null && earned() - S.colBase > S.cols) fillCol();
 }
 
