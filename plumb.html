@@ -218,17 +218,17 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
   box-shadow: 0 0 0 2px var(--bezel), inset 0 -3px 0 rgba(0,0,0,.4); }
 /* the tank's glass: a shine down the front */
 .bar::after { content: ""; position: absolute; inset: 3px 0 auto 0; height: 4px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.18) 20%, transparent 45%); pointer-events: none; z-index: 2; }
-.bar-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; transition: height .7s cubic-bezier(.3,1.35,.5,1);
+.bar-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; transition: height 1.3s cubic-bezier(.25,1.2,.5,1);
   background: linear-gradient(180deg, hsl(var(--hue) calc(92% * var(--sk)) calc(56% + var(--lift-a))), hsl(var(--hue) calc(85% * var(--sk)) calc(26% + var(--lift))));
   box-shadow: 0 0 14px hsl(var(--hue) calc(95% * var(--sk)) calc(60% + var(--lift-a)) / .6); }
 /* flat water: a bright line where the surface is */
 .bar-fill::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: hsl(var(--hue) calc(90% * var(--sk)) calc(82% + var(--lift-a)));
   box-shadow: 0 0 8px 1px hsl(var(--hue) calc(95% * var(--sk)) calc(70% + var(--lift-a)) / .8); }
-.bar-fill.drain { transition: height .95s cubic-bezier(.65,0,.9,.35); }
+.bar-fill.drain { transition: height 2.6s cubic-bezier(.45,0,.75,.6); }
 /* drain: a whirlpool spins at the bottom while the water runs out */
-.whirl { position: absolute; left: 50%; bottom: -10px; width: 46px; height: 22px; margin-left: -23px; border-radius: 50%; z-index: 1; pointer-events: none;
+.whirl { position: absolute; left: 50%; bottom: -10px; transition: opacity .6s; width: 46px; height: 22px; margin-left: -23px; border-radius: 50%; z-index: 1; pointer-events: none;
   background: conic-gradient(from 0deg, transparent, rgba(255,255,255,.55), transparent 35%, rgba(255,255,255,.4), transparent 70%, rgba(255,255,255,.5), transparent);
-  animation: whirl .35s linear infinite; }
+  animation: whirl .6s linear infinite; }
 @keyframes whirl { to { transform: rotate(360deg); } }
 /* letters dripping off the board into the tank, and flying from the tank onto the top and side words */
 .drip { position: fixed; z-index: 30; pointer-events: none; display: grid; place-items: center; width: 18px; height: 20px;
@@ -1156,7 +1156,7 @@ function fresh() {
            row: 1, seg: 0, cur: P[1].x, misses: 0, log: [], status: "playing", time: 0, started: false, score: 0, paid: P.map(() => false), cracked: false, crackedSide: false };
 }
 function load(i) {
-  if (typeof draining !== "undefined" && draining) { draining = false; slapping.clear(); }
+  if (typeof draining !== "undefined") { draining = false; slapping.clear(); dripsLeft = 0; dripWait.splice(0).forEach(f => f()); }
   if (!playable().includes(i) && !(ok7() && extras().includes(i))) i = INTRO;   // archived and future boards stay locked
   idx = i; P = parse(PUZZLES[i]); pending.clear(); busy = false;
   PW = P[0].w; litCells.clear(); hotCells.clear();
@@ -1257,14 +1257,19 @@ const earned = () => Math.floor(S.score / BAR);
 /* ---------- the tank ----------
    Letters that fall off the bottom of the board drip into the tank. Points raise the water; when it's full the tank
    drains, and the water turns into letters that fly up and slap onto the top and side words. */
-let draining = false;
+let draining = false, dripsLeft = 0, dripWait = [];
+// the water only rises once every falling drop has hit the surface
+const dripsDone = () => dripsLeft ? new Promise(res => dripWait.push(res)) : Promise.resolve();
+function dripLanded() { if (dripsLeft > 0 && --dripsLeft === 0) { dripWait.splice(0).forEach(f => f()); if (!draining) render(); } }
 const slapping = new Set();   // stamped cells waiting for their letter to land
 function tankBox() { const b = document.querySelector(".bar"); const r = b.getBoundingClientRect(); return r.height ? r : null; }
 function drip(ch, x, fromY, row) {
-  const tb = tankBox(); if (!tb || calm()) return;
+  const tb = tankBox(); if (!tb || calm()) return dripLanded();
   const level = tb.bottom - $("barFill").getBoundingClientRect().height;
   const cx = Math.min(tb.right - 14, Math.max(tb.left + 14, x));
   const dist = Math.max(0, level - fromY), T = 260 + dist * 1.3;
+  let landed = false; const land = () => { if (!landed) { landed = true; dripLanded(); } };
+  setTimeout(land, T + 800);   // safety: never leave the water waiting on a lost drop
   // the letter tile shrinks away while a water drop takes its place and falls
   const d = document.createElement("div"); d.className = "drip heat"; paint(d, row); d.textContent = ch;
   d.style.left = (cx - 9) + "px"; d.style.top = (fromY - 10) + "px"; document.body.appendChild(d);
@@ -1274,7 +1279,7 @@ function drip(ch, x, fromY, row) {
   drop.style.left = cx + "px"; drop.style.top = fromY + "px"; document.body.appendChild(drop);
   drop.animate([{ transform: "translateY(0) rotate(45deg) scale(.4)", opacity: 0 }, { transform: "translateY(8px) rotate(45deg) scale(1)", opacity: 1, offset: .2 },
     { transform: `translateY(${dist}px) rotate(45deg) scale(1, 1.15)`, opacity: 1 }], { duration: T, easing: "cubic-bezier(.5,0,1,.7)" }).onfinish = () => {
-    drop.remove(); splash(cx, level);
+    drop.remove(); splash(cx, level); land();
   };
 }
 function splash(x, y) {
@@ -1293,12 +1298,14 @@ function splash(x, y) {
 function drainTank(stamped) {
   const fill = $("barFill"), token = idx;
   draining = true;
+  dripsDone().then(() => {
+  if (token !== idx) return finishDrain();
   fill.style.height = "100%";   // top it off first
   setTimeout(() => {
     if (token !== idx) return finishDrain();
     $("whirl").hidden = false; fill.classList.add("drain"); fill.style.height = "0%";
-    sfx("tick", 0); setTimeout(() => sfx("tick", 2), 250); setTimeout(() => sfx("tick", 4), 500);
-  }, 650);
+    [0, 2, 4, 2, 0].forEach((k, n) => setTimeout(() => sfx("tick", k), n * 480));
+  }, 1400);
   setTimeout(() => {
     $("whirl").hidden = true; fill.classList.remove("drain");
     if (token !== idx) return finishDrain();
@@ -1317,7 +1324,8 @@ function drainTank(stamped) {
       };
     }, n * 120));
     if (!stamped.length) finishDrain();
-  }, 1650);
+  }, 1400 + 2700);
+  });
 }
 function finishDrain() { draining = false; slapping.clear(); $("whirl").hidden = true; $("barFill").classList.remove("drain"); render(); }
 // Stamp every letter the score has earned into both special words, always leaving one letter to guess
@@ -1393,7 +1401,7 @@ function render() {
   setHeat();
   // the points bar
   const into = S.score - earned() * BAR;
-  if (!draining) $("barFill").style.height = into / BAR * 100 + "%";
+  if (!draining && !dripsLeft) $("barFill").style.height = into / BAR * 100 + "%";
   $("barScore").textContent = `${S.score} pts`;
   $("barNext").textContent = S.cracked && S.crackedSide ? `${BAR - into} to fill a column` : `${BAR - into} to next letter`;
   const fk = playing() ? `${S.row}:${S.seg}:${S.cur}` : "";
@@ -1552,6 +1560,7 @@ function drop(r, cols) {
   save();
   busy = true; render();
   if (calm()) { pending.clear(); return settle(); }
+  dripsLeft += landings.length;   // count the drops now, so the water waits for all of them
 
   const box = $("board").getBoundingClientRect();
   const rowTop = j => tiles[j][X(j)].getBoundingClientRect().top - box.top;
@@ -1583,7 +1592,11 @@ function drop(r, cols) {
     });
   });
   const token = idx;
-  Promise.all(last).then(() => { if (token === idx) settle(); });
+  Promise.all(last).then(() => {
+    if (token === idx) settle();
+    // safety: if a drop never makes it (tab hidden, board switched), stop holding the water after a few seconds
+    setTimeout(() => { if (dripsLeft) { dripsLeft = 0; dripWait.splice(0).forEach(f => f()); if (!draining) render(); } }, 4000);
+  });
 }
 
 // The side word's rare trick: each letter shoots across its row and sticks wherever it fits
