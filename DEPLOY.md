@@ -46,6 +46,7 @@ A static page can't read Vercel's environment variables in the browser. `build.s
 | `CASCADE_LIVES` | `5` | Lives per board |
 | `CASCADE_FIRE_SECONDS` | `5` | How long the fire lasts after cracking the top or side word |
 | `CASCADE_ANALYTICS` | off | Set to `1` to load Vercel Web Analytics. Also turn on Analytics in the dashboard. |
+| `CASCADE_SITE_URL` | `https://www.playcascade.io` | The address used in search tags, link previews, `robots.txt` and `sitemap.xml` |
 
 Each environment can get its own values. For example, give **Preview** deploys `CASCADE_LIVES=99` so you can test boards without dying, and leave **Production** at 5.
 
