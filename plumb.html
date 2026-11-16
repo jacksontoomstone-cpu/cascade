@@ -241,30 +241,30 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 .ripple { position: fixed; z-index: 29; pointer-events: none; width: 34px; height: 7px; margin: -3.5px 0 0 -17px; border-radius: 50%;
   border: 2px solid hsl(var(--hue) calc(90% * var(--sk)) calc(82% + var(--lift-a))); animation: ripple .8s ease-out forwards; }
 @keyframes ripple { from { transform: scale(.2); opacity: 1; } to { transform: scale(2.4, 1.6); opacity: 0; } }
-.dam { position: fixed; z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 7px; pointer-events: none; padding: 8px 0 0; }
+.dam { position: fixed; z-index: 5; display: flex; flex-direction: column; align-items: center; gap: calc(var(--s, 28px) * .25); pointer-events: none; padding: 8px 0 0; }
 .dam::before { content: ""; position: absolute; left: -4px; right: -4px; bottom: 0; height: 58%; z-index: -1;
   background: linear-gradient(180deg, var(--bezel), var(--bezel-d)); clip-path: polygon(22% 0, 78% 0, 100% 100%, 0 100%); opacity: .9; }
 .dam-slot { width: var(--s, 28px); height: calc(var(--s, 28px) * 1.15); display: grid; place-items: center; font-family: "Press Start 2P", monospace; font-size: calc(var(--s, 28px) * .43); color: var(--muted);
   background: var(--screen); border: 2px solid var(--bezel-l); opacity: .5; filter: grayscale(1); transition: opacity .35s, filter .35s, background .35s, box-shadow .35s, color .35s; }
 .dam-slot.on { opacity: 1; filter: none; color: #04121a; background: var(--a); border-color: var(--white); box-shadow: 0 0 16px 3px var(--a); }
 .dam-slot.done { opacity: .18; }
-.dam-row { display: flex; gap: 6px; }
+.dam-row { display: flex; gap: calc(var(--s, 28px) * .22); }
 .dam-pu { width: calc(var(--s, 28px) * 2 + 6px); height: calc(var(--s, 28px) * 1.2); display: grid; place-items: center; background: var(--screen); border: 2px solid var(--bezel-l); opacity: .45; filter: grayscale(1); transition: all .35s; }
-.dam-pu svg { width: 18px; height: 22px; fill: var(--muted); }
+.dam-pu svg { width: calc(var(--s, 28px) * .6); height: calc(var(--s, 28px) * .75); fill: var(--muted); }
 .dam-pu.on { opacity: 1; filter: none; background: var(--a); border-color: var(--white); box-shadow: 0 0 18px 4px var(--a); animation: pupulse .5s ease-in-out infinite alternate; }
 .dam-pu.on svg { fill: #04121a; }
 .dam-pu.fire { animation: pufire .45s ease-out; }
 @keyframes pupulse { to { transform: scale(1.08); } }
 @keyframes pufire { 0% { transform: scale(1.3); filter: brightness(2.5); } 100% { transform: none; } }
-.dam-cap { font-family: "Press Start 2P", monospace; font-size: 6px; color: var(--muted); letter-spacing: .05em; margin-top: -3px; }
-.dam-riser { position: relative; width: 10px; flex: 1 1 auto; min-height: 30px; background: var(--screen); border: 2px solid var(--bezel-l); overflow: hidden; }
+.dam-cap { font-family: "Press Start 2P", monospace; font-size: max(6px, calc(var(--s, 28px) * .2)); color: var(--muted); letter-spacing: .05em; margin-top: -3px; }
+.dam-riser { position: relative; width: max(10px, calc(var(--s, 28px) * .36)); flex: 1 1 auto; min-height: 30px; background: var(--screen); border: 2px solid var(--bezel-l); overflow: hidden; }
 .dam-riser i, .dam-pipe i { position: absolute; background: linear-gradient(180deg, hsl(var(--hue) calc(92% * var(--sk)) calc(56% + var(--lift-a))), hsl(var(--hue) calc(85% * var(--sk)) calc(30% + var(--lift)))); box-shadow: 0 0 8px hsl(var(--hue) calc(92% * var(--sk)) calc(56% + var(--lift-a))); }
 .dam-riser i { left: 0; right: 0; bottom: 0; height: 0; transition: height 1s ease-in-out; }
-.dam-turbine { width: min(46px, calc(var(--s, 28px) * 1.65)); height: min(46px, calc(var(--s, 28px) * 1.65)); flex: none; margin-bottom: 4px; }
+.dam-turbine { width: calc(var(--s, 28px) * 1.65); height: calc(var(--s, 28px) * 1.65); flex: none; margin-bottom: 4px; }
 .dam-turbine svg { width: 100%; height: 100%; }
 .dam-turbine.spin svg { animation: whirl .5s linear infinite; }
-.dam-pipe { position: fixed; z-index: 4; height: 12px; background: var(--screen); border: 2px solid var(--bezel-l); overflow: hidden; pointer-events: none; }
-.dam-pipe i { top: 0; bottom: 0; right: 0; width: 0; transition: width .7s ease-in; }
+.dam-pipe { position: fixed; z-index: 4; height: 16px; background: var(--screen); border: 2px solid var(--bezel-l); overflow: hidden; pointer-events: none; }
+.dam-pipe i { top: 0; bottom: 0; left: 0; width: 0; transition: width .7s ease-in; }
 .tile.await { color: transparent !important; text-shadow: none !important; }
 .tile.slap { animation: slap .38s cubic-bezier(.2,1.6,.4,1); z-index: 3; }
 @keyframes slap { 0% { transform: scale(1.9) rotate(-8deg); filter: brightness(2.2); } 60% { transform: scale(.88) rotate(2deg); } 100% { transform: none; } }
@@ -399,6 +399,10 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 @media (min-width: 860px) {
   .app { max-width: none; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
   header h1 { font-size: clamp(1.15rem, 1.8vw, 1.9rem); }
+  :root { --term: "Rubik", system-ui, -apple-system, sans-serif; }
+  body { -webkit-font-smoothing: antialiased; }
+  .clue .text, .clue .whole, .pw-clue { font-weight: 600; letter-spacing: -.01em; }
+  .board::after { opacity: .45; }
   .nav { font-size: .62rem; } .timer { font-size: clamp(.95rem, 1.5vw, 1.4rem); }
   main { --side: clamp(300px, 27vw, 480px); display: grid; grid-template-columns: minmax(0, 1fr) var(--side); grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 12px 28px; padding-top: 12px; }
   .play { grid-column: 1; grid-row: 1 / 4; align-self: center; }
@@ -411,6 +415,7 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
   .clue .whole { font-size: clamp(1.25rem, 1.6vw, 1.8rem); }
   .ctrl { grid-column: 2; grid-row: 2; flex-wrap: wrap; }
   .kb { grid-column: 2; grid-row: 3; align-self: end; margin-top: 0; }
+  @media (pointer: fine) { .kb { display: none; } }
   .kb button { max-width: none; height: clamp(40px, 7vh, 72px); font-size: clamp(.7rem, 1vw, 1rem); }
   .kb button.wide { max-width: none; }
   .kb .spacer { max-width: 28px; }
@@ -1176,7 +1181,10 @@ const isCompound = r => P[r].segs.length > 1;
 const isSpecial = r => r === 0 || P[r].side;
 const crackedOf = r => r === 0 ? S.cracked : S.crackedSide;
 const baseWorth = r => Math.max(10, Math.round((100 - 90 * height(r)) / 5) * 5) * (isCompound(r) ? 2 : 1);   // compounds pay double
-const worth = r => isSpecial(r) ? 0 : Math.round(baseWorth(r) * 1.3 / 5) * 5;
+// points per word: a normal word pays its row's base value; a compound pays exactly two average normal words on this board
+const plain = r => Math.round(baseWorth(r) / 5) * 5;
+let AVG = 50;
+const worth = r => isSpecial(r) ? 0 : isCompound(r) ? AVG * 2 : plain(r);
 const light = r => isSpecial(r) ? 84 : Math.round(74 - 42 * height(r));
 const paint = (el, r) => { el.style.setProperty("--l", light(r) + "%"); el.style.setProperty("--on", light(r) > 50 ? "#04121a" : "#f2f7f8"); };
 const letterAt = (r, c) => W(r)[c - X(r)];
@@ -1203,6 +1211,7 @@ function load(i) {
   ORDER = [...PW].map((_, n) => n).sort((a, b) => (a * 37 + i * 11) % 17 - (b * 37 + i * 11) % 17);   // letters unlock out of order
   ORDER2 = [...P[P.length - 1].w].map((_, n) => n).sort((a, b) => (a * 41 + i * 7) % 13 - (b * 41 + i * 7) % 13);
   // a full bar stamps a letter into both special words; words pay 30% over this scale, so the bar fills fast
+  { const n = P.map((_, r) => r).filter(r => !isSpecial(r) && !isCompound(r)); AVG = n.length ? Math.round(n.reduce((a, r) => a + plain(r), 0) / n.length / 5) * 5 : 50; }
   BAR = Math.floor(P.reduce((sum, _, r) => sum + (isSpecial(r) ? 0 : baseWorth(r)), 0) * .95 * 1.25 / STAMPS / 5) * 5;   // x1.25: power-ups cost 25% more points
   S = store.get(SAVE + i) || fresh();
   fireUntil = 0;
@@ -1342,17 +1351,21 @@ const damOn = () => !$("dam").hidden;
 function layoutDam() {
   const bar = document.querySelector(".bar"), dam = $("dam"), pipe = $("damPipe");
   if (!wide.matches || !P) { bar.style.marginLeft = bar.style.width = ""; dam.hidden = pipe.hidden = true; return; }
-  const play = document.querySelector(".play").getBoundingClientRect(), side = document.querySelector(".sidebox").getBoundingClientRect(),
-    board = $("board").getBoundingClientRect(), main = document.querySelector("main").getBoundingClientRect();
-  bar.style.marginLeft = Math.max(0, side.left - main.left - parseFloat(getComputedStyle(document.querySelector("main")).paddingLeft || 0)) + "px";
+  const side = document.querySelector(".sidebox").getBoundingClientRect(), board = $("board").getBoundingClientRect(),
+    mainEl = document.querySelector("main"), main = mainEl.getBoundingClientRect(), pad = parseFloat(getComputedStyle(mainEl).paddingLeft || 0);
+  bar.style.marginLeft = Math.max(0, side.left - main.left - pad) + "px";
   bar.style.width = (board.right - side.left) + "px";
-  const tb = bar.getBoundingClientRect(), room = side.left - play.left - 10;
-  if (room < 40 || !tb.height) { dam.hidden = pipe.hidden = true; return; }
-  const w = Math.min(84, room), right = side.left - 10, h = Math.min(250, tb.bottom - board.top);
+  // the dam lives in the right-hand column, in the space below the buttons (where the on-screen keyboard used to be)
+  const tb = bar.getBoundingClientRect(), ctrl = document.querySelector(".ctrl").getBoundingClientRect();
+  const kbShown = getComputedStyle($("kb")).display !== "none";
+  const L = ctrl.left, Rt = main.right - parseFloat(getComputedStyle(mainEl).paddingRight || 0), T = ctrl.bottom + 16;
+  const w = Math.min(168, Rt - L - 20), h = Math.min(500, tb.bottom - T);
+  if (kbShown || w < 60 || h < 160 || !tb.height) { dam.hidden = pipe.hidden = true; return; }
+  const left = L + (Rt - L - w) / 2;
   dam.hidden = pipe.hidden = false;
-  dam.style.setProperty("--s", Math.min(28, (w - 8) / 2) + "px");   // slots shrink to fit narrow screens
-  Object.assign(dam.style, { left: (right - w) + "px", width: w + "px", top: (tb.bottom - h) + "px", height: h + "px" });
-  Object.assign(pipe.style, { left: (right - w / 2) + "px", width: (tb.left - (right - w / 2) + 2) + "px", top: (tb.bottom - 16) + "px" });
+  dam.style.setProperty("--s", Math.min(56, (w - 8) / 2, (h - 40) / 7.2) + "px");
+  Object.assign(dam.style, { left: left + "px", width: w + "px", top: (tb.bottom - h) + "px", height: h + "px" });
+  Object.assign(pipe.style, { left: (tb.right - 2) + "px", width: (left + w / 2 - tb.right + 2) + "px", top: (tb.bottom - 20) + "px" });
   renderDam();
 }
 function renderDam() {
