@@ -76,6 +76,11 @@ header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin
 .pay-small { margin: 0; font-size: .95rem; color: var(--muted); }
 .sheet.pay .btn.primary { min-width: 70%; margin-top: 8px; }
 .sheet.pay .btn:disabled { opacity: .55; cursor: default; }
+.sheet .arch-head { margin: 4px 0 0; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; color: var(--muted); }
+.arch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
+.arch-grid .btn { padding: 10px 0; font-size: .5rem; }
+.arch-grid .btn.won { background: var(--a); color: #04121a; }
+.arch-grid .btn.cur { outline: 2px solid var(--white); outline-offset: 2px; }
 .confirm-actions { display: flex; gap: 10px; justify-content: center; }
 .icon-btn { border: none; background: var(--bezel); box-shadow: inset -2px -2px 0 var(--bezel-d), inset 2px 2px 0 var(--bezel-l); border-radius: 0; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; padding: 0; }
 .icon-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.6; stroke-linecap: square; stroke-linejoin: miter; }
@@ -382,7 +387,19 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
     <p class="pay-price">$5</p>
     <p class="pay-small">Pay once. No subscription.</p>
     <button class="btn primary" id="payBtn" disabled>Unlock unlimited</button>
-    <p class="pay-small">Payments coming soon.</p>
+    <p class="pay-small" id="paySoon">Payments coming soon.</p>
+    <p class="pay-small" id="payVia" hidden>Secure checkout by Stripe.</p>
+  </div>
+</div>
+
+<div class="modal" id="archModal" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="archTitle">
+    <button class="close" data-close aria-label="Close">×</button>
+    <h2 id="archTitle">Unlimited</h2>
+    <p class="arch-head" id="archPastHead">Past dailies</p>
+    <div class="arch-grid" id="archPast"></div>
+    <p class="arch-head">Classics</p>
+    <div class="arch-grid" id="archOld"></div>
   </div>
 </div>
 
@@ -917,9 +934,19 @@ const playable = () => [INTRO, dailyIdx()].filter(i => i !== null);
 const doneWith = i => (store.get(SAVE + i)?.status ?? "playing") !== "playing";
 const allDone = () => playable().length > 1 && playable().every(doneWith);
 const dayLabel = () => new Date(today() + "T12:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+// Unlimited: everything that isn't the intro or a future daily
+const PAY_LINK = "https://buy.stripe.com/14A8wR1PM04W5Nneqy2cg01";   // your Stripe Payment Link (https://buy.stripe.com/...); the Unlock button stays off until it's set
+const dateOf = i => { const d = new Date(DAILY_START + "T12:00"); d.setDate(d.getDate() + DAILY.indexOf(i)); return d; };
+const shortDate = d => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+function pastDailies() {
+  const n = Math.round((Date.parse(today() + "T12:00") - Date.parse(DAILY_START + "T12:00")) / 864e5);
+  return DAILY.slice(0, Math.max(0, Math.min(n, DAILY.length))).reverse();   // newest first, never today's or later
+}
+const classics = () => Array.from({ length: INTRO }, (_, i) => i);
+const extras = () => [...pastDailies(), ...classics()];
 const K7 = "cx-v7";
 // the stored value has to match this code, so typing true or 1 into storage does nothing
-const q7 = () => { let h = 2166136261; for (const ch of "c4sc\u00e4de\u2022v7\u2022" + DAILY_START) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return "v7." + (h >>> 0).toString(36); };
+const q7 = () => { let h = 2166136261; for (const ch of "c4sc\u00e4de\u2022v7\u2022" + "2026-11-17") h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return "v7." + (h >>> 0).toString(36); };
 const ok7 = () => store.get(K7) === q7();
 const STAMPS = 6;   // sets the bar size: about this many fills on the old point scale
 
@@ -973,7 +1000,7 @@ function fresh() {
            row: 1, seg: 0, cur: P[1].x, misses: 0, log: [], status: "playing", time: 0, started: false, score: 0, paid: P.map(() => false), cracked: false, crackedSide: false };
 }
 function load(i) {
-  if (!playable().includes(i)) i = INTRO;   // archived and future boards can't be opened
+  if (!playable().includes(i) && !(ok7() && extras().includes(i))) i = INTRO;   // archived and future boards stay locked
   idx = i; P = parse(PUZZLES[i]); pending.clear(); busy = false;
   PW = P[0].w; litCells.clear(); hotCells.clear();
   ORDER = [...PW].map((_, n) => n).sort((a, b) => (a * 37 + i * 11) % 17 - (b * 37 + i * 11) % 17);   // letters unlock out of order
@@ -1105,8 +1132,8 @@ function render() {
   $("letterBtn").disabled = !playing();
   $("giveUpBtn").hidden = !playing();
   $("resetBtn").hidden = S.status !== "won";
-  const list = playable(), at = list.indexOf(idx);
-  $("navLbl").innerHTML = idx === INTRO ? "Intro" : `<span class="lbl-long">Daily </span>${dayLabel()}`;
+  const list = navList(), at = list.indexOf(idx);
+  $("navLbl").innerHTML = boardName(idx, true);
   $("prev").disabled = at <= 0; $("next").disabled = at === list.length - 1;
   $("timer").textContent = clock(S.time);
   $("pwClue").textContent = `Top: ${P[0].segs[0].clue}  Side: ${P[P.length - 1].segs[0].clue}`;
@@ -1557,7 +1584,7 @@ function filled() {
 const livesLeft = () => Math.max(0, LIVES() - S.misses);
 function shareText() {
   const n = livesLeft();
-  return `Cascade ${idx === INTRO ? "Intro" : `Daily ${dayLabel()}`}\n${filled()}% · ${clock(S.time)} · ${n} ${n === 1 ? "life" : "lives"} left`;
+  return `Cascade ${boardName(idx)}\n${filled()}% · ${clock(S.time)} · ${n} ${n === 1 ? "life" : "lives"} left`;
 }
 function showResult() {
   $("resTitle").textContent = S.status === "lost" ? "Out of lives" : "Board cleared";
@@ -1697,7 +1724,7 @@ if (window.visualViewport) {
 $("checkBtn").addEventListener("click", check);
 $("letterBtn").addEventListener("click", peek);
 $("giveUpBtn").addEventListener("click", giveUp);
-const step = d => { const list = playable(), j = list.indexOf(idx) + d; if (list[j] !== undefined) load(list[j]); };
+const step = d => { const list = navList(), j = list.indexOf(idx) + d; if (list[j] !== undefined) load(list[j]); };
 $("prev").addEventListener("click", () => step(-1));
 $("next").addEventListener("click", () => step(1));
 $("helpBtn").addEventListener("click", () => $("helpModal").hidden = false);
@@ -1707,7 +1734,25 @@ function paywall(afterDaily = true) {
   if (afterDaily && ok7()) return false;
   closeModals(); $("payLead").hidden = !afterDaily; $("payModal").hidden = false; return true;
 }
-$("unlimBtn").addEventListener("click", () => paywall(false));
+$("unlimBtn").addEventListener("click", () => ok7() ? openArchive() : paywall(false));
+$("payBtn").addEventListener("click", () => { if (PAY_LINK) location.href = PAY_LINK; });
+function openArchive() {
+  const fill = (el, list) => {
+    el.innerHTML = "";
+    list.forEach(i => {
+      const b = document.createElement("button"), won = store.get(SAVE + i)?.status === "won";
+      b.className = "btn" + (won ? " won" : "") + (i === idx ? " cur" : "");
+      b.textContent = DAILY.includes(i) ? shortDate(dateOf(i)) : i + 1;
+      b.setAttribute("aria-label", `${boardName(i)}${won ? ", solved" : ""}`);
+      b.addEventListener("click", () => { closeModals(); load(i); });
+      el.appendChild(b);
+    });
+  };
+  const past = pastDailies();
+  fill($("archPast"), past); fill($("archOld"), classics());
+  $("archPastHead").hidden = $("archPast").hidden = !past.length;
+  closeModals(); $("archModal").hidden = false;
+}
 // resetting a solved puzzle takes two buttons: Reset puzzle, then Reset in the confirm box
 $("resetBtn").addEventListener("click", () => { if (S.status === "won" && !busy) $("resetModal").hidden = false; });
 $("resetYes").addEventListener("click", () => {
@@ -1732,10 +1777,35 @@ document.querySelectorAll(".modal").forEach(m => m.addEventListener("click", e =
 // closing the last result of the day also brings up the paywall
 $("resultModal").querySelector(".close").addEventListener("click", () => { if (allDone()) paywall(); });
 
+// the arrows move between the intro and today's daily, or through the unlimited boards when you're in them
+const navList = () => extras().includes(idx) ? extras() : playable();
+function boardName(i, short = false) {
+  const day = d => short ? `<span class="lbl-long">Daily </span>${shortDate(d)}` : `Daily ${shortDate(d)}`;
+  if (i === INTRO) return "Intro";
+  if (DAILY.includes(i)) return day(dateOf(i));
+  return short ? `<span class="lbl-long">Classic </span>#${i + 1}` : `Classic #${i + 1}`;
+}
+function renderUnlim() {
+  $("unlimBtn").textContent = ok7() ? "Archive" : "Unlimited";
+  $("payBtn").disabled = !PAY_LINK;
+  $("paySoon").hidden = !!PAY_LINK; $("payVia").hidden = !PAY_LINK;
+}
+// Stripe sends buyers back to playcascade.io/?unlocked=cs_... after paying
+function claimUnlock() {
+  const u = new URL(location.href), id = u.searchParams.get("unlocked");
+  if (!id) return false;
+  u.searchParams.delete("unlocked");
+  try { history.replaceState(null, "", u.pathname + u.search + u.hash); } catch {}   // tidy the address bar
+  if (!/^cs_(live|test)_\w+$/.test(id)) return false;
+  store.set(K7, q7()); return true;
+}
+
 function start(data) {
   renderSound();
+  const fresh7 = claimUnlock(); renderUnlim();
   // new players start on the intro; once it's done they open on today's daily
   load(typeof data.idx === "number" ? data.idx : doneWith(INTRO) && dailyIdx() !== null ? dailyIdx() : INTRO);
+  if (fresh7) { openArchive(); toast("Unlimited unlocked. Thanks!"); return; }
   if (allDone() && paywall()) return;
   $("startLives").textContent = LIVES(); $("helpModal").hidden = false;   // start screen every time the game opens
 }
