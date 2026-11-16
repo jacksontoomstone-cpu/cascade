@@ -67,7 +67,8 @@ header { flex: none; display: flex; align-items: center; justify-content: space-
 header::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: linear-gradient(90deg, hsl(var(--hue) calc(95% * var(--sk)) calc(72% + var(--lift-a))) 25%, hsl(var(--hue) calc(90% * var(--sk)) calc(56% + var(--lift-a))) 25% 50%, hsl(var(--hue) calc(85% * var(--sk)) calc(42% + var(--lift-a))) 50% 75%, hsl(var(--hue) calc(80% * var(--sk)) calc(28% + var(--lift))) 75%); }
 header h1 { position: relative; }
 .admin-badge { position: absolute; left: 0; top: 100%; margin-top: 3px; font-family: "Press Start 2P", monospace; font-size: max(7px, .3em); line-height: 1; letter-spacing: .05em;
-  color: #1a1206; background: #ffe066; padding: 3px 5px; border: 2px solid #1a1206; text-shadow: none; transform: rotate(-4deg); pointer-events: none; z-index: 3; }
+  color: #1a1206; background: #ffe066; padding: 3px 5px; border: 2px solid #1a1206; text-shadow: none; transform: rotate(-4deg); cursor: pointer; z-index: 3; text-transform: uppercase; box-shadow: 2px 2px 0 rgba(0,0,0,.5); }
+.admin-badge:hover { background: #fff1a8; }
 header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin: 0; text-transform: uppercase; color: var(--a); text-shadow: 3px 3px 0 var(--ad); }
 .nav { display: flex; align-items: center; white-space: nowrap; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; }
 .nav button { border: none; background: transparent; font-size: .8rem; font-family: var(--pixel); cursor: pointer; padding: 4px 5px; color: var(--a); }
@@ -373,7 +374,7 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 
 <div class="app">
   <header>
-    <h1>Cascade<span class="admin-badge" id="adminBadge" hidden>Admin</span></h1>
+    <h1>Cascade<button class="admin-badge" id="adminBadge" hidden aria-label="Admin mode: open admin panel">Admin</button></h1>
     <div class="nav">
       <button id="prev" aria-label="Previous puzzle">‹</button>
       <span id="navLbl">1 of 8</span>
@@ -492,6 +493,24 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
         <button class="btn primary" type="submit">Reset all</button>
       </form>
     </div>
+  </div>
+</div>
+
+<div class="modal" id="adminModal" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="admTitle">
+    <button class="close" data-close aria-label="Close">×</button>
+    <h2 id="admTitle">Admin mode</h2>
+    <p class="pay-note" style="font-size:1.05rem">Every board is open, including upcoming dailies.</p>
+    <div class="confirm-actions">
+      <button class="btn" id="admArchive">Open archive</button>
+      <button class="btn" id="admExit">Exit admin</button>
+    </div>
+    <button class="btn primary" id="admResetBtn">Reset everything</button>
+    <form class="admin-row" id="admResetForm" hidden>
+      <input id="admResetCode" type="password" placeholder="Password" autocomplete="off" aria-label="Admin password">
+      <button class="btn primary" type="submit">Reset</button>
+    </form>
+    <p class="pay-small" style="text-align:center">Reset wipes all progress, the purchase and the board color, as if the game was never bought.</p>
   </div>
 </div>
 
@@ -1931,12 +1950,23 @@ $("wipeBtn").addEventListener("click", () => { $("archAdminForm").hidden = true;
 function wipeAll(input) {
   const v = input.value.trim().toLowerCase(); input.value = "";
   if (h7("ad\u2022" + v) !== A7) { toast("Wrong password"); return; }
+  // back to a brand-new player: no progress, no purchase, no admin, default color (sound setting stays)
   PUZZLES.forEach((_, i) => store.set(SAVE + i, null));
-  store.set(KT, null);
+  [KT, K7, KH, KA].forEach(k => store.set(k, null));
+  renderUnlim(); applyHue();
   closeModals(); fireUntil = 0; load(INTRO);
   $("startLives").textContent = LIVES(); $("helpModal").hidden = false;
-  toast("All progress reset");
+  toast("Reset to a fresh game");
 }
+$("adminBadge").addEventListener("click", () => { closeModals(); $("admResetForm").hidden = true; $("adminModal").hidden = false; });
+$("admArchive").addEventListener("click", openArchive);
+$("admExit").addEventListener("click", () => {
+  store.set(KA, null); renderUnlim(); applyHue(); closeModals();
+  if (!playable().includes(idx) && !(ok7() && extras().includes(idx))) load(INTRO);
+  toast("Admin mode off");
+});
+$("admResetBtn").addEventListener("click", () => { $("admResetForm").hidden = false; $("admResetCode").focus(); });
+$("admResetForm").addEventListener("submit", e => { e.preventDefault(); wipeAll($("admResetCode")); });
 $("wipeForm").addEventListener("submit", e => { e.preventDefault(); wipeAll($("wipeCode")); });
 // the same reset straight from the Unlimited screen, no admin mode needed
 $("payWipeLink").addEventListener("click", () => { $("adminForm").hidden = true; $("payWipeForm").hidden = false; $("payWipeCode").focus(); });
