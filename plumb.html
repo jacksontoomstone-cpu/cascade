@@ -241,6 +241,30 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 .ripple { position: fixed; z-index: 29; pointer-events: none; width: 34px; height: 7px; margin: -3.5px 0 0 -17px; border-radius: 50%;
   border: 2px solid hsl(var(--hue) calc(90% * var(--sk)) calc(82% + var(--lift-a))); animation: ripple .8s ease-out forwards; }
 @keyframes ripple { from { transform: scale(.2); opacity: 1; } to { transform: scale(2.4, 1.6); opacity: 0; } }
+.dam { position: fixed; z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 7px; pointer-events: none; padding: 8px 0 0; }
+.dam::before { content: ""; position: absolute; left: -4px; right: -4px; bottom: 0; height: 58%; z-index: -1;
+  background: linear-gradient(180deg, var(--bezel), var(--bezel-d)); clip-path: polygon(22% 0, 78% 0, 100% 100%, 0 100%); opacity: .9; }
+.dam-slot { width: var(--s, 28px); height: calc(var(--s, 28px) * 1.15); display: grid; place-items: center; font-family: "Press Start 2P", monospace; font-size: calc(var(--s, 28px) * .43); color: var(--muted);
+  background: var(--screen); border: 2px solid var(--bezel-l); opacity: .5; filter: grayscale(1); transition: opacity .35s, filter .35s, background .35s, box-shadow .35s, color .35s; }
+.dam-slot.on { opacity: 1; filter: none; color: #04121a; background: var(--a); border-color: var(--white); box-shadow: 0 0 16px 3px var(--a); }
+.dam-slot.done { opacity: .18; }
+.dam-row { display: flex; gap: 6px; }
+.dam-pu { width: calc(var(--s, 28px) * 2 + 6px); height: calc(var(--s, 28px) * 1.2); display: grid; place-items: center; background: var(--screen); border: 2px solid var(--bezel-l); opacity: .45; filter: grayscale(1); transition: all .35s; }
+.dam-pu svg { width: 18px; height: 22px; fill: var(--muted); }
+.dam-pu.on { opacity: 1; filter: none; background: var(--a); border-color: var(--white); box-shadow: 0 0 18px 4px var(--a); animation: pupulse .5s ease-in-out infinite alternate; }
+.dam-pu.on svg { fill: #04121a; }
+.dam-pu.fire { animation: pufire .45s ease-out; }
+@keyframes pupulse { to { transform: scale(1.08); } }
+@keyframes pufire { 0% { transform: scale(1.3); filter: brightness(2.5); } 100% { transform: none; } }
+.dam-cap { font-family: "Press Start 2P", monospace; font-size: 6px; color: var(--muted); letter-spacing: .05em; margin-top: -3px; }
+.dam-riser { position: relative; width: 10px; flex: 1 1 auto; min-height: 30px; background: var(--screen); border: 2px solid var(--bezel-l); overflow: hidden; }
+.dam-riser i, .dam-pipe i { position: absolute; background: linear-gradient(180deg, hsl(var(--hue) calc(92% * var(--sk)) calc(56% + var(--lift-a))), hsl(var(--hue) calc(85% * var(--sk)) calc(30% + var(--lift)))); box-shadow: 0 0 8px hsl(var(--hue) calc(92% * var(--sk)) calc(56% + var(--lift-a))); }
+.dam-riser i { left: 0; right: 0; bottom: 0; height: 0; transition: height 1s ease-in-out; }
+.dam-turbine { width: min(46px, calc(var(--s, 28px) * 1.65)); height: min(46px, calc(var(--s, 28px) * 1.65)); flex: none; margin-bottom: 4px; }
+.dam-turbine svg { width: 100%; height: 100%; }
+.dam-turbine.spin svg { animation: whirl .5s linear infinite; }
+.dam-pipe { position: fixed; z-index: 4; height: 12px; background: var(--screen); border: 2px solid var(--bezel-l); overflow: hidden; pointer-events: none; }
+.dam-pipe i { top: 0; bottom: 0; right: 0; width: 0; transition: width .7s ease-in; }
 .tile.await { color: transparent !important; text-shadow: none !important; }
 .tile.slap { animation: slap .38s cubic-bezier(.2,1.6,.4,1); z-index: 3; }
 @keyframes slap { 0% { transform: scale(1.9) rotate(-8deg); filter: brightness(2.2); } 60% { transform: scale(.88) rotate(2deg); } 100% { transform: none; } }
@@ -380,7 +404,7 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
   .play { grid-column: 1; grid-row: 1 / 4; align-self: center; }
   .boardwrap { --gap: 3px; --rg: 5px; --t: max(20px, calc(min((100vw - var(--side) - 170px) / (var(--c) + 1) - var(--gap), ((100dvh - 200px) / var(--r) - var(--rg)) / 1.15))); --h: calc(var(--t) * 1.15); gap: 14px; }
   .pw-clue { font-size: clamp(1.15rem, 1.5vw, 1.6rem); }
-  .bar { grid-column: 1 / -1; grid-row: 4; height: 44px; }
+  .bar { grid-column: 1; grid-row: 4; height: 44px; justify-self: start; }
   .bar-text { font-size: .6rem; }
   .clue { grid-column: 2; grid-row: 1; }
   .clue .text { font-size: clamp(1.9rem, 2.6vw, 3rem); }
@@ -438,6 +462,18 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
       <div class="whirl" id="whirl" hidden></div>
       <span class="bar-text"><b id="barScore">0 pts</b><span id="barNext"></span></span>
     </div>
+    <div class="dam" id="dam" hidden aria-hidden="true">
+      <div class="dam-pu" id="slotPU"><svg viewBox="0 0 12 16"><path d="M7 0 L1 9 H5 L4 16 L11 6 H7 Z"/></svg></div>
+      <div class="dam-cap">Power</div>
+      <div class="dam-row"><div class="dam-slot" id="slotTop">?</div><div class="dam-slot" id="slotSide">?</div></div>
+      <div class="dam-cap">Top Side</div>
+      <div class="dam-riser"><i id="riserFill"></i></div>
+      <div class="dam-turbine" id="turbine"><svg viewBox="-24 -24 48 48"><circle r="21" fill="var(--screen)" stroke="var(--bezel-l)" stroke-width="3"/>
+        <g fill="var(--a)" opacity=".85"><path d="M0 0 L-4 -18 L4 -18 Z"/><path d="M0 0 L-4 -18 L4 -18 Z" transform="rotate(60)"/><path d="M0 0 L-4 -18 L4 -18 Z" transform="rotate(120)"/>
+        <path d="M0 0 L-4 -18 L4 -18 Z" transform="rotate(180)"/><path d="M0 0 L-4 -18 L4 -18 Z" transform="rotate(240)"/><path d="M0 0 L-4 -18 L4 -18 Z" transform="rotate(300)"/></g>
+        <circle r="5" fill="var(--white)"/></svg></div>
+    </div>
+    <div class="dam-pipe" id="damPipe" hidden aria-hidden="true"><i id="pipeFill"></i></div>
 
     <div class="ctrl">
       <div class="status">
@@ -1156,7 +1192,11 @@ function fresh() {
            row: 1, seg: 0, cur: P[1].x, misses: 0, log: [], status: "playing", time: 0, started: false, score: 0, paid: P.map(() => false), cracked: false, crackedSide: false };
 }
 function load(i) {
-  if (typeof draining !== "undefined") { draining = false; slapping.clear(); dripsLeft = 0; dripWait.splice(0).forEach(f => f()); }
+  if (typeof draining !== "undefined") {
+    draining = false; slapping.clear(); dripsLeft = 0; dripWait.splice(0).forEach(f => f());
+    $("pipeFill").style.width = "0"; $("riserFill").style.height = "0"; $("turbine").classList.remove("spin");
+    ["slotTop", "slotSide"].forEach(id => { $(id).classList.remove("on"); $(id).textContent = "?"; }); $("slotPU").classList.remove("on", "fire");
+  }
   if (!playable().includes(i) && !(ok7() && extras().includes(i))) i = INTRO;   // archived and future boards stay locked
   idx = i; P = parse(PUZZLES[i]); pending.clear(); busy = false;
   PW = P[0].w; litCells.clear(); hotCells.clear();
@@ -1185,6 +1225,7 @@ function build() {
     (p.side ? sg : g).appendChild(t); tiles[r][c] = t;
   }));
   zoom = 1; autoZoomed = false; fit(); b.scrollTo(0, 0); lastFollow = "";
+  requestAnimationFrame(layoutDam);
 }
 /* ---------- phone sizing and zoom ----------
    On phones the board is sized to fit the space it has; pinch or double-tap to zoom in, then drag to pan. */
@@ -1233,7 +1274,7 @@ function setZoom(z, px, py) {
   b.addEventListener("touchend", e => { if (e.touches.length < 2) pinch = null; });
   // trackpad pinch on a narrow desktop window arrives as ctrl+wheel
   b.addEventListener("wheel", e => { if (!phone.matches || !e.ctrlKey) return; e.preventDefault(); setZoom(zoom * Math.exp(-e.deltaY / 100), e.clientX, e.clientY); }, { passive: false });
-  addEventListener("resize", () => { if (P) fit(); });
+  addEventListener("resize", () => { if (P) { fit(); layoutDam(); } });
   if (window.ResizeObserver) new ResizeObserver(() => { if (P) fit(); }).observe(b);
   phone.addEventListener?.("change", () => { if (P) { zoom = 1; fit(); } });
 }
@@ -1295,39 +1336,85 @@ function splash(x, y) {
     document.body.appendChild(r); setTimeout(() => r.remove(), 850);
   }, wait));
 }
-function drainTank(stamped) {
-  const fill = $("barFill"), token = idx;
+// wide screens: the tank sits under the puzzle, and a dam in the space to its left turns the drained water into power
+const wide = matchMedia("(min-width: 860px)");
+const damOn = () => !$("dam").hidden;
+function layoutDam() {
+  const bar = document.querySelector(".bar"), dam = $("dam"), pipe = $("damPipe");
+  if (!wide.matches || !P) { bar.style.marginLeft = bar.style.width = ""; dam.hidden = pipe.hidden = true; return; }
+  const play = document.querySelector(".play").getBoundingClientRect(), side = document.querySelector(".sidebox").getBoundingClientRect(),
+    board = $("board").getBoundingClientRect(), main = document.querySelector("main").getBoundingClientRect();
+  bar.style.marginLeft = Math.max(0, side.left - main.left - parseFloat(getComputedStyle(document.querySelector("main")).paddingLeft || 0)) + "px";
+  bar.style.width = (board.right - side.left) + "px";
+  const tb = bar.getBoundingClientRect(), room = side.left - play.left - 10;
+  if (room < 40 || !tb.height) { dam.hidden = pipe.hidden = true; return; }
+  const w = Math.min(84, room), right = side.left - 10, h = Math.min(250, tb.bottom - board.top);
+  dam.hidden = pipe.hidden = false;
+  dam.style.setProperty("--s", Math.min(28, (w - 8) / 2) + "px");   // slots shrink to fit narrow screens
+  Object.assign(dam.style, { left: (right - w) + "px", width: w + "px", top: (tb.bottom - h) + "px", height: h + "px" });
+  Object.assign(pipe.style, { left: (right - w / 2) + "px", width: (tb.left - (right - w / 2) + 2) + "px", top: (tb.bottom - 16) + "px" });
+  renderDam();
+}
+function renderDam() {
+  if (!S) return;
+  $("slotTop").classList.toggle("done", !!S.cracked); $("slotSide").classList.toggle("done", !!S.crackedSide);
+}
+if (window.ResizeObserver) new ResizeObserver(() => layoutDam()).observe(document.querySelector("main"));
+function drainTank(stamped, power = false) {
+  const fill = $("barFill"), token = idx, viaDam = damOn();
   draining = true;
   dripsDone().then(() => {
   if (token !== idx) return finishDrain();
   fill.style.height = "100%";   // top it off first
+  const T0 = 1400, DRAIN = 2700;
   setTimeout(() => {
     if (token !== idx) return finishDrain();
-    $("whirl").hidden = false; fill.classList.add("drain"); fill.style.height = "0%";
+    fill.classList.add("drain"); fill.style.height = "0%";
     [0, 2, 4, 2, 0].forEach((k, n) => setTimeout(() => sfx("tick", k), n * 480));
-  }, 1400);
+    if (!viaDam) { $("whirl").hidden = false; return; }
+    // water runs out the side of the tank, through the pipe, spins the turbine and climbs the riser
+    $("pipeFill").style.width = "100%"; $("turbine").classList.add("spin");
+    setTimeout(() => { $("riserFill").style.height = "100%"; }, 700);
+    setTimeout(() => {
+      if (token !== idx) return;
+      if (power) $("slotPU").classList.add("on");
+      stamped.forEach(({ t, r }) => { const sl = $(r === 0 ? "slotTop" : "slotSide"); if (!sl.classList.contains("on")) { sl.textContent = t.textContent; sl.classList.add("on"); } });
+      sfx("good");
+    }, 1800);
+  }, T0);
   setTimeout(() => {
     $("whirl").hidden = true; fill.classList.remove("drain");
     if (token !== idx) return finishDrain();
-    const tb = tankBox(), sx = tb ? tb.left + tb.width / 2 : innerWidth / 2, sy = tb ? tb.bottom - 6 : innerHeight;
+    const tb = tankBox(), cx = tb ? tb.left + tb.width / 2 : innerWidth / 2, cy = tb ? tb.bottom - 6 : innerHeight;
+    const origin = r => { if (!viaDam) return [cx, cy]; const o = $(r === 0 ? "slotTop" : "slotSide").getBoundingClientRect(); return [o.left + o.width / 2, o.top + o.height / 2]; };
     stamped.forEach(({ t, key, r }, n) => setTimeout(() => {
       if (token !== idx) return;
-      const to = t.getBoundingClientRect();
+      const [sx, sy] = origin(r), to = t.getBoundingClientRect();
       const f = document.createElement("div"); f.className = "drip heat"; paint(f, r); f.textContent = t.textContent;
       f.style.left = (sx - 9) + "px"; f.style.top = (sy - 10) + "px"; document.body.appendChild(f);
       const dx = to.left + to.width / 2 - sx, dy = to.top + to.height / 2 - sy, k = Math.max(1, to.width / 18);
-      f.animate([{ transform: "translate(0,0) scale(.6)" }, { transform: `translate(${dx * .5}px, ${dy * .5 - 60}px) scale(${k * .8}) rotate(-10deg)`, offset: .55 },
-        { transform: `translate(${dx}px, ${dy}px) scale(${k}) rotate(0deg)` }], { duration: 520, easing: "cubic-bezier(.3,.1,.6,1)" }).onfinish = () => {
+      f.animate([{ transform: "translate(0,0) scale(1)" }, { transform: `translate(${dx * .5}px, ${dy * .5 - 60}px) scale(${k * .8}) rotate(-10deg)`, offset: .55 },
+        { transform: `translate(${dx}px, ${dy}px) scale(${k}) rotate(0deg)` }], { duration: 620, easing: "cubic-bezier(.3,.1,.6,1)" }).onfinish = () => {
         f.remove(); slapping.delete(key); render();
         t.classList.remove("slap"); void t.offsetWidth; t.classList.add("slap"); sfx("tick", 3 + n % 4);
         if (!slapping.size) finishDrain();
       };
-    }, n * 120));
+    }, n * 140));
+    if (power) {   // the power-up fires, then the column drop runs
+      const pu = $("slotPU"); pu.classList.remove("on"); void pu.offsetWidth; pu.classList.add("fire"); sfx("win");
+      setTimeout(() => { pu.classList.remove("fire"); if (token === idx) fillCol(); }, 450);
+    }
     if (!stamped.length) finishDrain();
-  }, 1400 + 2700);
+  }, T0 + DRAIN);
   });
 }
-function finishDrain() { draining = false; slapping.clear(); $("whirl").hidden = true; $("barFill").classList.remove("drain"); render(); }
+function finishDrain() {
+  draining = false; slapping.clear(); $("whirl").hidden = true; $("barFill").classList.remove("drain");
+  // the dam empties and its lights go back to gray
+  $("pipeFill").style.width = "0"; $("riserFill").style.height = "0"; $("turbine").classList.remove("spin");
+  ["slotTop", "slotSide"].forEach(id => { $(id).classList.remove("on"); $(id).textContent = "?"; }); $("slotPU").classList.remove("on");
+  render(); renderDam();
+}
 // Stamp every letter the score has earned into both special words, always leaving one letter to guess
 function stampUp() {
   const out = [], si = P.length - 1, now = earned();
@@ -1397,7 +1484,7 @@ function render() {
   $("timer").textContent = clock(S.time);
   $("pwClue").textContent = `Top: ${P[0].segs[0].clue}  Side: ${P[P.length - 1].segs[0].clue}`;
   if (idx === INTRO && P.some((p, r) => isCompound(r) && rowSolved(r))) store.set(KT, 1);
-  placeTip();
+  placeTip(); renderDam();
   setHeat();
   // the points bar
   const into = S.score - earned() * BAR;
@@ -1661,10 +1748,11 @@ function settle() {
   if (allSolved()) return win();
   if (S.cracked && S.crackedSide && S.colBase == null) { S.colBase = earned(); S.cols = 0; }   // bars count from here
   render(); save();
-  if (full && !calm()) drainTank(stamped);
+  const power = S.colBase != null && earned() - S.colBase > S.cols;
+  if (full && !calm()) drainTank(stamped, power);
   else if (stamped.length) stamped.forEach(({ t }) => { t.classList.remove("land"); void t.offsetWidth; t.classList.add("land"); });
   if (stamped.length && combo === null) toast("New letters!");
-  if (S.colBase != null && earned() - S.colBase > S.cols) fillCol();
+  if (power && (calm() || !full)) fillCol();
 }
 
 // With both special words cracked, a full bar fills the column with the fewest letters in it
