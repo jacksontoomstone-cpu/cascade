@@ -249,6 +249,16 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 .dam-slot.on { opacity: 1; filter: none; color: #04121a; background: var(--a); border-color: var(--white); box-shadow: 0 0 16px 3px var(--a); }
 .dam-slot.done { opacity: .18; }
 .dam-row { display: flex; gap: calc(var(--s, 28px) * .22); }
+.dam-row.slots { margin-bottom: calc(var(--s, 28px) * .55); position: relative; z-index: 2; }
+.dam-labels { width: calc(var(--s, 28px) * 2.22); justify-content: space-around; position: relative; z-index: 2; }
+.dam-labels .dam-cap { margin: 0; }
+.dam-pu, .dam-cap { position: relative; z-index: 2; }
+/* small tubes: the riser splits at a manifold and feeds each letter slot, with a center line up to the power-up */
+.dam-tubes { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.tube { position: absolute; background: var(--screen); border: 2px solid var(--bezel-l); overflow: hidden; }
+.tube i { position: absolute; inset: 0; background: linear-gradient(90deg, hsl(var(--hue) calc(92% * var(--sk)) calc(56% + var(--lift-a))), hsl(var(--hue) calc(85% * var(--sk)) calc(30% + var(--lift)))); box-shadow: 0 0 6px hsl(var(--hue) calc(92% * var(--sk)) calc(56% + var(--lift-a))); transform: scaleX(0); transition: transform .45s ease-out; }
+.tube.v i { transform: scaleY(0); transform-origin: bottom; transition-duration: .55s; }
+.tube.full i { transform: none; }
 .dam-pu { width: calc(var(--s, 28px) * 2 + 6px); height: calc(var(--s, 28px) * 1.2); display: grid; place-items: center; background: var(--screen); border: 2px solid var(--bezel-l); opacity: .45; filter: grayscale(1); transition: all .35s; }
 .dam-pu svg { width: calc(var(--s, 28px) * .6); height: calc(var(--s, 28px) * .75); fill: var(--muted); }
 .dam-pu.on { opacity: 1; filter: none; background: var(--a); border-color: var(--white); box-shadow: 0 0 18px 4px var(--a); animation: pupulse .5s ease-in-out infinite alternate; }
@@ -260,7 +270,7 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 .dam-riser { position: relative; width: max(10px, calc(var(--s, 28px) * .36)); flex: 1 1 auto; min-height: 30px; background: var(--screen); border: 2px solid var(--bezel-l); overflow: hidden; }
 .dam-riser i, .dam-pipe i { position: absolute; background: linear-gradient(180deg, hsl(var(--hue) calc(92% * var(--sk)) calc(56% + var(--lift-a))), hsl(var(--hue) calc(85% * var(--sk)) calc(30% + var(--lift)))); box-shadow: 0 0 8px hsl(var(--hue) calc(92% * var(--sk)) calc(56% + var(--lift-a))); }
 .dam-riser i { left: 0; right: 0; bottom: 0; height: 0; transition: height 1s ease-in-out; }
-.dam-turbine { width: calc(var(--s, 28px) * 1.65); height: calc(var(--s, 28px) * 1.65); flex: none; margin-bottom: 4px; }
+.dam-turbine { width: var(--wheel, calc(var(--s, 28px) * 1.65)); height: var(--wheel, calc(var(--s, 28px) * 1.65)); flex: none; margin-bottom: 4px; }
 .dam-turbine svg { width: 100%; height: 100%; }
 .dam-turbine.spin svg { animation: whirl .5s linear infinite; }
 .dam-pipe { position: fixed; z-index: 4; height: 16px; background: var(--screen); border: 2px solid var(--bezel-l); overflow: hidden; pointer-events: none; }
@@ -465,10 +475,14 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
       <span class="bar-text"><b id="barScore">0 pts</b><span id="barNext"></span></span>
     </div>
     <div class="dam" id="dam" hidden aria-hidden="true">
-      <div class="dam-pu" id="slotPU"><svg viewBox="0 0 12 16"><path d="M7 0 L1 9 H5 L4 16 L11 6 H7 Z"/></svg></div>
+      <div class="dam-tubes" id="damTubes">
+        <div class="tube" id="tubeM"><i></i></div><div class="tube v" id="tubeL"><i></i></div>
+        <div class="tube v" id="tubeR"><i></i></div><div class="tube v" id="tubeC"><i></i></div>
+      </div>
       <div class="dam-cap">Power</div>
-      <div class="dam-row"><div class="dam-slot" id="slotTop">?</div><div class="dam-slot" id="slotSide">?</div></div>
-      <div class="dam-cap">Top Side</div>
+      <div class="dam-pu" id="slotPU"><svg viewBox="0 0 12 16"><path d="M7 0 L1 9 H5 L4 16 L11 6 H7 Z"/></svg></div>
+      <div class="dam-row dam-labels"><span class="dam-cap">Top</span><span class="dam-cap">Side</span></div>
+      <div class="dam-row slots"><div class="dam-slot" id="slotTop">?</div><div class="dam-slot" id="slotSide">?</div></div>
       <div class="dam-riser"><i id="riserFill"></i></div>
       <div class="dam-turbine" id="turbine"><svg viewBox="-24 -24 48 48"><circle r="21" fill="var(--screen)" stroke="var(--bezel-l)" stroke-width="3"/>
         <g fill="var(--a)" opacity=".85"><path d="M0 0 L-4 -18 L4 -18 Z"/><path d="M0 0 L-4 -18 L4 -18 Z" transform="rotate(60)"/><path d="M0 0 L-4 -18 L4 -18 Z" transform="rotate(120)"/>
@@ -1199,7 +1213,7 @@ function fresh() {
 function load(i) {
   if (typeof draining !== "undefined") {
     draining = false; slapping.clear(); dripsLeft = 0; dripWait.splice(0).forEach(f => f());
-    $("pipeFill").style.width = "0"; $("riserFill").style.height = "0"; $("turbine").classList.remove("spin");
+    $("pipeFill").style.width = "0"; $("riserFill").style.height = "0"; $("turbine").classList.remove("spin"); setTubes();
     ["slotTop", "slotSide"].forEach(id => { $(id).classList.remove("on"); $(id).textContent = "?"; }); $("slotPU").classList.remove("on", "fire");
   }
   if (!playable().includes(i) && !(ok7() && extras().includes(i))) i = INTRO;   // archived and future boards stay locked
@@ -1360,11 +1374,27 @@ function layoutDam() {
   if (kbShown || w < 60 || h < 160 || !tb.height) { dam.hidden = pipe.hidden = true; return; }
   const left = Math.min(tb.right + 22, Rt - w);   // tucked in right beside the puzzle
   dam.hidden = pipe.hidden = false;
-  dam.style.setProperty("--s", Math.min(56, (w - 8) / 2, (h - 40) / 7.2) + "px");
-  Object.assign(dam.style, { left: left + "px", width: w + "px", top: (tb.bottom - h) + "px", height: h + "px" });
-  Object.assign(pipe.style, { left: (tb.right - 2) + "px", width: (left + w / 2 - tb.right + 2) + "px", top: (tb.bottom - 20) + "px" });
+  const mid = tb.top + tb.height / 2, sz = Math.min(56, (w - 8) / 2, (h - 40) / 7.6);
+  const wheel = Math.min(sz * 1.65, (innerHeight - mid - 6) * 2);   // the wheel can't hang off the bottom of the screen
+  dam.style.setProperty("--s", sz + "px"); dam.style.setProperty("--wheel", wheel + "px");
+  // the wheel's hub sits level with the middle of the tank, so the pipe runs straight from the tank into it
+  const bottom = mid + wheel / 2 + 4, top = Math.max(T, bottom - 500);
+  Object.assign(dam.style, { left: left + "px", width: w + "px", top: top + "px", height: (bottom - top) + "px" });
+  Object.assign(pipe.style, { left: (tb.right - 2) + "px", width: (left + w / 2 - wheel / 2 - tb.right + 6) + "px", top: (mid - 8) + "px" });
+  placeTubes(sz);
   renderDam();
 }
+function placeTubes(sz) {
+  const d = $("dam").getBoundingClientRect(), rel = el => { const r = el.getBoundingClientRect(); return { l: r.left - d.left, t: r.top - d.top, r: r.right - d.left, b: r.bottom - d.top, cx: (r.left + r.right) / 2 - d.left }; };
+  const a = rel($("slotTop")), b = rel($("slotSide")), pu = rel($("slotPU")), riser = rel(document.querySelector(".dam-riser"));
+  const t = Math.max(6, sz * .18), my = riser.t - t;   // the manifold sits right on top of the riser
+  const put = (id, x, y, w, h) => Object.assign($(id).style, { left: x + "px", top: y + "px", width: w + "px", height: Math.max(0, h) + "px" });
+  put("tubeM", a.cx - t / 2, my, b.cx - a.cx + t, t);
+  put("tubeL", a.cx - t / 2, a.b - 2, t, my - a.b + 2);
+  put("tubeR", b.cx - t / 2, b.b - 2, t, my - b.b + 2);
+  put("tubeC", (a.cx + b.cx) / 2 - t / 2, pu.b - 2, t, my - pu.b + 2);
+}
+function setTubes(...ids) { ["tubeM", "tubeL", "tubeR", "tubeC"].forEach(id => $(id).classList.toggle("full", ids.includes(id))); }
 function renderDam() {
   if (!S) return;
   $("slotTop").classList.toggle("done", !!S.cracked); $("slotSide").classList.toggle("done", !!S.crackedSide);
@@ -1376,7 +1406,7 @@ function drainTank(stamped, power = false) {
   dripsDone().then(() => {
   if (token !== idx) return finishDrain();
   fill.style.height = "100%";   // top it off first
-  const T0 = 1400, DRAIN = 2700;
+  const T0 = 1400, DRAIN = viaDam ? 3500 : 2700;
   setTimeout(() => {
     if (token !== idx) return finishDrain();
     fill.classList.add("drain"); fill.style.height = "0%";
@@ -1385,12 +1415,16 @@ function drainTank(stamped, power = false) {
     // water runs out the side of the tank, through the pipe, spins the turbine and climbs the riser
     $("pipeFill").style.width = "100%"; $("turbine").classList.add("spin");
     setTimeout(() => { $("riserFill").style.height = "100%"; }, 700);
+    // the manifold fills, then only the tubes that lead somewhere: to each letter being placed, or up to the power-up
+    const toTop = stamped.some(x => x.r === 0), toSide = stamped.some(x => x.r !== 0);
+    setTimeout(() => { if (token === idx) setTubes("tubeM"); }, 1700);
+    setTimeout(() => { if (token === idx) setTubes("tubeM", ...(toTop ? ["tubeL"] : []), ...(toSide ? ["tubeR"] : []), ...(power ? ["tubeC"] : [])); }, 2150);
     setTimeout(() => {
       if (token !== idx) return;
       if (power) $("slotPU").classList.add("on");
       stamped.forEach(({ t, r }) => { const sl = $(r === 0 ? "slotTop" : "slotSide"); if (!sl.classList.contains("on")) { sl.textContent = t.textContent; sl.classList.add("on"); } });
       sfx("good");
-    }, 1800);
+    }, 2700);
   }, T0);
   setTimeout(() => {
     $("whirl").hidden = true; fill.classList.remove("drain");
@@ -1421,7 +1455,7 @@ function drainTank(stamped, power = false) {
 function finishDrain() {
   draining = false; slapping.clear(); $("whirl").hidden = true; $("barFill").classList.remove("drain");
   // the dam empties and its lights go back to gray
-  $("pipeFill").style.width = "0"; $("riserFill").style.height = "0"; $("turbine").classList.remove("spin");
+  $("pipeFill").style.width = "0"; $("riserFill").style.height = "0"; $("turbine").classList.remove("spin"); setTubes();
   ["slotTop", "slotSide"].forEach(id => { $(id).classList.remove("on"); $(id).textContent = "?"; }); $("slotPU").classList.remove("on");
   render(); renderDam();
 }
