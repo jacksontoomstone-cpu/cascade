@@ -65,6 +65,9 @@ button:focus-visible { outline: 3px dashed var(--a); outline-offset: 2px; }
 
 header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-block: 10px 13px; position: relative; }
 header::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: linear-gradient(90deg, hsl(var(--hue) calc(95% * var(--sk)) calc(72% + var(--lift-a))) 25%, hsl(var(--hue) calc(90% * var(--sk)) calc(56% + var(--lift-a))) 25% 50%, hsl(var(--hue) calc(85% * var(--sk)) calc(42% + var(--lift-a))) 50% 75%, hsl(var(--hue) calc(80% * var(--sk)) calc(28% + var(--lift))) 75%); }
+header h1 { position: relative; }
+.admin-badge { position: absolute; left: 0; top: 100%; margin-top: 3px; font-family: "Press Start 2P", monospace; font-size: max(7px, .3em); line-height: 1; letter-spacing: .05em;
+  color: #1a1206; background: #ffe066; padding: 3px 5px; border: 2px solid #1a1206; text-shadow: none; transform: rotate(-4deg); pointer-events: none; z-index: 3; }
 header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin: 0; text-transform: uppercase; color: var(--a); text-shadow: 3px 3px 0 var(--ad); }
 .nav { display: flex; align-items: center; white-space: nowrap; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; }
 .nav button { border: none; background: transparent; font-size: .8rem; font-family: var(--pixel); cursor: pointer; padding: 4px 5px; color: var(--a); }
@@ -79,7 +82,7 @@ header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin
 .pay-note { margin: 0; font-size: 1.25rem; line-height: 1.25; }
 .pay-price { font-family: var(--pixel); font-size: 2.2rem; color: var(--a); margin: 10px 0 2px; text-shadow: 4px 4px 0 var(--ad), 0 0 18px var(--a); }
 .pay-small { margin: 0; font-size: .95rem; color: var(--muted); }
-.sheet .admin-link { margin-top: 6px; font-size: .45rem; opacity: .6; }
+.sheet .admin-link { margin-top: 6px; font-size: .5rem; opacity: .85; }
 .admin-row { display: flex; gap: 8px; width: 100%; }
 .admin-row input { flex: 1; min-width: 0; border: 3px solid var(--bezel-l); background: var(--cab); color: var(--white); font-family: var(--term); font-size: 1.2rem; padding: 6px 10px; border-radius: 0; }
 .admin-row input:focus { outline: none; border-color: var(--a); }
@@ -370,7 +373,7 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 
 <div class="app">
   <header>
-    <h1>Cascade</h1>
+    <h1>Cascade<span class="admin-badge" id="adminBadge" hidden>Admin</span></h1>
     <div class="nav">
       <button id="prev" aria-label="Previous puzzle">‹</button>
       <span id="navLbl">1 of 8</span>
@@ -475,9 +478,15 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
     <div class="arch-grid" id="archPast"></div>
     <p class="arch-head">Classics</p>
     <div class="arch-grid" id="archOld"></div>
-    <div id="adminTools" hidden>
-      <p class="arch-head">Admin</p>
-      <button class="btn" id="wipeBtn">Admin reset</button>
+    <div id="adminTools">
+      <div style="display:flex;gap:18px;justify-content:center;margin-top:6px">
+        <button class="link-btn admin-link" id="archAdminLink">Admin</button>
+        <button class="link-btn admin-link" id="wipeBtn">Admin reset</button>
+      </div>
+      <form class="admin-row" id="archAdminForm" hidden>
+        <input id="archAdminCode" type="password" placeholder="Admin code" autocomplete="off" aria-label="Admin code">
+        <button class="btn" type="submit">Enter</button>
+      </form>
       <form class="admin-row" id="wipeForm" hidden>
         <input id="wipeCode" type="password" placeholder="Password" autocomplete="off" aria-label="Admin password">
         <button class="btn primary" type="submit">Reset all</button>
@@ -1875,7 +1884,7 @@ function openArchive() {
   $("archPastHead").hidden = $("archPast").hidden = !past.length;
   $("archNextHead").hidden = $("archNext").hidden = !next.length;
   $("archTitle").innerHTML = "Unlimited" + (adm() ? '<span class="admin-tag">Admin</span>' : "");
-  $("adminTools").hidden = !adm(); $("wipeForm").hidden = true;
+  $("archAdminLink").hidden = adm(); $("wipeForm").hidden = true; $("archAdminForm").hidden = true;
   closeModals(); $("archModal").hidden = false;
 }
 // resetting a solved puzzle takes two buttons: Reset puzzle, then Reset in the confirm box
@@ -1918,7 +1927,7 @@ $("colorBtn").addEventListener("click", () => {
   toast(HUES[n][0]);
 });
 // admin reset: after the password, every board's progress is wiped (admin mode, unlock, color and sound stay)
-$("wipeBtn").addEventListener("click", () => { $("wipeForm").hidden = false; $("wipeCode").focus(); });
+$("wipeBtn").addEventListener("click", () => { $("archAdminForm").hidden = true; $("wipeForm").hidden = false; $("wipeCode").focus(); });
 function wipeAll(input) {
   const v = input.value.trim().toLowerCase(); input.value = "";
   if (h7("ad\u2022" + v) !== A7) { toast("Wrong password"); return; }
@@ -1933,13 +1942,16 @@ $("wipeForm").addEventListener("submit", e => { e.preventDefault(); wipeAll($("w
 $("payWipeLink").addEventListener("click", () => { $("adminForm").hidden = true; $("payWipeForm").hidden = false; $("payWipeCode").focus(); });
 $("payWipeForm").addEventListener("submit", e => { e.preventDefault(); wipeAll($("payWipeCode")); });
 $("adminLink").addEventListener("click", () => { $("payWipeForm").hidden = true; $("adminForm").hidden = false; $("adminCode").focus(); });
-$("adminForm").addEventListener("submit", e => {
-  e.preventDefault();
-  const v = $("adminCode").value.trim().toLowerCase(); $("adminCode").value = "";
+function enterAdmin(input) {
+  const v = input.value.trim().toLowerCase(); input.value = "";
   if (h7("ad\u2022" + v) !== A7) { toast("Wrong code"); return; }
   store.set(KA, "a1." + A7); renderUnlim(); applyHue(); openArchive(); toast("Admin mode on");
-});
+}
+$("adminForm").addEventListener("submit", e => { e.preventDefault(); enterAdmin($("adminCode")); });
+$("archAdminForm").addEventListener("submit", e => { e.preventDefault(); enterAdmin($("archAdminCode")); });
+$("archAdminLink").addEventListener("click", () => { $("wipeForm").hidden = true; $("archAdminForm").hidden = false; $("archAdminCode").focus(); });
 function renderUnlim() {
+  $("adminBadge").hidden = !adm();
   $("unlimBtn").textContent = ok7() ? "Archive" : "Unlimited";
   $("payBtn").disabled = !PAY_LINK;
   $("paySoon").hidden = !!PAY_LINK; $("payVia").hidden = !PAY_LINK;
