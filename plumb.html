@@ -266,6 +266,11 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 .vial.done { opacity: .25; }
 .vial.fire { animation: pufire .45s ease-out; transform-box: fill-box; transform-origin: center; }
 @keyframes pufire { 0% { transform: scale(1.18); filter: brightness(2.4); } 100% { transform: none; } }
+.hoses { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 25; pointer-events: none; overflow: visible; }
+.hose-casing { fill: none; stroke: var(--bezel-l); stroke-width: 13; stroke-linecap: round; stroke-linejoin: round; }
+.hose-bore { fill: none; stroke: var(--cab); stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+.hose-water { fill: none; stroke: hsl(var(--hue) calc(92% * var(--sk)) calc(58% + var(--lift-a))); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 3px hsl(var(--hue) calc(92% * var(--sk)) calc(58% + var(--lift-a)))); }
+.hose-clamp { fill: var(--bezel-l); stroke: var(--white); stroke-width: 2; transform-box: fill-box; transform-origin: center; }
 .tile.await { color: transparent !important; text-shadow: none !important; }
 .tile.slap { animation: slap .38s cubic-bezier(.2,1.6,.4,1); z-index: 3; }
 @keyframes slap { 0% { transform: scale(1.9) rotate(-8deg); filter: brightness(2.2); } 60% { transform: scale(.88) rotate(2deg); } 100% { transform: none; } }
@@ -1435,7 +1440,16 @@ function drainTank(stamped, power = false) {
     if (token !== idx) return finishDrain();
     const tb = tankBox(), cx = tb ? tb.left + tb.width / 2 : innerWidth / 2, cy = tb ? tb.bottom - 6 : innerHeight;
     const origin = r => { if (!viaDam) return [cx, cy]; const o = $(r === 0 ? "slotTop" : "slotSide").getBoundingClientRect(); return [o.left + o.width / 2, o.top + o.height / 2]; };
-    stamped.forEach(({ t, key, r }, n) => setTimeout(() => {
+    if (viaDam) {
+      // each word gets its own hose; the top and side words are served at the same time, their letters one after another
+      const chains = [0, 1].map(side => stamped.filter(x => (x.r !== 0) === !!side));
+      let left = chains.filter(c => c.length).length;
+      chains.forEach(chain => (async () => {
+        for (const item of chain) { if (token !== idx) return; await hose(item, token); }
+        if (--left === 0) finishDrain();
+      })());
+    }
+    if (!viaDam) stamped.forEach(({ t, key, r }, n) => setTimeout(() => {
       if (token !== idx) return;
       const [sx, sy] = origin(r), to = t.getBoundingClientRect();
       const f = document.createElement("div"); f.className = "drip heat"; paint(f, r); f.textContent = t.textContent;
@@ -1454,6 +1468,54 @@ function drainTank(stamped, power = false) {
     }
     if (!stamped.length) finishDrain();
   }, T0 + DRAIN);
+  });
+}
+// The pump reaches out: a hose grows from the vial to the letter's tile, clamps on, pumps the letter in, then snaps back
+function hose({ t, key, r }, token) {
+  return new Promise(done => {
+    const v = $(r === 0 ? "slotTop" : "slotSide").getBoundingClientRect(), to = t.getBoundingClientRect();
+    const sx = v.left + v.width / 2, sy = v.top + 4;
+    let d, ex, ey;
+    if (r === 0) {   // up past the board's top edge, across, then down onto the tile
+      const board = $("board").getBoundingClientRect(), lane = board.top - 16;
+      ex = to.left + to.width / 2; ey = to.top - 1;
+      d = `M${sx} ${sy} V${lane} H${ex} V${ey}`;
+    } else {         // up the side of the station, then across into the tile's left edge
+      ex = to.left - 1; ey = to.top + to.height / 2;
+      d = `M${sx} ${sy} V${ey} H${ex}`;
+    }
+    const ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("class", "hoses");
+    const mk = (cls, extra = {}) => { const p = document.createElementNS(ns, extra.tag || "path"); p.setAttribute("class", cls);
+      Object.entries(extra).forEach(([k, val]) => k !== "tag" && p.setAttribute(k, val)); svg.appendChild(p); return p; };
+    const casing = mk("hose-casing", { d, pathLength: 1 }), bore = mk("hose-bore", { d, pathLength: 1 }), water = mk("hose-water", { d, pathLength: 1 });
+    const clamp = mk("hose-clamp", { tag: "rect", x: ex - (r === 0 ? 11 : 4), y: ey - (r === 0 ? 4 : 11), width: r === 0 ? 22 : 8, height: r === 0 ? 8 : 22, rx: 2 });
+    clamp.style.opacity = 0;
+    document.body.appendChild(svg);
+    const dash = (el, from, to, ms, ease) => el.animate([{ strokeDashoffset: from }, { strokeDashoffset: to }], { duration: ms, easing: ease, fill: "forwards" });
+    [casing, bore, water].forEach(el => { el.style.strokeDasharray = "1 1"; el.style.strokeDashoffset = 1; });
+    // 1. the hose grows out to the tile
+    dash(casing, 1, 0, 480, "cubic-bezier(.2,.7,.3,1)"); dash(bore, 1, 0, 480, "cubic-bezier(.2,.7,.3,1)");
+    setTimeout(() => {
+      if (token !== idx) { svg.remove(); return done(); }
+      // 2. it clamps on
+      clamp.style.opacity = 1;
+      clamp.animate([{ transform: "scale(1.8)" }, { transform: "scale(.85)", offset: .6 }, { transform: "scale(1)" }], { duration: 220, easing: "ease-out" });
+      sfx("tick", 1);
+      // 3. water runs down the hose and the letter fills in
+      dash(water, 1, 0, 320, "ease-in");
+      setTimeout(() => {
+        if (token !== idx) { svg.remove(); return done(); }
+        slapping.delete(key); render();
+        t.classList.remove("slap"); void t.offsetWidth; t.classList.add("slap"); sfx("tick", 4);
+      }, 340);
+      // 4. a beat to hold, then it lets go and snaps back to the station
+      setTimeout(() => {
+        clamp.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 90, fill: "forwards" });
+        [water, bore, casing].forEach(el => dash(el, 0, 1, 190, "cubic-bezier(.6,0,.9,.4)"));
+        setTimeout(() => { svg.remove(); done(); }, 210);
+      }, 1100);
+    }, 480);
   });
 }
 function finishDrain() {
