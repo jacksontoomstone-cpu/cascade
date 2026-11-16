@@ -917,7 +917,10 @@ const playable = () => [INTRO, dailyIdx()].filter(i => i !== null);
 const doneWith = i => (store.get(SAVE + i)?.status ?? "playing") !== "playing";
 const allDone = () => playable().length > 1 && playable().every(doneWith);
 const dayLabel = () => new Date(today() + "T12:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
-const PAID = "plumb-paid";
+const K7 = "cx-v7";
+// the stored value has to match this code, so typing true or 1 into storage does nothing
+const q7 = () => { let h = 2166136261; for (const ch of "c4sc\u00e4de\u2022v7\u2022" + DAILY_START) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return "v7." + (h >>> 0).toString(36); };
+const ok7 = () => store.get(K7) === q7();
 const STAMPS = 6;   // sets the bar size: about this many fills on the old point scale
 
 const $ = id => document.getElementById(id);
@@ -1701,7 +1704,7 @@ $("helpBtn").addEventListener("click", () => $("helpModal").hidden = false);
 $("soundBtn").addEventListener("click", () => { muted = !muted; store.set("plumb-muted", muted); renderSound(); });
 // once the intro and today's daily are both finished, the paywall comes up ($5 once; payment wiring comes later)
 function paywall(afterDaily = true) {
-  if (afterDaily && store.get(PAID)) return false;
+  if (afterDaily && ok7()) return false;
   closeModals(); $("payLead").hidden = !afterDaily; $("payModal").hidden = false; return true;
 }
 $("unlimBtn").addEventListener("click", () => paywall(false));
