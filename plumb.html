@@ -264,7 +264,8 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 .vial.on .st-char, .vial.on .st-bolt { fill: var(--white); opacity: 1; }
 .vial.on { filter: drop-shadow(0 0 7px hsl(var(--hue) calc(92% * var(--sk)) calc(58% + var(--lift-a)))); }
 .vial.done { opacity: .25; }
-.vial.fire { animation: pufire .45s ease-out; transform-box: fill-box; transform-origin: center; }
+.vial.fire, #pumpBody.fire { animation: pufire .45s ease-out; transform-box: fill-box; transform-origin: center; }
+.st-nozzle { fill: var(--bezel-l); stroke: var(--white); stroke-width: 1.5; }
 @keyframes pufire { 0% { transform: scale(1.18); filter: brightness(2.4); } 100% { transform: none; } }
 .hoses { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 25; pointer-events: none; overflow: visible; }
 .hose-casing { fill: none; stroke: var(--bezel-l); stroke-width: 13; stroke-linecap: round; stroke-linejoin: round; }
@@ -476,36 +477,20 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
       <div class="whirl" id="whirl" hidden></div>
     </div>
     <div class="dam" id="dam" hidden aria-hidden="true">
-      <svg viewBox="0 0 200 300" id="damSvg">
-        <defs><linearGradient id="stWater" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--a)"/><stop offset="1" stop-color="var(--ad)"/></linearGradient></defs>
-        <rect class="st-frame" x="3" y="3" width="194" height="294" rx="14"/>
-        <text class="st-label" x="100" y="20">POWER-UP</text>
-        <text class="st-label" x="55" y="102">TOP</text>
-        <text class="st-label" x="145" y="102">SIDE</text>
-        <g id="stPipes">
-          <path class="st-casing" d="M200 270 H122 M100 248 V206 M100 206 H55 V184 M100 206 H145 V184 M100 206 V74"/>
-          <path class="st-bore" d="M200 270 H122 M100 248 V206 M100 206 H55 V184 M100 206 H145 V184 M100 206 V74"/>
-        </g>
-        <path class="st-water" id="wIn" pathLength="1" d="M200 270 H122"/>
-        <path class="st-water" id="wRise" pathLength="1" d="M100 248 V206"/>
-        <path class="st-water" id="wL" pathLength="1" d="M100 206 H55 V184"/>
-        <path class="st-water" id="wR" pathLength="1" d="M100 206 H145 V184"/>
-        <path class="st-water" id="wC" pathLength="1" d="M100 206 V74"/>
-        <circle class="st-house" cx="100" cy="270" r="23"/>
-        <g class="st-blades" id="turbine"><path d="M100 270 L95 251 H105 Z"/>
-          <path d="M100 270 L95 251 H105 Z" transform="rotate(60 100 270)"/><path d="M100 270 L95 251 H105 Z" transform="rotate(120 100 270)"/>
-          <path d="M100 270 L95 251 H105 Z" transform="rotate(180 100 270)"/><path d="M100 270 L95 251 H105 Z" transform="rotate(240 100 270)"/>
-          <path d="M100 270 L95 251 H105 Z" transform="rotate(300 100 270)"/></g>
-        <circle class="st-hub" cx="100" cy="270" r="5"/>
-        <g class="vial" id="slotPU"><clipPath id="cpPU"><rect x="52" y="28" width="96" height="46" rx="20"/></clipPath>
-          <rect class="st-glass" x="52" y="28" width="96" height="46" rx="20"/><rect class="st-level" clip-path="url(#cpPU)" x="52" y="28" width="96" height="46"/>
-          <path class="st-bolt" d="M104 33 L90 53 H99 L96 69 L111 47 H102 Z"/></g>
-        <g class="vial" id="slotTop"><clipPath id="cpT"><rect x="33" y="110" width="44" height="74" rx="14"/></clipPath>
-          <rect class="st-glass" x="33" y="110" width="44" height="74" rx="14"/><rect class="st-level" clip-path="url(#cpT)" x="33" y="110" width="44" height="74"/>
-          <text class="st-char" id="charTop" x="55" y="148">?</text></g>
-        <g class="vial" id="slotSide"><clipPath id="cpS"><rect x="123" y="110" width="44" height="74" rx="14"/></clipPath>
-          <rect class="st-glass" x="123" y="110" width="44" height="74" rx="14"/><rect class="st-level" clip-path="url(#cpS)" x="123" y="110" width="44" height="74"/>
-          <text class="st-char" id="charSide" x="145" y="148">?</text></g>
+      <svg viewBox="0 0 200 96" id="damSvg">
+        <rect class="st-frame" x="3" y="3" width="194" height="90" rx="14"/>
+        <path class="st-casing" d="M200 66 H122 M100 43 V14"/>
+        <path class="st-bore" d="M200 66 H122 M100 43 V14"/>
+        <path class="st-water" id="wIn" pathLength="1" d="M200 66 H122"/>
+        <path class="st-water" id="wRise" pathLength="1" d="M100 43 V14"/>
+        <rect class="st-nozzle" id="nozzle" x="91" y="8" width="18" height="9" rx="3"/>
+        <g id="pumpBody"><circle class="st-house" cx="100" cy="66" r="23"/>
+        <g class="st-blades" id="turbine"><path d="M100 66 L95 47 H105 Z"/>
+          <path d="M100 66 L95 47 H105 Z" transform="rotate(60 100 66)"/><path d="M100 66 L95 47 H105 Z" transform="rotate(120 100 66)"/>
+          <path d="M100 66 L95 47 H105 Z" transform="rotate(180 100 66)"/><path d="M100 66 L95 47 H105 Z" transform="rotate(240 100 66)"/>
+          <path d="M100 66 L95 47 H105 Z" transform="rotate(300 100 66)"/></g>
+        <circle class="st-hub" cx="100" cy="66" r="5"/></g>
+        <text class="st-label" x="40" y="70">PUMP</text>
       </svg>
     </div>
 
@@ -1376,7 +1361,7 @@ function splash(x, y) {
 // wide screens: the tank sits under the puzzle, and a dam in the space to its left turns the drained water into power
 const wide = matchMedia("(min-width: 860px)");
 const damOn = () => !$("dam").hidden;
-const STW = 200, STH = 300, ST_IN = 270;   // the station drawing's size, and the height of its inlet pipe
+const STW = 200, STH = 96, ST_IN = 66;   // the station drawing's size, and the height of its inlet pipe
 function layoutDam() {
   const bar = document.querySelector(".bar"), dam = $("dam");
   if (!wide.matches || !P) { bar.style.marginLeft = bar.style.width = ""; dam.hidden = true; return; }
@@ -1399,13 +1384,12 @@ function layoutDam() {
 }
 // the station drains and goes dark again: empty pipes and vials, still wheel, "?" in the letter vials
 function resetStation() {
-  ["wIn", "wRise", "wL", "wR", "wC"].forEach(id => $(id).classList.remove("on"));
-  ["slotTop", "slotSide", "slotPU"].forEach(id => $(id).classList.remove("on", "fill", "fire"));
-  $("turbine").classList.remove("spin"); $("charTop").textContent = $("charSide").textContent = "?";
+  ["wIn", "wRise"].forEach(id => $(id).classList.remove("on"));
+  $("pumpBody").classList.remove("fire"); $("turbine").classList.remove("spin");
 }
 function renderDam() {
   if (!S) return;
-  $("slotTop").classList.toggle("done", !!S.cracked); $("slotSide").classList.toggle("done", !!S.crackedSide);
+
 }
 if (window.ResizeObserver) new ResizeObserver(() => layoutDam()).observe(document.querySelector("main"));
 function drainTank(stamped, power = false) {
@@ -1414,7 +1398,7 @@ function drainTank(stamped, power = false) {
   dripsDone().then(() => {
   if (token !== idx) return finishDrain();
   fill.style.height = "100%";   // top it off first
-  const T0 = 1400, DRAIN = viaDam ? 3500 : 2700;
+  const T0 = 1400, DRAIN = viaDam ? 1500 : 2700;
   setTimeout(() => {
     if (token !== idx) return finishDrain();
     fill.classList.add("drain"); fill.style.height = "0%";
@@ -1426,20 +1410,12 @@ function drainTank(stamped, power = false) {
     const go = (ms, fn) => setTimeout(() => { if (token === idx) fn(); }, ms);
     $("wIn").classList.add("on"); go(450, () => $("turbine").classList.add("spin"));
     go(650, () => $("wRise").classList.add("on"));
-    go(1250, () => { if (toTop) $("wL").classList.add("on"); if (toSide) $("wR").classList.add("on"); if (power) $("wC").classList.add("on"); });
-    go(1850, () => { if (toTop) $("slotTop").classList.add("fill"); if (toSide) $("slotSide").classList.add("fill"); if (power) $("slotPU").classList.add("fill"); });
-    go(2600, () => {
-      if (power) $("slotPU").classList.add("on");
-      stamped.forEach(({ t, r }) => { const v = $(r === 0 ? "slotTop" : "slotSide"), c = $(r === 0 ? "charTop" : "charSide");
-        if (!v.classList.contains("on")) { c.textContent = t.textContent; v.classList.add("on"); } });
-      sfx("good");
-    });
   }, T0);
   setTimeout(() => {
     $("whirl").hidden = true; fill.classList.remove("drain");
     if (token !== idx) return finishDrain();
     const tb = tankBox(), cx = tb ? tb.left + tb.width / 2 : innerWidth / 2, cy = tb ? tb.bottom - 6 : innerHeight;
-    const origin = r => { if (!viaDam) return [cx, cy]; const o = $(r === 0 ? "slotTop" : "slotSide").getBoundingClientRect(); return [o.left + o.width / 2, o.top + o.height / 2]; };
+    const origin = () => [cx, cy];
     if (viaDam) {
       // each word gets its own hose; the top and side words are served at the same time, their letters one after another
       const chains = [0, 1].map(side => stamped.filter(x => (x.r !== 0) === !!side));
@@ -1463,8 +1439,8 @@ function drainTank(stamped, power = false) {
       };
     }, n * 140));
     if (power) {   // the power-up fires, then the column drop runs
-      const pu = $("slotPU"); pu.classList.remove("on"); pu.getBoundingClientRect(); pu.classList.add("fire"); sfx("win");
-      setTimeout(() => { pu.classList.remove("fire"); if (token === idx) fillCol(); }, 450);
+      const pb = $("pumpBody"); pb.classList.remove("fire"); pb.getBoundingClientRect(); pb.classList.add("fire"); sfx("win");
+      setTimeout(() => { pb.classList.remove("fire"); if (token === idx) fillCol(); }, 450);
     }
     if (!stamped.length) finishDrain();
   }, T0 + DRAIN);
@@ -1473,8 +1449,8 @@ function drainTank(stamped, power = false) {
 // The pump reaches out: a hose grows from the vial to the letter's tile, clamps on, pumps the letter in, then snaps back
 function hose({ t, key, r }, token) {
   return new Promise(done => {
-    const v = $(r === 0 ? "slotTop" : "slotSide").getBoundingClientRect(), to = t.getBoundingClientRect();
-    const sx = v.left + v.width / 2, sy = v.top + 4;
+    const v = $("nozzle").getBoundingClientRect(), to = t.getBoundingClientRect();
+    const sx = v.left + v.width / 2, sy = v.top + 2;   // every hose comes out of the pump's nozzle
     let d, ex, ey;
     if (r === 0) {   // up past the board's top edge, across, then down onto the tile
       const board = $("board").getBoundingClientRect(), lane = board.top - 16;
