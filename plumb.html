@@ -1876,11 +1876,11 @@ function render() {
     const lock = S.locked[r][j] && !pending.has(cellKey(r, c));
     const revealed = !playing() && !S.locked[r][j];
     const L = lock || revealed ? W(r)[j] : S.typed[r][j];
-    const sel = r === S.row && s === S.seg && playing();
+    const sel = r === S.row && s === S.seg && (playing() || S.status === "lost");
     t.textContent = L;
     t.className = "tile heat" + (isCompound(r) ? " cmp" : "") + (j === g.a ? " first" : "") + (j === g.b - 1 ? " last" : "") +
       (lock ? " locked" : revealed ? " revealed" : "") + (sel ? " active" : "") +
-      (sel && c === S.cur && !segSolved(r, s) ? " cur" : "") +
+      (sel && playing() && c === S.cur && !segSolved(r, s) ? " cur" : "") +
       (isSpecial(r) ? " pwt" : "") + (isSpecial(r) && lock && !crackedOf(r) ? " imprint" : "") +
       (litCells.has(cellKey(r, c)) ? " lit" : "") + (hotCells.has(cellKey(r, c)) ? " hot" : "") + (slapping.has(cellKey(r, c)) ? " await" : "");
     t.setAttribute("aria-label", `Word ${r + 1}, letter ${j - g.a + 1}${L ? ", " + L : ", empty"}`);
@@ -1913,7 +1913,9 @@ function render() {
 }
 
 /* ---------- input ---------- */
-function select(r, c) { if (!playing() || busy) return; S.started = true; S.row = r; S.seg = segAt(r, c); S.cur = c; render(); }
+function select(r, c) {
+  if (S.status === "lost" && !busy) { S.row = r; S.seg = segAt(r, c); S.cur = c; render(); return; }   // out of lives: tap any word to read its clue
+  if (!playing() || busy) return; S.started = true; S.row = r; S.seg = segAt(r, c); S.cur = c; render(); }
 function nextOpen(from, d = 1) {
   const cols = segCols(S.row, S.seg);
   for (let c = from + d; cols.includes(c); c += d) if (!isLocked(S.row, c)) return c;
@@ -2430,11 +2432,95 @@ function pianoNote(x) {
     tone(f, 0, .9, "triangle", .09); tone(f * 2, 0, .35, "sine", .025);   // a soft key with a little sparkle on top
   } catch {}
 }
+/* ---------- water-drop sounds ----------
+   Every sound is a drop: a sine "plip" whose pitch jumps up as it hits the water, plus a soft hiss of filtered noise for splashes.
+   SOUND_STYLE picks the set: "drops" for these, "retro" for the original arcade beeps. */
+const SOUND_STYLE = "retro";   // "retro", "drops" or "wood"
+const DROP_SCALE = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51, 1567.98, 1760];   // C D E G A, two octaves
+function plip(f, at = 0, vol = .16, len = .16) {
+  const t = ac.currentTime + at, o = ac.createOscillator(), g = ac.createGain();
+  o.type = "sine";
+  o.frequency.setValueAtTime(f * .55, t);
+  o.frequency.exponentialRampToValueAtTime(f, t + .025);          // the quick upward "bloop" of a drop
+  o.frequency.exponentialRampToValueAtTime(f * 1.5, t + len);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .006);
+  g.gain.exponentialRampToValueAtTime(.0001, t + len);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + len + .05);
+}
+let noiseBuf = null;
+function splash(at = 0, vol = .08, len = .35, freq = 1400) {
+  if (!noiseBuf) {
+    noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+    const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  const t = ac.currentTime + at, n = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+  n.buffer = noiseBuf; f.type = "bandpass"; f.frequency.setValueAtTime(freq, t); f.frequency.exponentialRampToValueAtTime(freq * .4, t + len); f.Q.value = .8;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + len);
+  n.connect(f).connect(g).connect(ac.destination); n.start(t); n.stop(t + len + .05);
+}
+function thunk(at = 0) {   // a wrong guess: a dull, low drop into deep water
+  const t = ac.currentTime + at, o = ac.createOscillator(), g = ac.createGain();
+  o.type = "sine"; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(70, t + .22);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.22, t + .008); g.gain.exponentialRampToValueAtTime(.0001, t + .28);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + .33);
+  splash(at, .05, .18, 500);
+}
+/* ---------- wood and marimba sounds ----------
+   A marimba bar: a warm sine fundamental plus its 4th and 10th partials, which die away fast, the way a struck wooden bar rings.
+   Wrong guesses get a dry, muted wood knock. */
+const MARIMBA = [261.63, 293.66, 329.63, 392, 440, 523.25, 587.33, 659.25, 783.99, 880, 1046.5];   // C pentatonic, two octaves
+function bar(f, at = 0, vol = .14, len = .9) {
+  const t = ac.currentTime + at;
+  [[1, 1, len], [3.93, .3, len * .22], [9.95, .08, len * .08]].forEach(([mult, v, d]) => {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = "sine"; o.frequency.value = f * mult;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol * v, t + .004);
+    g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(g).connect(ac.destination); o.start(t); o.stop(t + d + .05);
+  });
+}
+function knock(at = 0, f = 180, vol = .2) {   // a block of wood tapped with a knuckle
+  const t = ac.currentTime + at, o = ac.createOscillator(), g = ac.createGain(), lp = ac.createBiquadFilter();
+  o.type = "triangle"; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * .7, t + .08);
+  lp.type = "lowpass"; lp.frequency.value = 900;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .002); g.gain.exponentialRampToValueAtTime(.0001, t + .12);
+  o.connect(lp).connect(g).connect(ac.destination); o.start(t); o.stop(t + .17);
+}
+function woodSfx(kind, step) {
+  const note = i => MARIMBA[Math.max(0, Math.min(MARIMBA.length - 1, i))];
+  if (kind === "tick") bar(note(step + 2), 0, .12, .6);   // each landing letter, a step up the scale
+  if (kind === "good") { bar(note(5), 0, .13); bar(note(7), .08, .13); }
+  if (kind === "bad") { knock(0, 170); knock(.09, 130, .14); }
+  if (kind === "crack") {   // a rolling run up the bars, then a held chord
+    for (let i = 0; i < 11; i++) bar(note(i), i * .055, .1, .5);
+    [note(5), note(7), note(8), note(10)].forEach(f => bar(f, .66, .1, 1.6));
+  }
+  if (kind === "win") [5, 7, 8, 10].forEach((k, i) => bar(note(k), i * .12, .13, i === 3 ? 1.6 : .8));
+  if (kind === "lose") [7, 5, 3, 0].forEach((k, i) => bar(note(k), i * .2, .12, i === 3 ? 1.4 : .7));
+}
+function dropSfx(kind, step) {
+  const note = i => DROP_SCALE[Math.max(0, Math.min(DROP_SCALE.length - 1, i))];
+  if (kind === "tick") plip(note(step) * (.97 + Math.random() * .06), 0, .13, .13);   // each landing letter, a little higher down the column
+  if (kind === "good") { plip(note(2), 0, .15); plip(note(5), .07, .13); splash(.03, .05, .3); }
+  if (kind === "bad") thunk();
+  if (kind === "crack") {   // a big splash and a rising cascade of drops
+    splash(0, .12, .7, 1800);
+    for (let i = 0; i < 10; i++) plip(note(i) * (.98 + Math.random() * .04), .06 + i * .065, .12, .2);
+    [5, 7, 9].forEach((k, i) => plip(note(k), .8 + i * .02, .08, .5));
+  }
+  if (kind === "win") {     // bubbles rising to the surface
+    for (let i = 0; i < 12; i++) plip(note(2 + (i * 7) % 8) * (1 + Math.random() * .08), i * .07 + Math.random() * .03, .1, .12);
+    splash(.85, .06, .5, 2200);
+  }
+  if (kind === "lose") { plip(note(4), 0, .13, .3); plip(note(2), .25, .12, .35); plip(note(0), .55, .12, .5); }
+}
 function sfx(kind, step = 0) {
   if (muted) return;
   try {
     ac = ac || new (window.AudioContext || window.webkitAudioContext)();
     if (ac.state === "suspended") ac.resume();
+    if (SOUND_STYLE === "drops") return dropSfx(kind, step);
+    if (SOUND_STYLE === "wood") return woodSfx(kind, step);
     if (kind === "good") tone(660, 0, .15);
     if (kind === "tick") tone(520 + step * 120, 0, .1, "triangle", .07);
     if (kind === "bad") tone(170, 0, .22, "square", .05);
