@@ -571,7 +571,11 @@ html.clean .done-list span, html.clean .arch-grid .btn { font-family: var(--pixe
 html.clean .done-list span.won, html.clean .arch-grid .btn.won { background: var(--c-done); color: #fff; }
 html.clean .arch-grid .btn.cur { outline-color: #121212; }
 html.clean .admin-row input { background: #fff; color: #121212; border: 1px solid #b9bdc2; border-radius: 6px; font-family: var(--pixel); }
-html.clean .tut-card { background: #fff; color: #121212; border: 1px solid #d3d6da; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,.18); font-family: var(--pixel); }
+html.clean .tut-card { background: #fff; color: #121212; border: 2px solid #121212; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,.18); font-family: var(--pixel); }
+html.clean .tut-arrows { filter: none; }
+html.clean .tut-arrows :is(rect, path) { stroke: #121212 !important; }
+html.clean #tutHead path { fill: #121212 !important; stroke: none !important; }
+html.clean .tut-bar { background: #e6e8eb; } html.clean .tut-bar i { background: #121212; }
 html.clean .tut-step { color: #6b6f73; font-family: var(--pixel); }
 html.clean .tut-welcome { background: rgba(255,255,255,.9); color: #121212; text-shadow: none; font-family: Georgia, "Times New Roman", serif; }
 html.clean .tut-welcome b { color: #121212; text-shadow: none; font-family: Georgia, "Times New Roman", serif; }
@@ -721,7 +725,7 @@ html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; colo
     <button class="btn" id="menuHow">Tutorial</button>
     <button class="btn" id="menuStats">Stats</button>
     <button class="btn" id="menuUnlim">Unlimited</button>
-    <button class="link-btn" id="menuMode">Switch to Clean mode</button>
+    <button class="btn" id="menuMode">Clean mode</button>
   </div>
 </div>
 
@@ -1830,7 +1834,6 @@ function finishDrain() {
 }
 // Stamp every letter the score has earned into both special words, always leaving one letter to guess
 function stampUp() {
-  if (CLEAN()) return [];   // Clean mode has no power-ups: only falling letters fill the big words
   const out = [], si = P.length - 1, now = earned();
   const stamp = (r, order, at) => order.slice(0, Math.min(now, order.length - 1)).forEach(i => {
     if (!S.locked[r][i]) { S.locked[r][i] = true; out.push({ t: tiles[r][at + i], key: cellKey(r, at + i), r }); }
@@ -2159,14 +2162,14 @@ function settle() {
   if (combo !== null) { toast(`Compound! ${W(combo)}`); sfx("win"); }   // points stay behind the scenes: the tank's water level shows them
   // each full bar stamps both special words at once
   const stamped = stampUp(), full = earned() > filledBefore;
-  if (full && !calm() && !allSolved()) stamped.forEach(x => slapping.add(x.key));
+  if (full && !calm() && !CLEAN() && !allSolved()) stamped.forEach(x => slapping.add(x.key));
   if (allSolved()) return win();
   if (S.cracked && S.crackedSide && S.colBase == null) { S.colBase = earned(); S.cols = 0; }   // bars count from here
   render(); save();
   const power = !CLEAN() && S.colBase != null && earned() - S.colBase > S.cols;
   if (full && !calm() && !CLEAN()) drainTank(stamped, power);
   else if (stamped.length) stamped.forEach(({ t }) => { t.classList.remove("land"); void t.offsetWidth; t.classList.add("land"); });
-  if (stamped.length && combo === null) toast("New letters!");
+  if (stamped.length && combo === null && !CLEAN()) toast("New letters!");   // Clean mode: the invisible pond adds them silently
   if (power && (calm() || !full)) fillCol();
 }
 
@@ -2703,7 +2706,8 @@ async function runTutorial() {
   load(INTRO); S = fresh(); S.started = false; build(); render();   // a clean scratch copy of the intro
   $("tutBlock").removeAttribute("hidden"); $("tutCard").removeAttribute("hidden");
   const prog = $("tutProg"); prog.style.transition = "none"; prog.style.width = "0"; prog.getBoundingClientRect();
-  const steps = 8;   // welcome splash, then: read, guess, fall, compound, cascade words, pond, check letter, your turn
+  const C = CLEAN(), steps = C ? 7 : 8, n = k => C && k > 6 ? k - 1 : k;   // Clean mode has no pond, so no pond step
+  // welcome splash, then: read, guess, fall, compound, cascade words, pond, check letter, your turn
   try {
     // a big welcome first
     $("tutWelSmall").textContent = "Welcome to"; $("tutWelSmall").hidden = false; $("tutWelBig").textContent = "Cascade";
@@ -2722,18 +2726,20 @@ async function runTutorial() {
     check();   // right! the letters drop
     tutSay(3, steps, "...and watch the letters fall down and fill in other words.", "#board");
     await tutWait(3600, run);
-    tutSay(4, steps, "The words with <u>white</u> outlines are COMPOUNDS!", null, [segTiles(r, 1)]);
+    tutSay(4, steps, `The words with <u>${C ? "bold" : "white"}</u> outlines are COMPOUNDS!`, null, [segTiles(r, 1)]);
     await tutType(r, 1, run, true);
     await tutWait(2800, run);
     tutSay(5, steps, "The cascade words are extra tough but complete so much of the puzzle.", null, [P[0].segs[0] && colsOf(0).map(c => tiles[0][c]), colsOf(P.length - 1).map(c => tiles[P.length - 1][c])]);
     await tutWait(4200, run);
-    S.score = (earned() + 1) * BAR - 5;   // nearly full, so one more word tops it off
-    tutSay(6, steps, "Fill the pond with letters to help figure them out.", ".bar");
-    if (other >= 0) await tutType(other, 0, run, true);
-    await tutWait(6200, run);
-    tutSay(7, steps, "Check a letter for a life if you are stuck!", null, ["#letterBtn"]);
+    if (!C) {
+      S.score = (earned() + 1) * BAR - 5;   // nearly full, so one more word tops it off
+      tutSay(6, steps, "Fill the pond with letters to help figure them out.", ".bar");
+      if (other >= 0) await tutType(other, 0, run, true);
+      await tutWait(6200, run);
+    }
+    tutSay(n(7), steps, "Check a letter for a life if you are stuck!", null, ["#letterBtn"]);
     await tutWait(3400, run);
-    tutSay(8, steps, "Your turn!", null, []);
+    tutSay(n(8), steps, "Your turn!", null, []);
     $("tutArrows").setAttribute("hidden", "");
     // a big "Your turn!" across the screen, like the welcome
     $("tutCard").setAttribute("hidden", ""); $("tutWelSmall").hidden = true; $("tutWelBig").textContent = "Your turn!";
@@ -2878,7 +2884,7 @@ function openMenu() {
 function applyMode() {
   const on = store.get("cx-clean") === "1";
   document.documentElement.classList.toggle("clean", on);
-  $("menuMode").textContent = on ? "Switch to Retro mode" : "Switch to Clean mode";
+  $("menuMode").textContent = on ? "Retro mode" : "Clean mode";
   if (on) { clearDucks(); fireUntil = 0; document.documentElement.dataset.heat = 0; }
   $("ruleFill").textContent = on ? "Letters fall into the long words across the top and side" : "Earn points to fill in important letters";
 }
