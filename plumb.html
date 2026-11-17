@@ -1992,6 +1992,10 @@ function render() {
   $("prev").disabled = at <= 0; $("next").disabled = at < 0 || at === list.length - 1;
   const lockedPrev = at > 0 && !canPlay(list[at - 1]);
   $("prev").classList.toggle("locked", lockedPrev); $("prev").title = lockedPrev ? "Older dailies come with Unlimited" : "Previous puzzle";
+  // past the newest puzzle a free player can reach, › shows a lock and opens Unlimited
+  const lockedNext = !ok7() && at === list.length - 1;
+  if (lockedNext) $("next").disabled = false;
+  $("next").classList.toggle("locked", lockedNext); $("next").title = lockedNext ? "More puzzles come with Unlimited" : "Next puzzle";
   $("timer").textContent = clock(S.time);
   $("pwClue").textContent = `Top: ${P[0].segs[0].clue}  Side: ${P[P.length - 1].segs[0].clue}`;
   if (idx === INTRO && P.some((p, r) => isCompound(r) && rowSolved(r))) store.set(KT, 1);
@@ -2826,7 +2830,7 @@ $("giveUpBtn").addEventListener("click", giveUp);
 // the arrows step through the archive by date; an older daily you haven't unlocked brings up Unlimited instead
 const step = d => {
   const list = timeline(), j = list.indexOf(idx) + d, to = list[j];
-  if (to === undefined) return;
+  if (to === undefined) { if (d > 0 && !ok7()) paywall(idx === dailyIdx()); return; }
   if (canPlay(to)) load(to); else paywall(false);
 };
 $("prev").addEventListener("click", () => step(-1));
