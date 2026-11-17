@@ -73,6 +73,21 @@ header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin
 .nav { display: flex; align-items: center; white-space: nowrap; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; }
 .nav button { border: none; background: transparent; font-size: .8rem; font-family: var(--pixel); cursor: pointer; padding: 4px 5px; color: var(--a); }
 .nav button:disabled { opacity: .25; cursor: default; }
+/* the puzzle switcher: big arrow buttons either side of the puzzle's name */
+.nav { gap: 8px; font-size: .78rem; }
+.nav button { display: grid; place-items: center; min-width: 38px; height: 34px; font-size: 1.5rem; line-height: 1; padding: 0 0 3px;
+  background: var(--bezel); color: var(--white); box-shadow: inset -3px -3px 0 var(--bezel-d), inset 3px 3px 0 var(--bezel-l); }
+.nav button:not(:disabled):hover { background: var(--a); color: #04121a; }
+.nav button.locked { color: var(--muted); }
+.nav button.locked::after { content: "🔒"; font-size: .5em; margin-left: 2px; }
+#navLbl { min-width: 7.5em; text-align: center; color: var(--white); }
+/* phones: the puzzle switcher gets its own full-width row under the logo and buttons */
+@media (max-width: 859px) {
+  header { flex-wrap: wrap; row-gap: 6px; }
+  header .nav { order: 9; flex-basis: 100%; justify-content: center; gap: 14px; }
+  header .nav button { min-width: 48px; height: 38px; font-size: 1.6rem; }
+  #navLbl { min-width: 8em; font-size: .9rem; }
+}
 .icons { display: flex; gap: 6px; }
 @media (max-width: 480px) { .lbl-long { display: none; } .icon-btn.text-btn { padding: 0 6px; } }
 .icon-btn.text-btn { width: auto; padding: 0 9px; font-family: var(--pixel); font-size: .42rem; text-transform: uppercase; color: var(--a); }
@@ -97,6 +112,13 @@ header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin
 .arch-grid .btn { padding: 10px 0; font-size: .5rem; }
 .arch-grid .btn.won { background: var(--a); color: #04121a; }
 .arch-grid .btn.cur { outline: 2px solid var(--white); outline-offset: 2px; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
+.stat-grid b { display: block; font-family: var(--pixel); font-weight: 400; font-size: 1.4rem; color: var(--a); }
+.stat-grid small { font-size: .95rem; color: var(--muted); }
+.done-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.done-list span { font-family: var(--pixel); font-size: .5rem; padding: 6px 8px; background: var(--bezel); }
+.done-list span.won { background: var(--a); color: #04121a; }
+.done-list span.lost { opacity: .6; text-decoration: line-through; }
 .confirm-actions { display: flex; gap: 10px; justify-content: center; }
 .icon-btn { border: none; background: var(--bezel); box-shadow: inset -2px -2px 0 var(--bezel-d), inset 2px 2px 0 var(--bezel-l); border-radius: 0; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; padding: 0; }
 .icon-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.6; stroke-linecap: square; stroke-linejoin: miter; }
@@ -417,7 +439,8 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
   .app { max-width: none; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
   header h1 { font-size: clamp(1.15rem, 1.8vw, 1.9rem); }
   .board::after { opacity: .45; }
-  .nav { font-size: .62rem; } .timer { font-size: clamp(.95rem, 1.5vw, 1.4rem); }
+  .nav { font-size: clamp(.85rem, 1.15vw, 1.2rem); gap: 12px; } .nav button { min-width: 52px; height: 46px; font-size: 2rem; }
+  .timer { font-size: clamp(.95rem, 1.5vw, 1.4rem); }
   main { --side: clamp(300px, 27vw, 480px); display: grid; grid-template-columns: minmax(0, 1fr) var(--side); grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 12px 28px; padding-top: 12px; }
   .play { grid-column: 1; grid-row: 1 / 4; align-self: center; }
   .boardwrap { --gap: 3px; --rg: 5px; --t: max(20px, calc(min((100vw - var(--side) - var(--st, 0px) - 170px) / (var(--c) + 1) - var(--gap), ((100dvh - 226px) / var(--r) - var(--rg)) / 1.15))); --h: calc(var(--t) * 1.15); gap: 14px; }
@@ -461,6 +484,7 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
     <div class="icons">
       <button class="icon-btn text-btn" id="unlimBtn">Unlimited</button>
       <button class="icon-btn color-btn" id="colorBtn" aria-label="Board color" hidden><i></i></button>
+      <button class="icon-btn" id="statsBtn" aria-label="Statistics"><svg viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-9"/></svg></button>
       <button class="icon-btn" id="soundBtn" aria-label="Sound on"><svg viewBox="0 0 24 24" id="soundIcon"></svg></button>
       <button class="icon-btn" id="helpBtn" aria-label="How to play"><svg viewBox="0 0 24 24"><path d="M9.2 9a3 3 0 1 1 4.3 2.7c-.9.5-1.5 1.2-1.5 2.3M12 17.5v.01"/></svg></button>
     </div>
@@ -561,16 +585,27 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
   </div>
 </div>
 
+<div class="modal" id="statsModal" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="statsTitle">
+    <button class="close" data-close aria-label="Close">×</button>
+    <h2 id="statsTitle">Statistics</h2>
+    <div class="stat-grid">
+      <div><b id="stPlayed">0</b><small>Played</small></div>
+      <div><b id="stWin">0%</b><small>Solved</small></div>
+      <div><b id="stStreak">0</b><small>Streak</small></div>
+      <div><b id="stBest">0</b><small>Best streak</small></div>
+    </div>
+    <p class="arch-head">Puzzles finished</p>
+    <div class="done-list" id="stDone"></div>
+    <p class="pay-small" style="text-align:center">Streaks count dailies solved on their own day.</p>
+  </div>
+</div>
+
 <div class="modal" id="archModal" hidden>
   <div class="sheet" role="dialog" aria-labelledby="archTitle">
     <button class="close" data-close aria-label="Close">×</button>
     <h2 id="archTitle">Unlimited</h2>
-    <p class="arch-head" id="archNextHead" hidden>Upcoming dailies (admin)</p>
-    <div class="arch-grid" id="archNext" hidden></div>
-    <p class="arch-head" id="archPastHead">Past dailies</p>
-    <div class="arch-grid" id="archPast"></div>
-    <p class="arch-head">Classics</p>
-    <div class="arch-grid" id="archOld"></div>
+    <p class="pay-note" style="font-size:1.1rem">You have every past daily. Use the <b>‹ ›</b> arrows at the top to move through the archive.</p>
     <div id="adminTools">
       <div style="display:flex;gap:18px;justify-content:center;margin-top:6px">
         <button class="link-btn admin-link" id="archAdminLink">Admin</button>
@@ -628,6 +663,7 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
     </div>
     <div class="actions" style="justify-content:center">
       <button class="btn primary" id="shareBtn">Copy result</button>
+      <button class="btn" id="resStats">Stats</button>
       <button class="btn" id="nextBtn">Next puzzle</button>
     </div>
   </div>
@@ -1205,8 +1241,16 @@ function pastDailies() {
   const n = Math.round((Date.parse(today() + "T12:00") - Date.parse(DAILY_START + "T12:00")) / 864e5);
   return DAILY.slice(0, Math.max(0, Math.min(n, DAILY.length))).reverse();   // newest first, never today's or later
 }
-const classics = () => Array.from({ length: INTRO }, (_, i) => i);
-const extras = () => [...upcoming(), ...pastDailies(), ...classics()];
+// the archive is the intro plus every daily so far, oldest first; the arrows walk it. The old classic boards are retired.
+const extras = () => [...upcoming(), ...pastDailies()];
+function timeline() {
+  const n = Math.round((Date.parse(today() + "T12:00") - Date.parse(DAILY_START + "T12:00")) / 864e5);
+  const upTo = DAILY.slice(0, Math.max(0, Math.min(n + 1, DAILY.length)));
+  const ahead = adm() ? DAILY.filter(i => !upTo.includes(i)) : [];   // admins can arrow ahead into upcoming dailies
+  return [INTRO, ...upTo, ...ahead];
+}
+// free players get the intro and today's daily; older dailies are part of Unlimited
+const canPlay = i => playable().includes(i) || (ok7() && extras().includes(i));
 const K7 = "cx-v7";
 // the stored value has to match this code, so typing true or 1 into storage does nothing
 const h7 = t => { let h = 2166136261; for (const ch of "c4sc\u00e4de\u2022" + t) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return (h >>> 0).toString(36); };
@@ -1289,7 +1333,7 @@ function load(i) {
     draining = false; slapping.clear(); dripsLeft = 0; dripWait.splice(0).forEach(f => f());
     resetStation();
   }
-  if (!playable().includes(i) && !(ok7() && extras().includes(i))) i = INTRO;   // archived and future boards stay locked
+  if (!canPlay(i)) i = INTRO;   // locked and future boards can't be opened directly
   idx = i; P = parse(PUZZLES[i]); pending.clear(); busy = false;
   PW = P[0].w; litCells.clear(); hotCells.clear();
   ORDER = [...PW].map((_, n) => n).sort((a, b) => (a * 37 + i * 11) % 17 - (b * 37 + i * 11) % 17);   // letters unlock out of order
@@ -1704,9 +1748,11 @@ function render() {
   $("letterBtn").disabled = !playing();
   $("giveUpBtn").hidden = !playing();
   $("resetBtn").hidden = S.status !== "won";
-  const list = navList(), at = list.indexOf(idx);
+  const list = timeline(), at = list.indexOf(idx);
   $("navLbl").innerHTML = boardName(idx, true);
-  $("prev").disabled = at <= 0; $("next").disabled = at === list.length - 1;
+  $("prev").disabled = at <= 0; $("next").disabled = at < 0 || at === list.length - 1;
+  const lockedPrev = at > 0 && !canPlay(list[at - 1]);
+  $("prev").classList.toggle("locked", lockedPrev); $("prev").title = lockedPrev ? "Older dailies come with Unlimited" : "Previous puzzle";
   $("timer").textContent = clock(S.time);
   $("pwClue").textContent = `Top: ${P[0].segs[0].clue}  Side: ${P[P.length - 1].segs[0].clue}`;
   if (idx === INTRO && P.some((p, r) => isCompound(r) && rowSolved(r))) store.set(KT, 1);
@@ -2044,12 +2090,40 @@ function flash(r, cells = litCells, hold = 1150) {
   });
 }
 
+/* ---------- stats ----------
+   Kept in this browser for now: every puzzle finished (first finish counts), and the daily streak:
+   a daily solved on its own day adds one, missing a day or losing one resets it. */
+const KS = "cx-stats";
+const stats = () => Object.assign({ done: {}, streak: 0, best: 0, last: null }, store.get(KS) || {});
+const dayBefore = key => { const d = new Date(key + "T12:00"); d.setDate(d.getDate() - 1); return dayKey(d); };
+function recordFinish(status) {
+  const st = stats();
+  if (st.done[idx]) return;   // replays and resets don't count twice
+  st.done[idx] = status;
+  if (DAILY.includes(idx) && idx === dailyIdx()) {   // only today's daily moves the streak
+    if (status === "won") { st.streak = st.last === dayBefore(today()) ? st.streak + 1 : 1; st.last = today(); st.best = Math.max(st.best, st.streak); }
+    else { st.streak = 0; st.last = null; }
+  }
+  store.set(KS, st);
+}
+const liveStreak = st => st.last === today() || st.last === dayBefore(today()) ? st.streak : 0;   // a missed day breaks it
+function openStats() {
+  const st = stats(), keys = Object.keys(st.done), won = keys.filter(k => st.done[k] === "won").length;
+  $("stPlayed").textContent = keys.length;
+  $("stWin").textContent = keys.length ? Math.round(won / keys.length * 100) + "%" : "0%";
+  $("stStreak").textContent = liveStreak(st); $("stBest").textContent = st.best;
+  const order = timeline().filter(i => st.done[i]);
+  $("stDone").innerHTML = order.length ? order.map(i => `<span class="${st.done[i]}">${boardName(+i)}</span>`).join("") : '<span>None yet</span>';
+  closeModals(); $("statsModal").hidden = false;
+}
 function win() {
+  recordFinish("won");
   kbIn.blur();
   S.status = "won"; save(); render(); sfx("win");
   setTimeout(showResult, 1400);
 }
 function lose() {
+  recordFinish("lost");
   kbIn.blur();
   S.status = "lost"; save(); render(); sfx("lose");
   setTimeout(showResult, 1100);
@@ -2299,10 +2373,17 @@ if (window.visualViewport) {
 $("checkBtn").addEventListener("click", check);
 $("letterBtn").addEventListener("click", peek);
 $("giveUpBtn").addEventListener("click", giveUp);
-const step = d => { const list = navList(), j = list.indexOf(idx) + d; if (list[j] !== undefined) load(list[j]); };
+// the arrows step through the archive by date; an older daily you haven't unlocked brings up Unlimited instead
+const step = d => {
+  const list = timeline(), j = list.indexOf(idx) + d, to = list[j];
+  if (to === undefined) return;
+  if (canPlay(to)) load(to); else paywall(false);
+};
 $("prev").addEventListener("click", () => step(-1));
 $("next").addEventListener("click", () => step(1));
 $("helpBtn").addEventListener("click", () => $("helpModal").hidden = false);
+$("statsBtn").addEventListener("click", openStats);
+$("resStats").addEventListener("click", openStats);
 $("soundBtn").addEventListener("click", () => { muted = !muted; store.set("plumb-muted", muted); renderSound(); });
 // once the intro and today's daily are both finished, the paywall comes up ($5 once; payment wiring comes later)
 function paywall(afterDaily = true) {
@@ -2312,21 +2393,6 @@ function paywall(afterDaily = true) {
 $("unlimBtn").addEventListener("click", () => ok7() ? openArchive() : paywall(false));
 $("payBtn").addEventListener("click", () => { if (PAY_LINK) location.href = PAY_LINK; });
 function openArchive() {
-  const fill = (el, list) => {
-    el.innerHTML = "";
-    list.forEach(i => {
-      const b = document.createElement("button"), won = store.get(SAVE + i)?.status === "won";
-      b.className = "btn" + (won ? " won" : "") + (i === idx ? " cur" : "");
-      b.textContent = DAILY.includes(i) ? shortDate(dateOf(i)) : i + 1;
-      b.setAttribute("aria-label", `${boardName(i)}${won ? ", solved" : ""}`);
-      b.addEventListener("click", () => { closeModals(); load(i); });
-      el.appendChild(b);
-    });
-  };
-  const past = pastDailies(), next = upcoming();
-  fill($("archPast"), past); fill($("archOld"), classics()); fill($("archNext"), next);
-  $("archPastHead").hidden = $("archPast").hidden = !past.length;
-  $("archNextHead").hidden = $("archNext").hidden = !next.length;
   $("archTitle").innerHTML = "Unlimited" + (adm() ? '<span class="admin-tag">Admin</span>' : "");
   $("archAdminLink").hidden = adm(); $("wipeForm").hidden = true; $("archAdminForm").hidden = true;
   closeModals(); $("archModal").hidden = false;
@@ -2355,13 +2421,11 @@ document.querySelectorAll(".modal").forEach(m => m.addEventListener("click", e =
 // closing the last result of the day also brings up the paywall
 $("resultModal").querySelector(".close").addEventListener("click", () => { if (allDone()) paywall(); });
 
-// the arrows move between the intro and today's daily, or through the unlimited boards when you're in them
-const navList = () => extras().includes(idx) ? extras() : playable();
 function boardName(i, short = false) {
   const day = d => short ? `<span class="lbl-long">Daily </span>${shortDate(d)}` : `Daily ${shortDate(d)}`;
   if (i === INTRO) return "Intro";
   if (DAILY.includes(i)) return day(dateOf(i));
-  return short ? `<span class="lbl-long">Classic </span>#${i + 1}` : `Classic #${i + 1}`;
+  return `Puzzle #${i + 1}`;
 }
 $("colorBtn").addEventListener("click", () => {
   let n = hueAt();
@@ -2378,7 +2442,7 @@ function wipeAll(input) {
   if (h7("ad\u2022" + v) !== A7) { toast("Wrong password"); return; }
   // back to a brand-new player: no progress, no purchase, no admin, default color (sound setting stays)
   PUZZLES.forEach((_, i) => store.set(SAVE + i, null));
-  [KT, K7, KH, KA].forEach(k => store.set(k, null));
+  [KT, K7, KH, KA, KS].forEach(k => store.set(k, null));
   renderUnlim(); applyHue();
   closeModals(); fireUntil = 0; load(INTRO);
   $("startLives").textContent = LIVES(); $("helpModal").hidden = false;
@@ -2388,7 +2452,7 @@ $("adminBadge").addEventListener("click", () => { closeModals(); $("admResetForm
 $("admArchive").addEventListener("click", openArchive);
 $("admExit").addEventListener("click", () => {
   store.set(KA, null); renderUnlim(); applyHue(); closeModals();
-  if (!playable().includes(idx) && !(ok7() && extras().includes(idx))) load(INTRO);
+  if (!canPlay(idx)) load(INTRO);
   toast("Admin mode off");
 });
 $("admResetBtn").addEventListener("click", () => { $("admResetForm").hidden = false; $("admResetCode").focus(); });
@@ -2408,7 +2472,7 @@ $("archAdminForm").addEventListener("submit", e => { e.preventDefault(); enterAd
 $("archAdminLink").addEventListener("click", () => { $("wipeForm").hidden = true; $("archAdminForm").hidden = false; $("archAdminCode").focus(); });
 function renderUnlim() {
   $("adminBadge").hidden = !adm();
-  $("unlimBtn").textContent = ok7() ? "Archive" : "Unlimited";
+  $("unlimBtn").textContent = "Unlimited";
   $("payBtn").disabled = !PAY_LINK;
   $("paySoon").hidden = !!PAY_LINK; $("payVia").hidden = !PAY_LINK;
 }
