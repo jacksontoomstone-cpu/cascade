@@ -2541,26 +2541,6 @@ function skyStart() {
     g.globalAlpha = .55; g.fillStyle = dark; g.fillRect(0, S, W, depth); g.globalAlpha = 1;
     // a bright waterline
     g.fillStyle = glow; g.globalAlpha = .7; g.fillRect(0, S, W, 2); g.globalAlpha = 1;
-    // the moon's reflection: a wobbling column of short dashes under the moon
-    const mx = W * .82;
-    for (let k = 0; k < 9; k++) {
-      const y = S + 8 + k * (depth - 12) / 9, w = (26 - k * 2.2) * (1 + .25 * Math.sin(time * 1.6 + k));
-      g.globalAlpha = .55 - k * .05; g.fillStyle = "#fff6c8"; px(mx - w / 2 + Math.sin(time * 1.2 + k * .9) * 4, y, w, 2);
-    }
-    // slow shimmer: dashes drifting along the surface layers
-    g.fillStyle = glow;
-    for (let k = 0; k < 7; k++) {
-      const y = S + 6 + k * (depth - 10) / 7, off = (time * (8 + k * 3) * (k % 2 ? 1 : -1)) % 120;
-      g.globalAlpha = .22 - k * .02;
-      for (let x = -120 + off; x < W; x += 120) px(x + (k * 37) % 60, y, 18 + (k % 3) * 8, 2);
-    }
-    // lily pads bobbing on the water
-    pads.forEach(p => {
-      const y = S + p.d * depth * .5 + Math.sin(time * .8 + p.x) * 1.5;
-      g.globalAlpha = .9; g.fillStyle = mid; px(p.x - p.w / 2, y - 3, p.w, 6); px(p.x - p.w / 2 + 4, y - 5, p.w - 8, 10);
-      g.fillStyle = dim; px(p.x - p.w / 2 + 2, y - 3, p.w - 4, 2);
-      g.fillStyle = deep; px(p.x + p.w * .1, y - 5, 4, 6);   // the notch
-    });
     // rings spreading from every letter that lands
     rings.forEach(r => {
       g.globalAlpha = Math.max(0, r.life) * .8; g.strokeStyle = glow; g.lineWidth = 2;
