@@ -407,21 +407,43 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 .ss-head h2 { margin: 0; font-family: var(--pixel); font-weight: 400; font-size: .9rem; text-transform: uppercase; color: var(--a); }
 .ss-head .close { position: static; border: none; background: transparent; color: var(--white); font-family: var(--pixel); font-size: 1rem; cursor: pointer; width: 34px; height: 34px; }
 .side-stats .arch-head { margin: 4px 0 0; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; color: var(--muted); }
-.ss-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.ss-list li { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 10px 12px; background: var(--cab); box-shadow: inset 0 0 0 2px var(--bezel); font-size: 1.15rem; }
-.ss-list li.can { cursor: pointer; } .ss-list li.can:hover { box-shadow: inset 0 0 0 2px var(--a); }
-.ss-list li.cur { box-shadow: inset 0 0 0 2px var(--white); }
-.ss-list .nm { font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; }
-.ss-list .tg { font-family: var(--pixel); font-size: .45rem; text-transform: uppercase; padding: 5px 7px; }
-.ss-list .won .tg, .ss-list li.won .tg { background: var(--a); color: #04121a; }
-.ss-list li.lost .tg { background: var(--bad); color: #fff; }
+.ss-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+/* each finished puzzle is a bar: its fill shows the percentile; dailies use the board color, the intro is gold, misses are pink */
+.ss-list li { --bc: var(--a); position: relative; overflow: hidden; display: grid; grid-template-columns: 1fr auto; row-gap: 8px; column-gap: 12px; align-items: center;
+  padding: 14px 16px; background: var(--cab); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--bc) 55%, var(--bezel)); font-size: 1.25rem; }
+.ss-list li.intro { --bc: #ffd166; }
+.ss-list li.lost { --bc: #ff5d8f; }
+.ss-list li::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--pct, 0%); background: linear-gradient(90deg, color-mix(in srgb, var(--bc) 10%, transparent), color-mix(in srgb, var(--bc) 30%, transparent)); pointer-events: none; }
+.ss-list li > * { position: relative; }
+.ss-list li.can { cursor: pointer; } .ss-list li.can:hover { box-shadow: inset 0 0 0 2px var(--bc), 0 0 14px -4px var(--bc); }
+.ss-list li.cur { box-shadow: inset 0 0 0 3px var(--bc); }
+.ss-list .nm { font-family: var(--pixel); font-size: .62rem; text-transform: uppercase; color: var(--bc); }
+.ss-list .tg { font-family: var(--pixel); font-size: .48rem; text-transform: uppercase; padding: 6px 8px; background: var(--bc); color: #04121a; justify-self: end; }
 .ss-list .mt { color: var(--muted); font-variant-numeric: tabular-nums; }
+.ss-list .pc { font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; letter-spacing: .08em; color: var(--white); justify-self: end; }
+.ss-list .pc b { color: var(--bc); font-weight: 400; }
+/* the four numbers at the top each get their own color */
+.stat-grid > div:nth-child(1) b { color: #4de3ff; }
+.stat-grid > div:nth-child(2) b { color: #5fe08a; }
+.stat-grid > div:nth-child(3) b { color: #ff9f43; }
+.stat-grid > div:nth-child(4) b { color: #ffd166; }
+.side-stats .stat-grid { gap: 10px; }
+.side-stats .stat-grid > div { padding: 12px 4px 10px; background: var(--cab); box-shadow: inset 0 0 0 2px var(--bezel); }
+.side-stats .stat-grid b { font-size: 1.6rem; }
+.side-stats .stat-grid > div:nth-child(1) { box-shadow: inset 0 0 0 2px rgba(77, 227, 255, .45); }
+.side-stats .stat-grid > div:nth-child(2) { box-shadow: inset 0 0 0 2px rgba(95, 224, 138, .45); }
+.side-stats .stat-grid > div:nth-child(3) { box-shadow: inset 0 0 0 2px rgba(255, 159, 67, .45); }
+.side-stats .stat-grid > div:nth-child(4) { box-shadow: inset 0 0 0 2px rgba(255, 209, 102, .45); }
 html.clean .side-stats:not([hidden]) { background: #fff; box-shadow: 0 0 0 1px #d3d6da; border-radius: 10px; }
 html.clean .ss-head h2 { font-family: Georgia, "Times New Roman", serif; font-weight: 700; text-transform: none; color: #121212; font-size: 1.2rem; }
-html.clean .ss-list li { background: #f6f7f8; box-shadow: none; border-radius: 6px; }
-html.clean .ss-list .nm, html.clean .ss-list .tg { font-family: var(--pixel); text-transform: none; font-size: .85rem; }
-html.clean .ss-list li.won .tg { background: var(--c-done); color: #fff; border-radius: 4px; }
-html.clean .ss-list li.lost .tg { border-radius: 4px; }
+html.clean .ss-list li { --bc: var(--c-done); background: #f6f7f8; border-radius: 8px; }
+html.clean .ss-list li.intro { --bc: var(--c-big); } html.clean .ss-list li.lost { --bc: #d1453b; }
+html.clean .ss-list .nm, html.clean .ss-list .tg, html.clean .ss-list .pc { font-family: var(--pixel); text-transform: none; font-size: .9rem; letter-spacing: 0; }
+html.clean .ss-list .tg { color: #fff; border-radius: 4px; }
+html.clean .ss-list .pc { color: #121212; }
+html.clean .stat-grid > div:nth-child(1) b { color: var(--c-cmp); } html.clean .stat-grid > div:nth-child(2) b { color: var(--c-done); }
+html.clean .stat-grid > div:nth-child(3) b { color: #e07b1f; } html.clean .stat-grid > div:nth-child(4) b { color: #b8940f; }
+html.clean .side-stats .stat-grid > div { background: #f6f7f8; border-radius: 8px; }
 /* the two big buttons under every result */
 .res-big { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
 .res-big .btn { padding: 17px 10px; font-size: .7rem; }
@@ -2417,8 +2439,15 @@ function openSideStats() {
   $("ssStreak").textContent = liveStreak(st); $("ssBest").textContent = st.best;
   const known = timeline(), order = [...known.filter(i => st.done[i]), ...keys.map(Number).filter(i => !known.includes(i))].reverse();
   $("ssList").innerHTML = order.length ? order.map(i => {
-    const sv = store.get(SAVE + i), res = st.done[i], meta = sv && sv.status !== "playing" ? `${clock(sv.time || 0)} · ${Math.max(0, LIVES() - (sv.misses || 0))}♥` : "";
-    return `<li class="${res}${canPlay(i) ? " can" : ""}${i === idx ? " cur" : ""}" data-i="${i}"><span class="nm">${boardName(i)}</span><span class="mt">${meta}</span><span class="tg">${res === "won" ? "Solved" : "Missed"}</span></li>`;
+    const sv = store.get(SAVE + i), res = st.done[i], done = sv && sv.status !== "playing";
+    const meta = done ? `${clock(sv.time || 0)} · ${Math.max(0, LIVES() - (sv.misses || 0))}♥` : "";
+    // percentile from the same estimated crowd as the finish curve: solves rank by time, misses by how much got filled
+    let pct = null;
+    if (done && res === "won") pct = pctText(pOfTime(sv.time || 1));
+    else if (done && sv.locked) { const all = sv.locked.flat(), c = all.filter(Boolean).length / all.length; pct = pctText(CROWD.fail * Math.max(.01, c)); }
+    const cls = `${res}${i === INTRO ? " intro" : ""}${canPlay(i) ? " can" : ""}${i === idx ? " cur" : ""}`;
+    return `<li class="${cls}" data-i="${i}" style="--pct:${pct ?? 0}%"><span class="nm">${boardName(i)}</span><span class="tg">${res === "won" ? "Solved" : "Missed"}</span>` +
+      `<span class="mt">${meta}</span><span class="pc">${pct == null ? "" : `Better than <b>${pct}%</b>`}</span></li>`;
   }).join("") : '<li><span class="nm">None yet</span></li>';
   $("sideStats").hidden = false;
 }
