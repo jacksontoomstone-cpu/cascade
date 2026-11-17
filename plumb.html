@@ -123,7 +123,7 @@ header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin
 .menu { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 16px;
   background: radial-gradient(80% 70% at 50% 35%, hsl(var(--hue) calc(70% * var(--sk)) calc(12% + var(--lift))), var(--cab) 75%); }
 .menu[hidden] { display: none; }
-.menu canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.menu canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
 .menu::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px); }
 .menu-box { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: stretch; gap: 12px; width: min(100%, 360px);
   padding: 28px 26px 24px; background: hsl(var(--hue) calc(70% * var(--sk)) calc(4% + var(--lift)) / .82); border: 4px solid var(--white); outline: 4px solid var(--bezel);
@@ -2527,8 +2527,15 @@ function skyStart() {
   const surf = () => Math.round(H * .79 / 4) * 4;   // the pond's waterline
   const make = top => { const z = Math.random(); return { x: Math.random() * W, y: top ? -40 - Math.random() * H * .6 : Math.random() * surf(),
     size: 10 + z * 22, v: 30 + z * 95, ch: ABC[Math.random() * 26 | 0], bright: Math.random() < .18, z }; };
-  const n = Math.round(W * H / 11000);
-  const drops = Array.from({ length: n }, () => make(false)).sort((a, b) => a.z - b.z);
+  // the sky starts empty: tap or click anywhere around the menu to drop a letter into the pond
+  const drops = [];
+  const tap = e => {
+    if ($("menu").hidden || e.target.closest(".menu-box")) return;
+    const z = .45 + Math.random() * .55;
+    drops.push({ x: e.clientX - 8, y: e.clientY, size: 12 + z * 22, v: 20, ch: ABC[Math.random() * 26 | 0], bright: Math.random() < .5, z });
+    sfx("tick", Math.random() * 6 | 0);
+  };
+  $("menu").onpointerdown = tap;
   const rings = [], pads = Array.from({ length: Math.max(3, Math.round(W / 260)) }, (_, i) => ({ x: (i + .3 + Math.random() * .4) * W / Math.max(3, Math.round(W / 260)), d: .25 + Math.random() * .6, w: 26 + Math.random() * 22 }));
   const stars = Array.from({ length: Math.round(W / 22) }, () => ({ x: Math.random() * W, y: Math.random() * H * .6, p: Math.random() * 6 }));
   const px = (x, y, w, h) => g.fillRect(Math.round(x / 2) * 2, Math.round(y / 2) * 2, Math.round(w / 2) * 2, Math.round(h / 2) * 2);
@@ -2561,42 +2568,23 @@ function skyStart() {
     g.fillStyle = "rgba(0,0,0,.3)"; g.fillRect(0, 0, W, surf());   // short streaks behind falling letters, sky only
     sky();
     const S = surf();
-    const depth = H - S;
-    drops.forEach(d => {
-      if (d.sink == null && d.y >= S) {   // plop: a ring on the water, and the letter slows right down as it goes under
-        rings.push({ x: d.x + d.size * .4, y: S + 2, r: 4, life: 1, grow: 22 + d.z * 30 });
-        d.sink = 0; d.v = 16 + d.z * 18; d.sway = Math.random() * 6;
+    for (let i = drops.length - 1; i >= 0; i--) {
+      const d = drops[i];
+      d.v += 420 * dt; d.y += d.v * dt;   // falls with a little gravity
+      if (d.y >= S) {   // plop: a ring spreads where it hit, and the letter is gone
+        rings.push({ x: d.x + d.size * .4, y: S + 2, r: 4, life: 1, grow: 26 + d.z * 34 });
+        drops.splice(i, 1);
       }
-      if (d.sink != null) {
-        d.v = Math.max(9, d.v - 6 * dt); d.sink += dt;
-        if (d.y - d.size > S + depth * .8) { Object.assign(d, make(true), { sink: null }); return; }   // gone to the bottom: start again up top
-      }
-      d.y += d.v * dt;
-      if (d.sink == null && Math.random() < dt * .5) d.ch = ABC[Math.random() * 26 | 0];
-    });
-    // letters still in the air (and the part of a sinking letter that hasn't gone under yet)
-    g.save(); g.beginPath(); g.rect(0, 0, W, S); g.clip();
+    }
     drops.forEach(d => {
       const y = Math.round(d.y / 4) * 4;
       g.font = `${Math.round(d.size)}px "Press Start 2P", monospace`;
-      g.globalAlpha = .25 + d.z * .75; g.shadowColor = glow; g.shadowBlur = d.bright ? 14 : 0;
+      g.globalAlpha = .35 + d.z * .65; g.shadowColor = glow; g.shadowBlur = d.bright ? 14 : 0;
       g.fillStyle = d.bright ? glow : dim; g.fillText(d.ch, d.x, y);
     });
-    g.restore();
     g.shadowBlur = 0; g.globalAlpha = 1;
     for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; r.r += r.grow * dt; r.life -= dt * .55; if (r.life <= 0) rings.splice(i, 1); }
     pond();
-    // under the surface: sinking letters drift side to side and fade into the deep
-    g.save(); g.beginPath(); g.rect(0, S + 2, W, depth); g.clip();
-    drops.forEach(d => {
-      if (d.sink == null) return;
-      const under = Math.max(0, (d.y - S) / (depth * .8)), y = Math.round(d.y / 4) * 4;
-      g.font = `${Math.round(d.size)}px "Press Start 2P", monospace`;
-      g.globalAlpha = Math.max(0, (.2 + d.z * .55) * (1 - under));
-      g.fillStyle = d.bright ? glow : dim;
-      g.fillText(d.ch, d.x + Math.sin(d.sink * 1.8 + d.sway) * 3, y);
-    });
-    g.restore(); g.globalAlpha = 1;
   };
   const frame = now => {
     if (run !== skyRun || $("menu").hidden) return;
