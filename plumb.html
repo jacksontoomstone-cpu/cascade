@@ -890,7 +890,7 @@ html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; colo
     <figure class="res-curve" id="resCurve" hidden>
       <svg id="resCurveSvg" viewBox="0 0 320 96" tabindex="0" role="slider" aria-label="Drag to compare solve times" aria-valuemin="0" aria-valuemax="99"></svg>
       <figcaption id="resRank"></figcaption>
-      <p class="res-est" id="resHint">Drag the dot to try other times · estimated</p>
+      <p class="res-est" id="resHint">Drag the dot to try other finishes · estimated</p>
     </figure>
     <div class="res-big">
       <button class="btn primary" id="nextBtn">Next puzzle</button>
@@ -2514,49 +2514,62 @@ function drawCurve() {
     `<g clip-path="url(#rcBeat)"><path d="${area(-3, zf)}" fill="url(#rcF)"/><path d="${area(zf, 3)}" fill="url(#rcW)"/></g>` +
     `<path class="c-edge-f" d="${edge(-3, zf)}"/><path class="c-edge-w" d="${edge(zf, 3)}"/>` +
     `<line class="c-base" x1="0" y1="${B}" x2="${W}" y2="${B}"/>${tickSvg}` +
-    `<text class="c-ax fail" x="${X((-3 + zf) / 2)}" y="${B + 12}" text-anchor="middle">OUT OF LIVES</text>` +
+    `<text class="c-ax c-tlbl fail" x="${X((-3 + zf) / 2)}" y="${B + 12}" text-anchor="middle">OUT OF LIVES</text>` +
     `<circle class="c-gold" cx="${X(ownZ)}" cy="${Y(ownZ)}" r="3.4"/>` +
     `<line class="c-hline" id="rcLine" y2="${B}"/><circle class="c-handle" id="rcDot" r="4.2"/><text class="c-hlbl" id="rcLbl" y="${B + 12}" text-anchor="middle"></text>`;
   // the handle snaps to whole 10-second steps; it can't go into the "out of lives" side
-  curveDrag = { t: own, own }; drawCurveAt(own);
+  curveDrag = { own }; drawCurveAt({ t: own });
   fig.hidden = false;
 }
-// drag (or arrow keys) along the curve to see how a faster or slower finish would rank
+// drag (or arrow keys) along the curve: on the solved side it shows how a faster or slower time would rank (10-second steps);
+// in the red "out of lives" side it shows how far a board got before the lives ran out (5% steps)
 {
-  const svg = $("resCurveSvg");
+  const svg = $("resCurveSvg"), F = () => CROWD.fail;
   const at = e => {
-    const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * 320;
-    const z = Math.max(zOf(CROWD.fail) + .01, Math.min(2.85, x / 320 * 6 - 3));
-    return timeOfP(ncdf(z));
+    const r = svg.getBoundingClientRect(), z = Math.max(-2.85, Math.min(2.85, (e.clientX - r.left) / r.width * 6 - 3));
+    return z < zOf(F()) ? { c: ncdf(z) / F() * 100 } : { t: timeOfP(ncdf(z)) };
   };
   let dragging = false;
-  const redraw = t => { if (curveDrag) drawCurveAt(t); };
+  const redraw = pos => { if (curveDrag) drawCurveAt(pos); };
   svg.addEventListener("pointerdown", e => { if (!curveDrag) return; dragging = true; svg.setPointerCapture(e.pointerId); redraw(at(e)); });
   svg.addEventListener("pointermove", e => { if (dragging) redraw(at(e)); });
   svg.addEventListener("pointerup", () => { dragging = false; });
   svg.addEventListener("pointercancel", () => { dragging = false; });
   svg.addEventListener("keydown", e => {
-    if (!curveDrag) return;
-    if (e.key === "ArrowRight") { e.preventDefault(); redraw(Math.max(10, curveDrag.t - 10)); }    // right = faster
-    if (e.key === "ArrowLeft") { e.preventDefault(); redraw(curveDrag.t + 10); }
+    if (!curveDrag || !["ArrowLeft", "ArrowRight"].includes(e.key)) return;
+    e.preventDefault();
+    const right = e.key === "ArrowRight", { t, c } = curveDrag;
+    if (c != null) redraw(right ? (c >= 95 ? { t: timeOfP(F() + .006) } : { c: c + 5 }) : { c: c - 5 });
+    else if (right) redraw({ t: Math.max(10, t - 10) });                                   // right = faster
+    else redraw(pOfTime(t + 10) <= F() + .006 ? { c: 95 } : { t: t + 10 });               // past the slowest solve: out of lives
   });
 }
-function drawCurveAt(t) {
+function drawCurveAt(pos) {
   // re-place just the handle, keeping the chart and the gold dot
   const W = 320, B = 78, X = z => (z + 3) / 6 * W, Y = z => B - pdf(z) * (B - 8);
-  const zf = zOf(CROWD.fail), own = curveDrag.own;
-  t = Math.max(10, Math.round(t / 10) * 10);
-  const p = pOfTime(t), z = Math.max(zf + .01, Math.min(2.85, zOf(p))), x = X(z), mine = t === Math.max(10, Math.round(own / 10) * 10);
+  const zf = zOf(CROWD.fail), own = curveDrag.own, svg = $("resCurveSvg");
+  let p, z, lbl, cap, txt;
+  if (pos.c != null) {   // out of lives, some share of the board filled
+    const c = Math.max(0, Math.min(95, Math.round(pos.c / 5) * 5));
+    p = CROWD.fail * Math.max(.01, c / 100); z = Math.max(-2.85, Math.min(zf - .01, zOf(p)));
+    curveDrag.c = c; curveDrag.t = null;
+    lbl = `${c}%`; cap = `<b>${c}%</b> done, out of lives: better than <b>${pctText(p)}%</b>`; txt = `out of lives at ${c}% complete`;
+  } else {
+    const t = Math.max(10, Math.round(pos.t / 10) * 10), mine = t === Math.max(10, Math.round(own / 10) * 10);
+    p = pOfTime(t); z = Math.max(zf + .01, Math.min(2.85, zOf(p)));
+    curveDrag.t = t; curveDrag.c = null;
+    lbl = mine ? "YOU" : clock(t); txt = clock(t);
+    cap = mine ? `Better than <b>${pctText(p)}%</b> of players` : `In <b>${clock(t)}</b>: better than <b>${pctText(p)}%</b>`;
+  }
+  const x = X(z);
   $("rcClip").setAttribute("width", x);
   const ln = $("rcLine"); ln.setAttribute("x1", x); ln.setAttribute("x2", x); ln.setAttribute("y1", Y(z));
   const dot = $("rcDot"); dot.setAttribute("cx", x); dot.setAttribute("cy", Y(z));
-  const lb = $("rcLbl"); lb.setAttribute("x", Math.min(W - 18, Math.max(18, x))); lb.textContent = mine ? "YOU" : clock(t);
-  // a time label right under the handle steps aside so the two never overprint
-  document.querySelectorAll("#resCurveSvg .c-tlbl").forEach(el => { el.style.visibility = Math.abs(+el.getAttribute("x") - x) < 34 ? "hidden" : ""; });
-  const pct = pctText(p);
-  $("resRank").innerHTML = mine ? `Better than <b>${pct}%</b> of players` : `In <b>${clock(t)}</b>: better than <b>${pct}%</b>`;
-  const svg = $("resCurveSvg"); svg.setAttribute("aria-valuenow", pct); svg.setAttribute("aria-valuetext", `${clock(t)}, better than ${pct}% of players`);
-  curveDrag.t = t;
+  const lb = $("rcLbl"); lb.setAttribute("x", Math.min(W - 18, Math.max(18, x))); lb.textContent = lbl;
+  // an axis label right under the handle steps aside so the two never overprint
+  svg.querySelectorAll(".c-tlbl").forEach(el => { el.style.visibility = Math.abs(+el.getAttribute("x") - x) < (el.classList.contains("fail") ? 64 : 34) ? "hidden" : ""; });
+  $("resRank").innerHTML = cap;
+  svg.setAttribute("aria-valuenow", pctText(p)); svg.setAttribute("aria-valuetext", `${txt}, better than ${pctText(p)}% of players`);
 }
 function showResult() {
   $("resTitle").textContent = S.status === "lost" ? "Out of lives" : "Board cleared";
