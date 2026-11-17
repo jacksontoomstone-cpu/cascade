@@ -1159,7 +1159,10 @@ const upcoming = () => adm() ? DAILY.filter(i => i !== dailyIdx() && !pastDailie
 // board colors for Unlimited: the color button steps through these
 const HUES = [["Blue", 198, 1], ["Red", 356, 1], ["Gold", 45, 1], ["Pink", 322, 1], ["Purple", 268, 1], ["Silver", 212, .3, 15, 22]];
 const KH = "cx-color2";   // saved by name, so the list can change without mixing up anyone's pick
-const hueAt = () => Math.max(0, HUES.findIndex(([name]) => name === store.get(KH)));   // every player can pick a board color
+// free players can switch between Blue and Red; Unlimited unlocks every color
+const FREE_HUES = ["Blue", "Red"];
+const hueOpen = name => ok7() || FREE_HUES.includes(name);
+const hueAt = () => { const n = HUES.findIndex(([name]) => name === store.get(KH)); return n >= 0 && hueOpen(HUES[n][0]) ? n : 0; };
 function applyHue() {
   const [name, h, k, lift = 0, liftA = 0] = HUES[hueAt()], st = document.documentElement.style;
   st.setProperty("--base-hue", h); st.setProperty("--base-sk", k);
@@ -1336,7 +1339,7 @@ const SHOWN = .85;   // water shows at most 85% full while filling, so it never 
    and when the water reaches the top they all take off and flap away. A new board starts with an empty pond. */
 let ducks = [], lastSplashX = null, duckBirths = 0;
 function makeDuck(x) {
-  const tb = tankBox(); if (!tb) return;
+  const tb = tankBox(); if (!tb || !ok7()) return;   // ducks are an Unlimited perk
   const d = document.createElement("div"); d.className = "duck"; d.setAttribute("aria-hidden", "true");
   d.innerHTML = `<div class="face">${$("duckArt").innerHTML}</div>`;
   document.body.appendChild(d);
@@ -2301,7 +2304,9 @@ function boardName(i, short = false) {
   return short ? `<span class="lbl-long">Classic </span>#${i + 1}` : `Classic #${i + 1}`;
 }
 $("colorBtn").addEventListener("click", () => {
-  const n = (hueAt() + 1) % HUES.length; store.set(KH, HUES[n][0]);
+  let n = hueAt();
+  do n = (n + 1) % HUES.length; while (!hueOpen(HUES[n][0]));   // step to the next color this player has
+  store.set(KH, HUES[n][0]);
   const root = document.documentElement; root.classList.add("instant");   // switch colors at once, no fade
   applyHue(); void root.offsetWidth; requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove("instant")));
   toast(HUES[n][0]);
