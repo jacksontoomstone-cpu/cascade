@@ -1440,13 +1440,15 @@ function pastDailies() {
   const n = Math.round((Date.parse(today() + "T12:00") - Date.parse(DAILY_START + "T12:00")) / 864e5);
   return DAILY.slice(0, Math.max(0, Math.min(n, DAILY.length))).reverse();   // newest first, never today's or later
 }
-// the archive is the intro plus every daily so far, oldest first; the arrows walk it. The old classic boards are retired.
+// the archive is every daily so far, oldest first, with the intro just before today's; the arrows walk it. The old classic boards are retired.
 const extras = () => [...upcoming(), ...pastDailies()];
 function timeline() {
   const n = Math.round((Date.parse(today() + "T12:00") - Date.parse(DAILY_START + "T12:00")) / 864e5);
   const upTo = DAILY.slice(0, Math.max(0, Math.min(n + 1, DAILY.length)));
   const ahead = adm() ? DAILY.filter(i => !upTo.includes(i)) : [];   // admins can arrow ahead into upcoming dailies
-  return [INTRO, ...upTo, ...ahead];
+  // the intro sits just before today's daily, so › from the intro goes straight to today; older dailies are back behind ‹
+  const d = dailyIdx(), past = upTo.filter(i => i !== d);
+  return [...past, INTRO, ...(d !== null ? [d] : []), ...ahead];
 }
 // free players get the intro and today's daily; older dailies are part of Unlimited
 const canPlay = i => playable().includes(i) || (ok7() && extras().includes(i));
