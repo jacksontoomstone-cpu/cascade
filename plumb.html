@@ -503,6 +503,87 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 /* the invisible box the phone keyboard types into */
 .kb-in { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; font-size: 16px; pointer-events: none; caret-color: transparent; }
 
+/* ---------- Clean mode: a calm newspaper-style skin for the same puzzle ----------
+   White page, black type, thin gray tiles, soft fills. No pond, pump, ducks, fire, power-ups or scanlines: letters just fall. */
+html.clean {
+  --a: #121212; --ad: #121212; --cab: #ffffff; --screen: #ffffff; --bezel: #d3d6da; --bezel-l: #e6e8eb; --bezel-d: #b9bdc2; --rod: #e3e5e8;
+  --white: #121212; --muted: #6b6f73; --bad: #d1453b; --scrim: rgba(255,255,255,.82);
+  --pixel: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif; --term: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --c-sel: #a7d8ff; --c-cur: #ffda00; --c-done: #7fb27a; --c-cmp: #5a8fc9; --c-big: #c9b458; --c-big-soft: #f4ecc4;
+  color-scheme: light;
+}
+html.clean[data-heat] { --hue: var(--base-hue); }
+html.clean body { background: #fff; color: #121212; font-size: 18px; }
+html.clean body::before, html.clean body::after, html.clean #fx, html.clean #fx2, html.clean .board::before, html.clean .board::after, html.clean .menu::after { display: none !important; }
+html.clean .bar, html.clean #dam, html.clean .duck, html.clean .drip, html.clean .drop, html.clean .tilefill, html.clean #colorBtn, html.clean .whirl { display: none !important; }
+html.clean :is(header, .clue, .pw, .ctrl) { background: none !important; box-shadow: none !important; }
+html.clean header::after { background: #121212; height: 1px; }
+html.clean header h1 { font-family: Georgia, "Times New Roman", serif; font-weight: 700; font-size: 1.5rem; text-transform: none; letter-spacing: -.01em; color: #121212; text-shadow: none; }
+html.clean .nav button, html.clean .icon-btn { background: #fff; color: #121212; box-shadow: none; border: 1px solid #d3d6da; border-radius: 6px; }
+html.clean .nav button:not(:disabled):hover, html.clean .icon-btn:hover { background: #f1f2f4; color: #121212; }
+html.clean .icon-btn.text-btn, html.clean .timer { color: #121212; font-weight: 700; text-transform: none; font-size: .8rem; }
+html.clean #navLbl { font-weight: 600; font-size: .9rem; text-transform: none; }
+html.clean .admin-badge { font-family: inherit; font-weight: 700; text-transform: none; box-shadow: none; border-width: 1px; }
+html.clean .clue .eyebrow { font-weight: 700; font-size: .72rem; letter-spacing: .06em; color: #6b6f73; }
+html.clean .clue .eyebrow b { font-weight: 800; color: #121212; }
+html.clean .clue .text { font-size: 1.3rem; font-weight: 600; line-height: 1.2; }
+html.clean .clue .whole { color: #5a5e62; font-size: 1rem; line-height: 1.2; }
+html.clean .clue { padding-left: 0; }
+html.clean .swatch { display: none; }
+html.clean .pw-clue { color: #5a5e62; font-size: .95rem; line-height: 1.3; }
+html.clean .board, html.clean .sidebox { background: #fff; box-shadow: none !important; border-radius: 0; }
+html.clean .grid { background: none; }
+html.clean .tile, html.clean .faller { font-family: var(--pixel); font-weight: 700; font-size: calc(var(--t) * .62); border-radius: 0; }
+html.clean .tile { background: #fff; color: #121212; border: 1px solid #c3c6ca; box-shadow: none; text-shadow: none; }
+html.clean .tile:not(.last)::after { background: #e1e3e6; height: 2px; top: calc(50% - 1px); }
+html.clean .tile.active { background: var(--c-sel); border-color: #7fb6e0; }
+html.clean .tile.cur { animation: none; background: var(--c-cur); border-color: #d9b800; }
+html.clean .tile.locked, html.clean .tile.hot { background: var(--c-done); border-color: var(--c-done); color: #fff; box-shadow: none; }
+html.clean .tile.locked.active { border-color: #121212; }
+html.clean .tile.revealed { background: #fff; color: #9a9ea2; border: 1px dashed #b9bdc2; }
+html.clean .tile.cmp { border: 2px solid #121212; box-shadow: none; }
+html.clean .tile.cmp::after { background: #121212; height: 2px; top: calc(50% - 1px); }
+html.clean .tile.cmp.locked { background: var(--c-cmp); border-color: #121212; color: #fff; box-shadow: none; }
+html.clean .tile.pwt { background: #fafafa; border-color: #c3c6ca; box-shadow: none; }
+html.clean .tile.pwt.active { background: var(--c-sel); border-color: #7fb6e0; }
+html.clean .tile.pwt.imprint { background: var(--c-big-soft); color: #121212; border-color: var(--c-big); text-shadow: none; box-shadow: none; }
+html.clean .tile.pwt.locked:not(.imprint) { background: var(--c-big) !important; border-color: var(--c-big) !important; color: #fff; box-shadow: none !important; }
+html.clean .faller { background: var(--c-done); color: #fff; box-shadow: none; }
+html.clean .faller.mystery { animation: none; }
+html.clean .tile.lit, html.clean .tile.slap { animation: none; }
+html.clean .tile.land { animation: cleanland .25s ease-out; }
+@keyframes cleanland { 0% { transform: translateY(-4px); } 100% { transform: none; } }
+html.clean .tip { display: none; }
+html.clean .status, html.clean .link-btn { font-family: var(--pixel); font-weight: 600; text-transform: none; color: #5a5e62; font-size: .8rem; }
+html.clean .misses i { color: #121212; }
+html.clean .misses i.used { color: #d3d6da; }
+html.clean .btn { background: #fff; color: #121212; border: 1px solid #121212; border-radius: 999px; box-shadow: none; font-family: var(--pixel); font-weight: 700; text-transform: none; font-size: .85rem; padding: 10px 18px; }
+html.clean .btn.primary { background: #121212; color: #fff; box-shadow: none; }
+html.clean .btn.dim { background: #f1f2f4; color: #6b6f73; border-color: #d3d6da; box-shadow: none; }
+html.clean .kb button { background: #d3d6da; color: #121212; box-shadow: none; border-radius: 4px; font-family: var(--pixel); font-weight: 700; font-size: .85rem; }
+html.clean .kb button:active { background: #b9bdc2; color: #121212; }
+html.clean .toast { background: #121212; color: #fff; border: none; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.18); font-family: var(--pixel); font-weight: 700; text-transform: none; }
+html.clean .sheet { background: #fff; color: #121212; border: none; outline: none; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,.18); }
+html.clean .sheet h2, html.clean .sheet .pay-title, html.clean .sheet.start .start-title, html.clean .pay-price { font-family: Georgia, "Times New Roman", serif; font-weight: 700; text-transform: none; color: #121212; text-shadow: none !important; letter-spacing: 0; }
+html.clean .sheet .close { font-family: var(--pixel); color: #121212; }
+html.clean .sheet .arch-head, html.clean .stat-grid b { font-family: var(--pixel); color: #121212; font-weight: 700; text-transform: none; }
+html.clean .done-list span, html.clean .arch-grid .btn { font-family: var(--pixel); background: #f1f2f4; color: #121212; border-radius: 6px; }
+html.clean .done-list span.won, html.clean .arch-grid .btn.won { background: var(--c-done); color: #fff; }
+html.clean .arch-grid .btn.cur { outline-color: #121212; }
+html.clean .admin-row input { background: #fff; color: #121212; border: 1px solid #b9bdc2; border-radius: 6px; font-family: var(--pixel); }
+html.clean .tut-card { background: #fff; color: #121212; border: 1px solid #d3d6da; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,.18); font-family: var(--pixel); }
+html.clean .tut-step { color: #6b6f73; font-family: var(--pixel); }
+html.clean .tut-welcome { background: rgba(255,255,255,.9); color: #121212; text-shadow: none; font-family: Georgia, "Times New Roman", serif; }
+html.clean .tut-welcome b { color: #121212; text-shadow: none; font-family: Georgia, "Times New Roman", serif; }
+/* the clean menu: a plain white page, letters still drop when you tap */
+html.clean .menu { background: #fff; }
+html.clean .menu-box { background: #fff; border: 1px solid #d3d6da; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,.12); outline: none; }
+html.clean .menu-title { font-family: Georgia, "Times New Roman", serif; font-weight: 700; color: #121212; text-shadow: none; text-transform: none; letter-spacing: -.01em; }
+html.clean .menu-sub { font-family: var(--pixel); font-weight: 600; text-transform: none; letter-spacing: 0; font-size: .85rem; color: #6b6f73; }
+html.clean .menu-box .btn { font-size: .95rem; padding: 13px; }
+html.clean .menu-box .btn.primary { font-size: 1rem; padding: 15px; }
+html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; color: #121212; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
@@ -587,7 +668,7 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
     <h2 id="helpTitle" class="start-title">Cascade</h2>
     <ol class="start-rules">
       <li>Solve clues and the letters fall down!</li>
-      <li>Earn points to fill in important letters</li>
+      <li id="ruleFill">Earn points to fill in important letters</li>
       <li><b id="startLives">5</b> lives</li>
     </ol>
     <button class="btn primary" data-close>Play</button>
@@ -640,6 +721,7 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
     <button class="btn" id="menuHow">Tutorial</button>
     <button class="btn" id="menuStats">Stats</button>
     <button class="btn" id="menuUnlim">Unlimited</button>
+    <button class="link-btn" id="menuMode">Switch to Clean mode</button>
   </div>
 </div>
 
@@ -1343,6 +1425,7 @@ const store = {
   },
   set(k, v) { mem.set(k, JSON.stringify(v)); try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
+const CLEAN = () => document.documentElement.classList.contains("clean");   // Clean mode: same puzzle, plain look, no pond or power-ups
 const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /* ---------- state ---------- */
@@ -1502,6 +1585,7 @@ const SHOWN = .85;   // water shows at most 85% full while filling, so it never 
    and when the water reaches the top they all take off and flap away. A new board starts with an empty pond. */
 let ducks = [], lastSplashX = null, duckBirths = 0;
 function makeDuck(x) {
+  if (CLEAN()) return;
   const tb = tankBox(); if (!tb || !ok7()) return;   // ducks are an Unlimited perk
   const d = document.createElement("div"); d.className = "duck"; d.setAttribute("aria-hidden", "true");
   d.innerHTML = `<div class="face">${$("duckArt").innerHTML}</div>`;
@@ -1746,6 +1830,7 @@ function finishDrain() {
 }
 // Stamp every letter the score has earned into both special words, always leaving one letter to guess
 function stampUp() {
+  if (CLEAN()) return [];   // Clean mode has no power-ups: only falling letters fill the big words
   const out = [], si = P.length - 1, now = earned();
   const stamp = (r, order, at) => order.slice(0, Math.min(now, order.length - 1)).forEach(i => {
     if (!S.locked[r][i]) { S.locked[r][i] = true; out.push({ t: tiles[r][at + i], key: cellKey(r, at + i), r }); }
@@ -2078,8 +2163,8 @@ function settle() {
   if (allSolved()) return win();
   if (S.cracked && S.crackedSide && S.colBase == null) { S.colBase = earned(); S.cols = 0; }   // bars count from here
   render(); save();
-  const power = S.colBase != null && earned() - S.colBase > S.cols;
-  if (full && !calm()) drainTank(stamped, power);
+  const power = !CLEAN() && S.colBase != null && earned() - S.colBase > S.cols;
+  if (full && !calm() && !CLEAN()) drainTank(stamped, power);
   else if (stamped.length) stamped.forEach(({ t }) => { t.classList.remove("land"); void t.offsetWidth; t.classList.add("land"); });
   if (stamped.length && combo === null) toast("New letters!");
   if (power && (calm() || !full)) fillCol();
@@ -2215,6 +2300,7 @@ function setHeat() {
   if (lvl && !burning && !calm()) { burning = true; requestAnimationFrame(burn); }
 }
 function blast() {
+  if (CLEAN()) return;   // no fire in Clean mode
   fireUntil = Date.now() + FIRE_MS;
   clearTimeout(fireTimer); fireTimer = setTimeout(setHeat, FIRE_MS + 50);
   document.body.classList.remove("blast"); void document.body.offsetWidth; document.body.classList.add("blast");
@@ -2730,7 +2816,22 @@ function skyStart() {
     g.fillStyle = "#e8dca0"; px(mx - mr * .3, my - mr * .3, mr * .3, mr * .3); px(mx + mr * .2, my + mr * .15, mr * .25, mr * .25);
     g.globalAlpha = 1;
   };
+  // Clean mode: a plain white page; tapped letters just fall in soft colors and drop off the bottom
+  const clean = CLEAN(), INK = ["#7fb27a", "#5a8fc9", "#c9b458", "#a7d8ff", "#121212"];
+  const drawClean = dt => {
+    g.clearRect(0, 0, W, H);
+    for (let i = drops.length - 1; i >= 0; i--) { const d = drops[i]; d.v += 420 * dt; d.y += d.v * dt; if (d.y > H + 60) drops.splice(i, 1); }
+    drops.forEach(d => {
+      const s = Math.round(d.size * 1.3);
+      d.ink = d.ink || INK[Math.random() * INK.length | 0];
+      g.fillStyle = d.ink; g.fillRect(d.x - 4, d.y - s, s + 8, s + 8);
+      g.fillStyle = d.ink === "#a7d8ff" ? "#121212" : "#fff"; g.font = `700 ${Math.round(s * .7)}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
+      g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(d.ch, d.x + s / 2, d.y - s / 2 + 4);
+      g.textAlign = "start"; g.textBaseline = "alphabetic";
+    });
+  };
   const draw = dt => {
+    if (clean) return drawClean(dt);
     time += dt;
     g.fillStyle = "rgba(0,0,0,.3)"; g.fillRect(0, 0, W, surf());   // short streaks behind falling letters, sky only
     sky();
@@ -2759,7 +2860,7 @@ function skyStart() {
     draw(dt);
     requestAnimationFrame(frame);
   };
-  if (calm()) { g.fillStyle = deep; g.fillRect(0, 0, W, H); draw(0); return; }
+  if (calm()) { if (!clean) { g.fillStyle = deep; g.fillRect(0, 0, W, H); } draw(0); return; }
   requestAnimationFrame(frame);
 }
 function openMenu() {
@@ -2774,6 +2875,17 @@ function openMenu() {
   $("menu").hidden = false; skyStart();
   setTimeout(() => $("menuPlay").focus({ preventScroll: true }), 50);
 }
+function applyMode() {
+  const on = store.get("cx-clean") === "1";
+  document.documentElement.classList.toggle("clean", on);
+  $("menuMode").textContent = on ? "Switch to Retro mode" : "Switch to Clean mode";
+  if (on) { clearDucks(); fireUntil = 0; document.documentElement.dataset.heat = 0; }
+  $("ruleFill").textContent = on ? "Letters fall into the long words across the top and side" : "Earn points to fill in important letters";
+}
+$("menuMode").addEventListener("click", () => {
+  store.set("cx-clean", store.get("cx-clean") === "1" ? "0" : "1");
+  applyMode(); render(); layoutDam(); skyStart();
+});
 const closeMenu = () => { $("menu").hidden = true; skyRun++; };
 $("menuPlay").addEventListener("click", () => {
   store.set("cx-tut", 1); closeMenu();
@@ -2787,7 +2899,7 @@ document.querySelector("header h1").addEventListener("click", e => { if (!e.targ
 
 function start(data) {
   renderSound();
-  const fresh7 = claimUnlock(); renderUnlim(); applyHue();
+  const fresh7 = claimUnlock(); renderUnlim(); applyHue(); applyMode();
   // new players start on the intro; once it's done they open on today's daily
   load(typeof data.idx === "number" ? data.idx : doneWith(INTRO) && dailyIdx() !== null ? dailyIdx() : INTRO);
   if (fresh7) { openArchive(); toast("Unlimited unlocked. Thanks!"); return; }
