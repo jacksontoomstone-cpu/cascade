@@ -2297,6 +2297,18 @@ function tone(f, at, dur, type = "sine", vol = .1) {
   g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + at + dur);
   o.connect(g).connect(ac.destination); o.start(ac.currentTime + at); o.stop(ac.currentTime + at + dur + .05);
 }
+// the menu's invisible piano: left side low, right side high, on a pentatonic scale so any run sounds pretty
+const PIANO = [130.81, 146.83, 164.81, 196, 220];   // C D E G A
+function pianoNote(x) {
+  if (muted) return;
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === "suspended") ac.resume();
+    const keys = 18, k = Math.max(0, Math.min(keys - 1, Math.floor(x / innerWidth * keys)));
+    const f = PIANO[k % 5] * 2 ** Math.floor(k / 5);
+    tone(f, 0, .9, "triangle", .09); tone(f * 2, 0, .35, "sine", .025);   // a soft key with a little sparkle on top
+  } catch {}
+}
 function sfx(kind, step = 0) {
   if (muted) return;
   try {
@@ -2538,15 +2550,14 @@ function skyStart() {
   $("menu").onpointerdown = e => {
     if ($("menu").hidden || e.target.closest(".menu-box")) return;
     held = true; lastX = e.clientX; lastY = e.clientY; lastT = performance.now();
-    spawn(e.clientX, e.clientY); sfx("tick", Math.random() * 6 | 0);
+    spawn(e.clientX, e.clientY); pianoNote(e.clientX);
   };
   $("menu").onpointermove = e => {
     if (!held || e.target.closest(".menu-box")) return;
     const now = performance.now(), moved = Math.hypot(e.clientX - lastX, e.clientY - lastY);
     if (moved < 16 && now - lastT < 70) return;   // a new letter every few pixels of drag
     lastX = e.clientX; lastY = e.clientY; lastT = now;
-    spawn(e.clientX, e.clientY);
-    if (Math.random() < .35) sfx("tick", Math.random() * 6 | 0);
+    spawn(e.clientX, e.clientY); pianoNote(e.clientX);
   };
   $("menu").onpointerup = $("menu").onpointercancel = $("menu").onpointerleave = () => { held = false; };
   const rings = [], pads = Array.from({ length: Math.max(3, Math.round(W / 260)) }, (_, i) => ({ x: (i + .3 + Math.random() * .4) * W / Math.max(3, Math.round(W / 260)), d: .25 + Math.random() * .6, w: 26 + Math.random() * 22 }));
