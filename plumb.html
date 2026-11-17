@@ -2561,22 +2561,42 @@ function skyStart() {
     g.fillStyle = "rgba(0,0,0,.3)"; g.fillRect(0, 0, W, surf());   // short streaks behind falling letters, sky only
     sky();
     const S = surf();
+    const depth = H - S;
     drops.forEach(d => {
-      d.y += d.v * dt;
-      if (d.y >= S) {   // plop: a ring on the water, then the letter starts again from the top
+      if (d.sink == null && d.y >= S) {   // plop: a ring on the water, and the letter slows right down as it goes under
         rings.push({ x: d.x + d.size * .4, y: S + 2, r: 4, life: 1, grow: 22 + d.z * 30 });
-        Object.assign(d, make(true));
-        return;
+        d.sink = 0; d.v = 16 + d.z * 18; d.sway = Math.random() * 6;
       }
-      if (Math.random() < dt * .5) d.ch = ABC[Math.random() * 26 | 0];
+      if (d.sink != null) {
+        d.v = Math.max(9, d.v - 6 * dt); d.sink += dt;
+        if (d.y - d.size > S + depth * .8) { Object.assign(d, make(true), { sink: null }); return; }   // gone to the bottom: start again up top
+      }
+      d.y += d.v * dt;
+      if (d.sink == null && Math.random() < dt * .5) d.ch = ABC[Math.random() * 26 | 0];
+    });
+    // letters still in the air (and the part of a sinking letter that hasn't gone under yet)
+    g.save(); g.beginPath(); g.rect(0, 0, W, S); g.clip();
+    drops.forEach(d => {
       const y = Math.round(d.y / 4) * 4;
       g.font = `${Math.round(d.size)}px "Press Start 2P", monospace`;
       g.globalAlpha = .25 + d.z * .75; g.shadowColor = glow; g.shadowBlur = d.bright ? 14 : 0;
       g.fillStyle = d.bright ? glow : dim; g.fillText(d.ch, d.x, y);
     });
+    g.restore();
     g.shadowBlur = 0; g.globalAlpha = 1;
     for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; r.r += r.grow * dt; r.life -= dt * .55; if (r.life <= 0) rings.splice(i, 1); }
     pond();
+    // under the surface: sinking letters drift side to side and fade into the deep
+    g.save(); g.beginPath(); g.rect(0, S + 2, W, depth); g.clip();
+    drops.forEach(d => {
+      if (d.sink == null) return;
+      const under = Math.max(0, (d.y - S) / (depth * .8)), y = Math.round(d.y / 4) * 4;
+      g.font = `${Math.round(d.size)}px "Press Start 2P", monospace`;
+      g.globalAlpha = Math.max(0, (.2 + d.z * .55) * (1 - under));
+      g.fillStyle = d.bright ? glow : dim;
+      g.fillText(d.ch, d.x + Math.sin(d.sink * 1.8 + d.sway) * 3, y);
+    });
+    g.restore(); g.globalAlpha = 1;
   };
   const frame = now => {
     if (run !== skyRun || $("menu").hidden) return;
