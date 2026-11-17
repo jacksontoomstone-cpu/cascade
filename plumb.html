@@ -2783,18 +2783,20 @@ $("resetYes").addEventListener("click", () => {
   if (S.status !== "won" || busy) return;
   store.set(SAVE + idx, null); load(idx); toast("Puzzle reset");
 });
-// Next puzzle: the intro or today's daily if one is unfinished; with Unlimited, the newest unfinished daily;
-// otherwise the "new daily tomorrow" screen
+// Next puzzle. Free players: from the intro it's today's daily (if unfinished); after that it's the Unlimited paywall.
+// Unlimited players: the newest daily they haven't finished.
 function nextPuzzle() {
+  const d = dailyIdx();
+  if (!ok7()) return idx === INTRO && d !== null && !doneWith(d) ? d : undefined;
   const free = playable().find(i => i !== idx && !doneWith(i));
   if (free !== undefined) return free;
-  if (ok7()) return [...timeline()].reverse().find(i => i !== idx && canPlay(i) && !doneWith(i));
+  return [...timeline()].reverse().find(i => i !== idx && canPlay(i) && !doneWith(i));
 }
 $("nextBtn").addEventListener("click", () => {
   const to = nextPuzzle();
   if (to !== undefined) { closeModals(); load(to); return; }
   if (ok7()) { closeModals(); toast("You've played every puzzle so far!"); return; }
-  if (!paywall()) closeModals();
+  paywall(idx === dailyIdx());   // the Unlimited screen; after the daily it opens with "A new daily drops tomorrow"
 });
 $("shareBtn").addEventListener("click", () => {
   navigator.clipboard.writeText(shareText()).then(() => toast("Copied")).catch(() => {
