@@ -417,7 +417,7 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
   /* no on-screen keys: tapping a word brings up the phone's own keyboard, and the game shrinks to fit above it */
   .kb { display: none; }
   :root.typing .app { height: calc(var(--vvh, 100%) - env(safe-area-inset-top, 0px)); transform: translateY(var(--vvt, 0px)); }
-  :root.typing :is(.pw-clue, header, .bar) { display: none; }
+  :root.typing .app :is(.pw-clue, header, .bar) { display: none; }
   .ctrl { padding-bottom: 4px; }
   .toast { bottom: auto; top: calc(64px + env(safe-area-inset-top, 0px)); }
   :root.typing .toast { top: calc(64px + var(--vvt, 0px) + env(safe-area-inset-top, 0px)); }
@@ -604,6 +604,34 @@ html.clean .menu-box .btn { font-size: .95rem; padding: 13px; }
 html.clean .menu-box .btn.primary { font-size: 1rem; padding: 15px; }
 html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; color: #121212; }
 
+/* ---------- phones: the clue across the top, the board filling everything under it, and the rest of the game
+   (logo, puzzle arrows, timer, buttons, lives, Check, the tank) tucked into a drawer behind the ☰ button ---------- */
+.burger, .drawer, .drawer-scrim { display: none; }
+.burger svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2.8; stroke-linecap: square; }
+@media (max-width: 859px) {
+  .app { max-width: none; padding-left: max(4px, env(safe-area-inset-left, 0px)); padding-right: max(4px, env(safe-area-inset-right, 0px)); padding-bottom: 4px; }
+  main { position: relative; gap: 4px; padding-top: 6px; }
+  .burger { display: grid; place-items: center; position: absolute; left: 2px; top: 10px; width: 44px; height: 44px; z-index: 7; color: var(--white); }
+  .clue { min-height: 62px; padding-left: 54px; padding-right: 4px; cursor: text; }
+  .clue .swatch { display: none; }
+  .clue .text { font-size: 1.3rem; }
+  .play { gap: 0; }
+  .boardwrap { padding: 4px 2px 4px 4px; gap: 5px; }
+  .drawer-scrim:not([hidden]) { display: block; position: fixed; inset: 0; z-index: 18; background: var(--scrim); }
+  .drawer:not([hidden]) {
+    display: flex; flex-direction: column; gap: 14px; position: fixed; top: 0; left: 0; right: 0; z-index: 19; max-height: 90%; overflow-y: auto;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) max(14px, env(safe-area-inset-right, 0px)) 16px max(14px, env(safe-area-inset-left, 0px));
+    background: var(--cab); border-bottom: 4px solid var(--bezel); box-shadow: 0 12px 40px rgba(0,0,0,.6); animation: drawerIn .18s ease-out;
+  }
+  @keyframes drawerIn { from { transform: translateY(-24px); opacity: 0; } }
+  .drawer header { padding-block: 0 13px; }
+  .drawer .pw-clue { text-align: left; }
+  .drawer .ctrl { flex-wrap: wrap; row-gap: 10px; }
+  .drawer .drawer-close { align-self: stretch; }
+  html.clean .drawer { border-bottom: 1px solid #d3d6da; box-shadow: 0 10px 30px rgba(0,0,0,.15); }
+  html.clean .burger { color: #121212; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
@@ -628,6 +656,7 @@ html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; colo
   </header>
 
   <main>
+    <button class="icon-btn burger" id="burger" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
     <section class="clue heat" id="clue" aria-live="polite">
       <div class="eyebrow" id="clueLen"></div>
       <div class="text" id="clueText"></div>
@@ -675,6 +704,11 @@ html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; colo
 
     <div class="kb" id="kb"></div>
   </main>
+</div>
+<div class="drawer-scrim" id="drawerScrim" hidden></div>
+<div class="drawer" id="drawer" hidden role="dialog" aria-label="Game menu">
+  <div id="drawerBody" style="display:contents"></div>
+  <button class="btn primary drawer-close" id="drawerClose">Back to puzzle</button>
 </div>
 
 <canvas id="fx" aria-hidden="true"></canvas>
@@ -1537,9 +1571,10 @@ function fit() {
   const b = $("boardwrap");
   if (!phone.matches) { b.style.removeProperty("--t"); b.style.removeProperty("--h"); zoom = 1; return; }
   const c = totalCols(), r = Math.max(...P.map(p => p.y)) + 1;
-  const tw = (b.clientWidth - 53 - (c - 1) * 2) / (c + 1);
-  const hAvail = (b.clientHeight - 30 - (r - 1) * 4) / r;
-  const t = Math.max(10, Math.min(tw, hAvail / 1.05)), h = Math.max(10, Math.min(hAvail, t * 1.45));
+  // fill the screen: tiles are as wide as the width allows, and grow taller into whatever height is left
+  const tw = (b.clientWidth - 45 - (c - 1) * 2) / (c + 1);
+  const hAvail = (b.clientHeight - 38 - (r - 1) * 4) / r;
+  const t = Math.max(10, Math.min(tw, hAvail / 1.05)), h = Math.max(10, Math.min(hAvail, t * 2));
   baseT = t;
   b.style.setProperty("--t", (t * zoom).toFixed(2) + "px");
   b.style.setProperty("--h", (h * zoom).toFixed(2) + "px");
@@ -2048,26 +2083,21 @@ function peek() {
 
 /* ---------- falling letters ---------- */
 // Every newly locked letter falls down its column. It sticks in each word below where it fits.
-// Cracking a special word: each letter pops in order, a rainbow runs over the whole word,
-// then its letters fall down the board (top word) or fly across the rows (side word)
+// Cracking a special word: each letter pops in order, then its letters fall down the board (top word)
+// or fly across the rows (side word). No fire and no rainbow: just the pops and a fanfare.
 const POP = [{ transform: "scale(1)" }, { transform: "scale(1.3)", filter: "brightness(2.2)", offset: .4 }, { transform: "scale(1)" }];
-const RAINBOW = [0, 35, 58, 130, 200, 265, 320, 360].map(hue => ({ background: `hsl(${hue} 95% 60%)`, color: "#111", boxShadow: `0 0 14px hsl(${hue} 100% 60%)` }));
 function crack(r, cols) {
   busy = true; save(); render();
   toast(`${W(r)} cracked!`);
-  const go = () => { blast(); return r === 0 ? drop(r, cols) : sweep(r); };
+  const go = () => r === 0 ? drop(r, cols) : sweep(r);
   if (calm()) { sfx("crack"); return go(); }
-  const token = idx, step = 110, wave = 35, rain = cols.length * step + 150;
+  const token = idx, step = 110, done = cols.length * step + 150;
   cols.forEach((c, i) => {
     tiles[r][c].animate(POP, { duration: 300, delay: i * step });
     setTimeout(() => { if (token === idx) sfx("tick", i % 8); }, i * step);
   });
-  setTimeout(() => {
-    if (token !== idx) return;
-    sfx("crack");
-    cols.forEach((c, i) => tiles[r][c].animate(RAINBOW, { duration: 900, delay: i * wave }));
-  }, rain);
-  setTimeout(() => { if (token === idx) go(); }, rain + 900 + cols.length * wave);
+  setTimeout(() => { if (token === idx) sfx("crack"); }, done);
+  setTimeout(() => { if (token === idx) go(); }, done + 450);
 }
 
 function drop(r, cols) {
@@ -2593,9 +2623,30 @@ document.addEventListener("keydown", e => {
    On phones there are no on-screen keys. Tapping a word focuses an invisible text box, so the phone's own keyboard
    comes up. The box always holds one space: a letter arrives as extra text, a delete empties it. */
 const kbIn = $("kbIn");
+// Phones can put the keyboard away (Done, the down arrow, Back) while the box still has focus, and focusing a box that
+// already has focus does nothing. So when the keyboard looks hidden, drop focus and take it again to bring it back.
+let vvMax = 0, vvW = 0, kbAt = 0;
+const kbShowing = () => !!window.visualViewport && vvMax > 0 && visualViewport.height < vvMax - 120;
 function openKb() {
-  if (!phone.matches || !playing()) return;
-  if (document.activeElement !== kbIn) kbIn.focus({ preventScroll: true });
+  if (!phone.matches || !playing() || TUT) return;
+  if (document.activeElement === kbIn) {
+    if (kbShowing() || Date.now() - kbAt < 700) return;
+    kbIn.blur();
+  }
+  kbAt = Date.now();
+  kbIn.focus({ preventScroll: true });
+}
+// tapping the clue brings the keyboard up too
+$("clue").addEventListener("click", openKb);
+// focus on touchend as well as click: some phones only show the keyboard for focus that happens right in the tap
+{
+  let t0 = null;
+  $("boardwrap").addEventListener("touchstart", e => { t0 = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null; }, { passive: true });
+  $("boardwrap").addEventListener("touchend", e => {
+    const t = e.changedTouches[0];
+    if (t0 && t && Math.hypot(t.clientX - t0.x, t.clientY - t0.y) < 10 && e.target.closest(".tile")) openKb();
+    t0 = null;
+  });
 }
 function resetKb() { kbIn.value = " "; try { kbIn.setSelectionRange(1, 1); } catch {} }
 kbIn.addEventListener("input", () => {
@@ -2620,13 +2671,15 @@ document.querySelectorAll(".ctrl button, #boardwrap").forEach(el => el.addEventL
 }));
 // tapping anywhere else puts the keyboard away
 document.addEventListener("pointerdown", e => {
-  if (document.activeElement === kbIn && !e.target.closest("#boardwrap, .ctrl")) kbIn.blur();
+  if (document.activeElement === kbIn && !e.target.closest("#boardwrap, .clue, .app .ctrl")) kbIn.blur();
 });
 // size the game to the part of the screen the keyboard leaves visible
 if (window.visualViewport) {
   const vv = visualViewport, root = document.documentElement;
   const fitVV = () => {
     if (!phone.matches) { root.style.removeProperty("--vvh"); root.style.removeProperty("--vvt"); return; }
+    if (Math.abs(vv.width - vvW) > 2) { vvW = vv.width; vvMax = 0; }   // turned the phone: learn the full height again
+    vvMax = Math.max(vvMax, vv.height);
     root.style.setProperty("--vvh", vv.height + "px"); root.style.setProperty("--vvt", vv.offsetTop + "px");
     requestAnimationFrame(() => { if (S) keyZoom(); });
   };
@@ -2837,12 +2890,15 @@ async function runTutorial() {
     await tutWait(4200, run);
     if (!C) {
       S.score = (earned() + 1) * BAR - 5;   // nearly full, so one more word tops it off
+      if (phone.matches) setDrawer(true);   // on phones the pond and Check letter live in the drawer
       tutSay(6, steps, "Fill the pond with letters to help figure them out.", ".bar");
       if (other >= 0) await tutType(other, 0, run, true);
       await tutWait(6200, run);
     }
+    if (phone.matches) setDrawer(true);
     tutSay(n(7), steps, "Check a letter for a life if you are stuck!", null, ["#letterBtn"]);
     await tutWait(3400, run);
+    setDrawer(false);
     tutSay(n(8), steps, "Your turn!", null, []);
     $("tutArrows").setAttribute("hidden", "");
     // a big "Your turn!" across the screen, like the welcome
@@ -2855,6 +2911,7 @@ async function runTutorial() {
 }
 function endTutorial() {
   tutRun++; TUT = false;
+  setDrawer(false);
   ["tutBlock", "tutCard", "tutArrows", "tutWelcome"].forEach(id => $(id).setAttribute("hidden", ""));
   // the intro keeps everything the demo filled in: the player picks up right where it left off
   save(); render();
@@ -3009,6 +3066,30 @@ $("menuHow").addEventListener("click", () => { closeMenu(); runTutorial(); });
 $("menuStats").addEventListener("click", () => { closeMenu(); openStats(); });
 $("menuUnlim").addEventListener("click", () => { closeMenu(); ok7() ? openArchive() : paywall(false); });
 document.querySelector("header h1").addEventListener("click", e => { if (!e.target.closest("#adminBadge")) openMenu(); });
+
+/* ---------- phone drawer ----------
+   On phones the header, Check buttons and lives, the top/side clue line and the tank move into the ☰ drawer, so the
+   clue and the board get the whole screen. On wide screens they go back where they were. */
+const CHROME = [document.querySelector("header"), document.querySelector(".ctrl"), $("pwClue"), document.querySelector(".bar")]
+  .map(el => { const home = document.createComment("home"); el.before(home); return { el, home }; });
+function placeChrome() {
+  if (phone.matches) CHROME.forEach(({ el }) => $("drawerBody").appendChild(el));
+  else { CHROME.forEach(({ el, home }) => home.after(el)); setDrawer(false); }
+  if (P) { fit(); layoutDam(); }
+}
+function setDrawer(open) {
+  $("drawer").hidden = $("drawerScrim").hidden = !open;
+  $("burger").setAttribute("aria-expanded", open);
+  if (open && document.activeElement === kbIn) kbIn.blur();
+}
+$("burger").addEventListener("click", () => setDrawer($("drawer").hidden));
+$("drawerScrim").addEventListener("click", () => setDrawer(false));
+$("drawerClose").addEventListener("click", () => setDrawer(false));
+// buttons that act on the board or open something else close the drawer; sound, color and Give up keep it open
+["checkBtn", "letterBtn", "prev", "next", "unlimBtn", "statsBtn", "helpBtn"].forEach(id => $(id).addEventListener("click", () => setDrawer(false)));
+document.querySelector("header h1").addEventListener("click", e => { if (!e.target.closest("#adminBadge")) setDrawer(false); });
+phone.addEventListener?.("change", placeChrome);
+placeChrome();
 
 function start(data) {
   renderSound();
