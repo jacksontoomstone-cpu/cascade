@@ -1983,7 +1983,7 @@ function drop(r, cols) {
   landings.forEach(({ c, hits }, n) => {
     const src = tiles[r][c].getBoundingClientRect();
     const y0 = src.top - box.top, dist = end - y0;
-    const T = 300 + dist * 1.1, wait = n * 70;
+    const T = (300 + dist * 1.1) * (TUT ? 1.6 : 1), wait = n * (TUT ? 110 : 70);   // the tutorial's letters fall a bit slower so you can follow them
     const f = document.createElement("div");
     f.className = "faller heat"; paint(f, r); f.textContent = letterAt(r, c);
     f.style.left = (src.left - box.left) + "px"; f.style.top = y0 + "px";
@@ -2605,10 +2605,10 @@ async function tutType(r, sg, run, enter = true) {
   const cols = segCols(r, sg), word = P[r].segs[sg].word;
   S.row = r; S.seg = sg; S.cur = cols[0]; render();
   for (let j = 0; j < cols.length; j++) {
-    await tutWait(180, run);
+    await tutWait(330, run);   // typed at an easy reading pace
     S.typed[r][cols[j] - X(r)] = word[j]; S.cur = cols[Math.min(j + 1, cols.length - 1)]; render(); sfx("tick", j % 5);
   }
-  if (enter) { await tutWait(300, run); check(); }
+  if (enter) { await tutWait(450, run); check(); }
 }
 async function runTutorial() {
   const run = ++tutRun;
