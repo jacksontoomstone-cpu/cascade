@@ -119,6 +119,21 @@ header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin
 .done-list span { font-family: var(--pixel); font-size: .5rem; padding: 6px 8px; background: var(--bezel); }
 .done-list span.won { background: var(--a); color: #04121a; }
 .done-list span.lost { opacity: .6; text-decoration: line-through; }
+/* the menu: a night sky raining pixel letters, with the title and buttons in a framed box */
+.menu { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 16px;
+  background: radial-gradient(80% 70% at 50% 35%, hsl(var(--hue) calc(70% * var(--sk)) calc(12% + var(--lift))), var(--cab) 75%); }
+.menu[hidden] { display: none; }
+.menu canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.menu::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px); }
+.menu-box { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: stretch; gap: 12px; width: min(100%, 360px);
+  padding: 28px 26px 24px; background: hsl(var(--hue) calc(70% * var(--sk)) calc(4% + var(--lift)) / .82); border: 4px solid var(--white); outline: 4px solid var(--bezel);
+  box-shadow: 0 0 40px -6px var(--a); backdrop-filter: blur(2px); }
+.menu-title { margin: 0 0 2px; text-align: center; font-family: "Press Start 2P", monospace; font-weight: 400; font-size: clamp(1.6rem, 7.4vw, 2.4rem);
+  color: var(--a); text-transform: uppercase; letter-spacing: .04em; text-shadow: 4px 4px 0 var(--ad), 0 0 18px var(--a); }
+.menu-sub { margin: 0 0 8px; text-align: center; font-family: "Press Start 2P", monospace; font-size: .5rem; text-transform: uppercase; color: var(--muted); letter-spacing: .08em; }
+.menu-box .btn { font-size: .7rem; padding: 14px; }
+.menu-box .btn.primary { font-size: .85rem; padding: 18px; }
+header h1 { cursor: pointer; }
 .confirm-actions { display: flex; gap: 10px; justify-content: center; }
 .icon-btn { border: none; background: var(--bezel); box-shadow: inset -2px -2px 0 var(--bezel-d), inset 2px 2px 0 var(--bezel-l); border-radius: 0; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; padding: 0; }
 .icon-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.6; stroke-linecap: square; stroke-linejoin: miter; }
@@ -582,6 +597,18 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
       <input id="payWipeCode" type="password" placeholder="Password" autocomplete="off" aria-label="Admin password">
       <button class="btn primary" type="submit">Reset all</button>
     </form>
+  </div>
+</div>
+
+<div class="menu" id="menu" hidden>
+  <canvas id="menuSky" aria-hidden="true"></canvas>
+  <div class="menu-box" role="dialog" aria-labelledby="menuTitle">
+    <h1 id="menuTitle" class="menu-title">Cascade</h1>
+    <p class="menu-sub" id="menuSub">Daily word puzzle</p>
+    <button class="btn primary" id="menuPlay">Play</button>
+    <button class="btn" id="menuHow">How to play</button>
+    <button class="btn" id="menuStats">Stats</button>
+    <button class="btn" id="menuUnlim">Unlimited</button>
   </div>
 </div>
 
@@ -2311,7 +2338,7 @@ function keyBtn(label, cls, fn, aria) {
   if (ri === 2) row.appendChild(keyBtn("⌫", "wide", back, "Delete"));
   $("kb").appendChild(row);
 });
-const anyModal = () => [...document.querySelectorAll(".modal")].some(m => !m.hidden);
+const anyModal = () => !$("menu").hidden || [...document.querySelectorAll(".modal")].some(m => !m.hidden);
 document.addEventListener("keydown", e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (anyModal()) { if (e.key === "Escape") closeModals(); return; }
@@ -2486,14 +2513,64 @@ function claimUnlock() {
   store.set(K7, q7()); return true;
 }
 
+/* ---------- menu ---------- */
+let skyRun = 0;
+function skyStart() {
+  const cv = $("menuSky"), g = cv.getContext("2d"), run = ++skyRun;
+  const fit = () => { const k = Math.min(2, devicePixelRatio || 1); cv.width = innerWidth * k; cv.height = innerHeight * k; g.setTransform(k, 0, 0, k, 0, 0); };
+  fit(); addEventListener("resize", fit);
+  const css = getComputedStyle(document.documentElement), glow = css.getPropertyValue("--a").trim() || "#7fdcff", dim = css.getPropertyValue("--bezel-l").trim() || "#2b6d8a";
+  const ABC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const make = top => { const z = Math.random(); return { x: Math.random() * innerWidth, y: top ? -40 - Math.random() * innerHeight : Math.random() * innerHeight,
+    size: 10 + z * 22, v: 40 + z * 140, ch: ABC[Math.random() * 26 | 0], bright: Math.random() < .18, z }; };
+  const n = Math.round(innerWidth * innerHeight / 9000);
+  const drops = Array.from({ length: n }, () => make(false)).sort((a, b) => a.z - b.z);
+  let t0 = performance.now();
+  const frame = now => {
+    if (run !== skyRun || $("menu").hidden) return;
+    const dt = Math.min(.05, (now - t0) / 1000); t0 = now;
+    g.fillStyle = "rgba(0,0,0,.28)"; g.fillRect(0, 0, innerWidth, innerHeight);   // leaves short streaks behind each letter
+    drops.forEach(d => {
+      d.y += d.v * dt;
+      if (d.y > innerHeight + 30) Object.assign(d, make(true), { y: -30 });
+      if (Math.random() < dt * .6) d.ch = ABC[Math.random() * 26 | 0];   // letters flicker as they fall
+      const y = Math.round(d.y / 4) * 4;                                  // move in 4px steps, like an old arcade screen
+      g.font = `${Math.round(d.size)}px "Press Start 2P", monospace`;
+      g.globalAlpha = .25 + d.z * .75;
+      g.shadowColor = glow; g.shadowBlur = d.bright ? 14 : 0;
+      g.fillStyle = d.bright ? glow : dim;
+      g.fillText(d.ch, d.x, y);
+    });
+    g.globalAlpha = 1; g.shadowBlur = 0;
+    requestAnimationFrame(frame);
+  };
+  if (calm()) { g.clearRect(0, 0, innerWidth, innerHeight); drops.forEach(d => { g.font = `${Math.round(d.size)}px "Press Start 2P"`; g.globalAlpha = .25 + d.z * .6; g.fillStyle = d.bright ? glow : dim; g.fillText(d.ch, d.x, d.y); }); g.globalAlpha = 1; return; }
+  requestAnimationFrame(frame);
+}
+function openMenu() {
+  closeModals();
+  $("menuSub").textContent = dailyIdx() !== null ? `Daily word puzzle · ${dayLabel()}` : "Daily word puzzle";
+  $("menu").hidden = false; skyStart();
+  setTimeout(() => $("menuPlay").focus({ preventScroll: true }), 50);
+}
+const closeMenu = () => { $("menu").hidden = true; skyRun++; };
+$("menuPlay").addEventListener("click", () => {
+  closeMenu();
+  if (allDone() && paywall()) return;
+  if (!store.get("cx-seen")) { store.set("cx-seen", 1); $("startLives").textContent = LIVES(); $("helpModal").hidden = false; }   // rules once, for first-timers
+});
+$("menuHow").addEventListener("click", () => { closeMenu(); $("startLives").textContent = LIVES(); $("helpModal").hidden = false; });
+$("menuStats").addEventListener("click", () => { closeMenu(); openStats(); });
+$("menuUnlim").addEventListener("click", () => { closeMenu(); ok7() ? openArchive() : paywall(false); });
+document.querySelector("header h1").addEventListener("click", e => { if (!e.target.closest("#adminBadge")) openMenu(); });
+
 function start(data) {
   renderSound();
   const fresh7 = claimUnlock(); renderUnlim(); applyHue();
   // new players start on the intro; once it's done they open on today's daily
   load(typeof data.idx === "number" ? data.idx : doneWith(INTRO) && dailyIdx() !== null ? dailyIdx() : INTRO);
   if (fresh7) { openArchive(); toast("Unlimited unlocked. Thanks!"); return; }
-  if (allDone() && paywall()) return;
-  $("startLives").textContent = LIVES(); $("helpModal").hidden = false;   // start screen every time the game opens
+  openMenu();   // the game opens on the menu
 }
 window.claude?.hot?.snapshot?.(() => ({ idx }));
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
