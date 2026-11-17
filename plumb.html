@@ -1570,6 +1570,8 @@ const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /* ---------- state ---------- */
 let idx, P, S, PW, ORDER, ORDER2, BAR, tiles = [], busy = false;
+// busy: letters are falling (typing still works; Enter waits for them). shaking: a wrong guess is shaking (nothing works for 0.45s)
+let shaking = false, checkQueued = false;
 const litCells = new Set();  // tiles flashing after a solve
 const hotCells = new Set();  // compound tiles glowing red before they cool
 const pending = new Set();  // cells locked in the state but whose letter is still falling
@@ -1615,7 +1617,7 @@ function load(i) {
     resetStation();
   }
   if (!canPlay(i)) i = INTRO;   // locked and future boards can't be opened directly
-  idx = i; P = parse(PUZZLES[i]); pending.clear(); busy = false;
+  idx = i; P = parse(PUZZLES[i]); pending.clear(); busy = shaking = false;
   PW = P[0].w; litCells.clear(); hotCells.clear();
   ORDER = [...PW].map((_, n) => n).sort((a, b) => (a * 37 + i * 11) % 17 - (b * 37 + i * 11) % 17);   // letters unlock out of order
   ORDER2 = [...P[P.length - 1].w].map((_, n) => n).sort((a, b) => (a * 41 + i * 7) % 13 - (b * 41 + i * 7) % 13);
@@ -1641,7 +1643,7 @@ function build() {
     const t = document.createElement("button"); t.className = "tile";
     t.style.gridRow = p.side ? c - 100 + 2 : p.y + 1; t.style.gridColumn = p.side ? 1 : c + 1; paint(t, r);
     // a tapped word is already on screen, so tapping never moves or zooms the board
-    t.addEventListener("click", () => { openKb(); if (playing() && !busy) lastFollow = `${r}:${segAt(r, c)}:${c}`; select(r, c); });
+    t.addEventListener("click", () => { openKb(); if (playing() && !shaking) lastFollow = `${r}:${segAt(r, c)}:${c}`; select(r, c); });
     (p.side ? sg : g).appendChild(t); tiles[r][c] = t;
   }));
   zoom = 1; autoZoomed = false; fit(); b.scrollTo(0, 0); lastFollow = "";
@@ -2056,7 +2058,7 @@ function render() {
 /* ---------- input ---------- */
 function select(r, c) {
   if (S.status === "lost" && !busy) { S.row = r; S.seg = segAt(r, c); S.cur = c; render(); return; }   // out of lives: tap any word to read its clue
-  if (!playing() || busy) return; S.started = true; S.row = r; S.seg = segAt(r, c); S.cur = c; render(); }
+  if (!playing() || shaking) return; S.started = true; S.row = r; S.seg = segAt(r, c); S.cur = c; render(); }
 function nextOpen(from, d = 1) {
   const cols = segCols(S.row, S.seg);
   for (let c = from + d; cols.includes(c); c += d) if (!isLocked(S.row, c)) return c;
@@ -2074,7 +2076,7 @@ function goToNext() { // the rest of this word first, then the first unsolved pi
 }
 
 function type(ch) {
-  if (!playing() || busy || segSolved(S.row, S.seg)) return;
+  if (!playing() || shaking || segSolved(S.row, S.seg)) return;
   S.started = true;
   let c = S.cur;
   if (isLocked(S.row, c)) { c = nextOpen(c); if (c < 0) return; }
@@ -2088,7 +2090,7 @@ function type(ch) {
   render(); save();
 }
 function back() {
-  if (!playing() || busy) return;
+  if (!playing() || shaking) return;
   const r = S.row, c = S.cur;
   if (!isLocked(r, c) && S.typed[r][c - X(r)]) S.typed[r][c - X(r)] = "";
   else {
@@ -2113,7 +2115,11 @@ function moveRow(d) {
 }
 
 function check() {
-  if (!playing() || busy) return;
+  if (!playing()) return;
+  if (busy || shaking) {   // pressed Enter while letters are still falling: check as soon as they land
+    if (!checkQueued) { checkQueued = true; const wait = () => busy || shaking ? setTimeout(wait, 60) : (checkQueued = false, check()); setTimeout(wait, 60); }
+    return;
+  }
   const r = S.row, shown = c => isLocked(r, c) ? letterAt(r, c) : S.typed[r][c - X(r)];
   if (!segCols(r, S.seg).every(shown)) {
     const k = P[r].segs.findIndex((_, i) => !segSolved(r, i) && segCols(r, i).every(shown));
@@ -2147,9 +2153,9 @@ function check() {
     if (S.misses >= LIVES()) { setTimeout(lose, 450); return; }
     const left = LIVES() - S.misses;
     toast(`Not ${guess}. ${left} ${left === 1 ? "life" : "lives"} left`);
-    busy = true; save();
+    busy = shaking = true; save();
     setTimeout(() => {
-      busy = false;
+      busy = shaking = false;
       cols.forEach(c => { if (!isLocked(r, c)) S.typed[r][c - X(r)] = ""; });
       S.cur = firstOpen(r, s);
       render(); save();
