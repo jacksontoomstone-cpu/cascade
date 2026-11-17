@@ -1295,6 +1295,7 @@ const PUZZLES = [
     ["HUNCH", 8, 10, ["Gut feeling"], ""],
     ["SKEPTICISM", 0, 1, ["Grain of salt."], "side"],
   ],
+  // board 20: DRAFT. Pulled from the Nov 17 daily slot; not in DAILY, so no one can reach it. Add its index back to DAILY to schedule it.
   [
     ["RECONCILIATION", 0, 0, ["Burying the hatchet."], ""],
     ["CHEER|LEADER", 2, 1, ["Applaud", "Follow the ___"], "Sideline spirit"],
@@ -1382,7 +1383,8 @@ const SAVE = "plumb15-";   // bumped from plumb14- to clear everyone's old progr
 // Players see two boards: the intro, which never changes, and today's daily. Every other board is archived (no way to reach it).
 const INTRO = 18;
 const DAILY_START = "2026-11-16";   // the first day with a daily puzzle
-const DAILY = [19, 20, 21, 22, 23];             // board for each day from DAILY_START; add one index per new day
+const DAILY = [19, 21, 22, 23];                 // board for each day from DAILY_START; add one index per new day
+const DRAFTS = [20];                            // finished boards waiting for a day (not playable until moved into DAILY)
 const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const today = () => window.CASCADE_TODAY || dayKey(new Date());   // the player's own calendar day
 function dailyIdx() {
