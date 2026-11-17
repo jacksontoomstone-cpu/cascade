@@ -407,6 +407,10 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
   @media (pointer: fine) { .side-stats:not([hidden]) { grid-column: 3; } }
 }
 @keyframes ssIn { from { opacity: 0; transform: translateY(8px); } }
+.snd-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+.snd-grid .btn { min-width: 0; white-space: normal; overflow-wrap: anywhere; text-align: left; font-size: .5rem; padding: 10px; line-height: 1.5; }
+.snd-grid .btn small { display: block; font-family: var(--term); font-size: .95rem; text-transform: none; color: var(--muted); }
+html.clean .snd-grid .btn { border-radius: 8px; font-size: .85rem; } html.clean .snd-grid .btn small { font-family: var(--pixel); font-size: .75rem; }
 .ss-head { display: flex; align-items: center; justify-content: space-between; }
 .ss-head h2 { margin: 0; font-family: var(--pixel); font-weight: 400; font-size: .9rem; text-transform: uppercase; color: var(--a); }
 .ss-head .close { position: static; border: none; background: transparent; color: var(--white); font-family: var(--pixel); font-size: 1rem; cursor: pointer; width: 34px; height: 34px; }
@@ -936,6 +940,8 @@ html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; colo
       <button class="btn primary" type="submit">Reset</button>
     </form>
     <p class="pay-small" style="text-align:center">Reset wipes all progress, the purchase and the board color, as if the game was never bought.</p>
+    <p class="arch-head">Sound test</p>
+    <div class="snd-grid" id="sndGrid"></div>
   </div>
 </div>
 
@@ -2712,7 +2718,7 @@ const MAX_VOICES = 14;
 function out() {
   if (!bus) {
     const comp = ac.createDynamicsCompressor(), master = ac.createGain();
-    comp.threshold.value = -18; comp.knee.value = 12; comp.ratio.value = 12; comp.attack.value = .002; comp.release.value = .2;
+    comp.threshold.value = -8; comp.knee.value = 8; comp.ratio.value = 4; comp.attack.value = .012; comp.release.value = .25;   // gentle: only catches pile-ups
     master.gain.value = .8;
     master.connect(comp).connect(ac.destination); bus = master;
   }
@@ -2726,12 +2732,12 @@ function voice(len) {
   voices++; setTimeout(() => voices--, (len + .1) * 1000);
   return true;
 }
-function tone(f, at, dur, type = "sine", vol = .1) {
+function tone(f, at, dur, type = "sine", vol = .1, attack = .01) {
   if (!voice(at + dur)) return;
   const o = ac.createOscillator(), g = ac.createGain();
   o.type = type; o.frequency.value = f;
   g.gain.setValueAtTime(0, ac.currentTime + at);
-  g.gain.linearRampToValueAtTime(vol, ac.currentTime + at + .01);
+  g.gain.linearRampToValueAtTime(vol, ac.currentTime + at + attack);
   g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + at + dur);
   o.connect(g).connect(out()); o.start(ac.currentTime + at); o.stop(ac.currentTime + at + dur + .05);
 }
@@ -2850,15 +2856,18 @@ function dropSfx(kind, step) {
   }
   if (kind === "lose") { plip(note(4), 0, .13, .3); plip(note(2), .25, .12, .35); plip(note(0), .55, .12, .5); }
 }
+// switched off while tracking down a harsh sound: letter landings (tick), correct word (good) and wrong guess (bad)
+const SFX_OFF = new Set(["tick", "good", "bad"]);
 function sfx(kind, step = 0) {
-  if (muted) return;
+  if (muted || SFX_OFF.has(kind)) return;
   try {
     ac = ac || new (window.AudioContext || window.webkitAudioContext)();
     if (ac.state === "suspended") ac.resume();
     if (SOUND_STYLE === "drops") return dropSfx(kind, step);
     if (SOUND_STYLE === "wood") return woodSfx(kind, step);
     if (kind === "good") tone(660, 0, .15);
-    if (kind === "tick") tone(520 + step * 120, 0, .1, "triangle", .07);
+    // a landing letter: a soft, round "pip" on a pentatonic scale (it used to be a sharp triangle blip that sounded like a drum hit)
+    if (kind === "tick") tone([523.25, 587.33, 659.25, 783.99, 880, 1046.5][Math.max(0, step) % 6], 0, .18, "sine", .05, .02);
     if (kind === "bad") tone(170, 0, .22, "square", .05);
     if (kind === "crack") {   // a bright major fanfare: quick climb, then a held chord
       [523, 659, 784, 1047].forEach((f, i) => { tone(f, i * .09, .22, "square", .035); tone(f, i * .09, .3, "triangle", .08); });
@@ -3066,6 +3075,26 @@ function wipeAll(input) {
 }
 $("adminBadge").addEventListener("click", () => { closeModals(); $("admResetForm").hidden = true; $("adminModal").hidden = false; });
 $("admArchive").addEventListener("click", openArchive);
+// admin sound test: every sound effect in the game, numbered, so a bad one can be named
+const SOUND_TEST = [
+  ["Letter lands", "each letter that drops into place", () => sfx("tick", 0)],
+  ["Letters cascade", "a run of landings, low to high", () => [0, 1, 2, 3, 4, 5].forEach((k, i) => setTimeout(() => sfx("tick", k), i * 90))],
+  ["Correct word", "a guess is right", () => sfx("good")],
+  ["Wrong guess", "a guess is wrong, lose a life", () => sfx("bad")],
+  ["Big word cracked", "top or side word solved", () => sfx("crack")],
+  ["Puzzle solved", "the whole board is done", () => sfx("win")],
+  ["Out of lives", "the puzzle is lost", () => sfx("lose")],
+  ["Menu song note", "tapping the menu sky", () => { songNote(); }],
+];
+const sndOff = i => i < 4;   // sounds 1-4 are switched off for now (see SFX_OFF)
+$("sndGrid").innerHTML = SOUND_TEST.map(([n, d], i) => `<button class="btn" data-snd="${i}"${sndOff(i) ? " disabled" : ""}>${i + 1}. ${n}<small>${sndOff(i) ? "switched off" : d}</small></button>`).join("");
+$("sndGrid").addEventListener("click", e => {
+  const b = e.target.closest("[data-snd]"); if (!b) return;
+  if (muted) { toast("Sound is off: turn it on with the speaker button"); return; }
+  ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+  if (ac.state === "suspended") ac.resume();
+  SOUND_TEST[+b.dataset.snd][2]();
+});
 $("admExit").addEventListener("click", () => {
   store.set(KA, null); renderUnlim(); applyHue(); closeModals();
   if (!canPlay(idx)) load(INTRO);
