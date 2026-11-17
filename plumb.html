@@ -393,21 +393,26 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 .res-big { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
 .res-big .btn { padding: 17px 10px; font-size: .7rem; }
 .res-share { align-self: center; }
-/* bell curve: where this finish sits among players (red = ran out of lives, blue = solved, faster to the right) */
-.res-curve { margin: 2px 0 0; display: flex; flex-direction: column; gap: 6px; }
-.res-curve figcaption { text-align: center; font-size: 1.15rem; line-height: 1.2; }
-.res-curve figcaption b { color: var(--a); font-weight: 700; }
-.res-curve svg { display: block; width: 100%; height: auto; overflow: visible; }
-.res-curve .c-fail { fill: var(--bad); opacity: .55; }
-.res-curve .c-win { fill: var(--a); opacity: .75; }
-.res-curve .c-line { stroke: var(--white); stroke-width: 2; fill: none; }
-.res-curve .c-axis { stroke: var(--muted); stroke-width: 1; }
-.res-curve .c-you { stroke: var(--white); stroke-width: 2.5; stroke-dasharray: 4 3; }
-.res-curve .c-dot { fill: var(--white); stroke: var(--screen); stroke-width: 2; }
-.res-curve .c-lbl { fill: var(--white); font-family: var(--pixel); font-size: 11px; font-weight: 700; }
-.res-legend { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; font-size: .95rem; color: var(--muted); }
-.res-legend i { display: inline-block; width: 11px; height: 11px; margin-right: 6px; vertical-align: -1px; }
-.res-legend .lg-fail { background: var(--bad); opacity: .7; } .res-legend .lg-win { background: var(--a); }
+/* finish curve, styled after Krillion's results chart: a soft gradient under a thin outline, everything you beat lit up,
+   the rest dimmed; a gold dot marks your real finish and a white handle drags along the curve to try other times */
+.res-curve { --cw: var(--a); --cf: #ff5d8f; --gold: #ffd166; margin: 4px 0 0; display: flex; flex-direction: column; gap: 6px; }
+.res-curve svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: none; cursor: grab; outline: none; }
+.res-curve svg:active { cursor: grabbing; }
+.res-curve svg:focus-visible { outline: 2px dashed var(--a); outline-offset: 4px; }
+.res-curve .c-dim { opacity: .28; }
+.res-curve .c-edge-w { fill: none; stroke: var(--cw); stroke-width: 1.4; stroke-opacity: .75; }
+.res-curve .c-edge-f { fill: none; stroke: var(--cf); stroke-width: 1.4; stroke-opacity: .75; }
+.res-curve .c-base { stroke: var(--muted); stroke-opacity: .35; stroke-width: 1; }
+.res-curve .c-tick { stroke: var(--muted); stroke-opacity: .5; }
+.res-curve .c-ax { fill: var(--muted); opacity: .55; font-family: var(--pixel); font-size: 8px; }
+.res-curve .c-ax.fail { fill: var(--cf); opacity: .7; }
+.res-curve .c-hline { stroke: var(--white); stroke-width: 1.2; }
+.res-curve .c-handle { fill: var(--white); stroke: var(--screen); stroke-width: 1.5; }
+.res-curve .c-hlbl { fill: var(--white); font-family: var(--pixel); font-size: 8.5px; letter-spacing: .12em; }
+.res-curve .c-gold { fill: var(--gold); filter: drop-shadow(0 0 3px rgba(255, 209, 102, .8)); }
+.res-curve .c-glbl { fill: var(--gold); font-family: var(--pixel); font-size: 8px; letter-spacing: .12em; }
+.res-curve figcaption { text-align: center; font-family: var(--pixel); font-size: .55rem; line-height: 1.6; letter-spacing: .12em; text-transform: uppercase; color: var(--a); text-shadow: 0 0 8px color-mix(in srgb, var(--a) 45%, transparent); }
+.res-curve figcaption b { color: var(--white); font-weight: inherit; }
 .res-est { margin: 0; text-align: center; font-size: .85rem !important; color: var(--muted); opacity: .8; }
 .res-stats b { display: block; font-family: var(--pixel); font-weight: 400; font-size: 1.2rem; color: var(--a); }
 .res-stats small { display: block; margin-top: 6px; font-size: 1.05rem; color: var(--muted); }
@@ -596,9 +601,9 @@ html.clean .misses i { color: #121212; }
 html.clean .misses i.used { color: #d3d6da; }
 html.clean .btn { background: #fff; color: #121212; border: 1px solid #121212; border-radius: 999px; box-shadow: none; font-family: var(--pixel); font-weight: 700; text-transform: none; font-size: .85rem; padding: 10px 18px; }
 html.clean .res-big .btn { padding: 15px 10px; font-size: .95rem; }
-html.clean .res-curve .c-win, html.clean .res-legend .lg-win { fill: var(--c-done); background: var(--c-done); opacity: .9; }
-html.clean .res-curve .c-lbl { font-family: var(--pixel); }
-html.clean .res-curve figcaption b { color: #121212; }
+html.clean .res-curve { --cw: var(--c-done); --cf: #d1453b; --gold: #d9a400; }
+html.clean .res-curve figcaption { text-shadow: none; color: #121212; }
+html.clean .res-curve .c-handle { fill: #121212; stroke: #fff; }
 html.clean .btn.primary { background: #121212; color: #fff; box-shadow: none; }
 html.clean .btn.dim { background: #f1f2f4; color: #6b6f73; border-color: #d3d6da; box-shadow: none; }
 html.clean .kb button { background: #d3d6da; color: #121212; box-shadow: none; border-radius: 4px; font-family: var(--pixel); font-weight: 700; font-size: .85rem; }
@@ -883,10 +888,9 @@ html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; colo
       <div><b id="resLives">5</b><small>Lives left</small></div>
     </div>
     <figure class="res-curve" id="resCurve" hidden>
+      <svg id="resCurveSvg" viewBox="0 0 320 96" tabindex="0" role="slider" aria-label="Drag to compare solve times" aria-valuemin="0" aria-valuemax="99"></svg>
       <figcaption id="resRank"></figcaption>
-      <svg id="resCurveSvg" viewBox="0 0 320 112" role="img" aria-labelledby="resRank"></svg>
-      <div class="res-legend"><span><i class="lg-fail"></i>Ran out of lives</span><span><i class="lg-win"></i>Solved, slower → faster</span></div>
-      <p class="res-est">Estimated from typical results</p>
+      <p class="res-est" id="resHint">Drag the dot to try other times · estimated</p>
     </figure>
     <div class="res-big">
       <button class="btn primary" id="nextBtn">Next puzzle</button>
@@ -2481,24 +2485,78 @@ const erf = x => { const t = 1 / (1 + .3275911 * Math.abs(x)), y = 1 - (((((1.06
 const ncdf = z => .5 * (1 + erf(z / Math.SQRT2));
 const pdf = z => Math.exp(-z * z / 2);
 const zOf = p => { let lo = -6, hi = 6; for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; ncdf(m) < p ? lo = m : hi = m; } return (lo + hi) / 2; };
+let curveDrag = null;
+// position on the curve (as a share of all players beaten) <-> solve time, using the CROWD model
+const pOfTime = t => Math.min(.99, Math.max(CROWD.fail + .005, CROWD.fail + (1 - CROWD.fail) * (1 - ncdf(Math.log(Math.max(1, t) / CROWD.median) / CROWD.spread))));
+const timeOfP = p => CROWD.median * Math.exp(CROWD.spread * zOf(1 - (p - CROWD.fail) / (1 - CROWD.fail)));
+const pctText = p => Math.min(99, Math.floor(p * 100));   // never "better than 100%"
 function drawCurve() {
   const fig = $("resCurve");
   if (S.status !== "won") { fig.hidden = true; return; }
-  const t = Math.max(1, S.time);
-  const slower = 1 - ncdf(Math.log(t / CROWD.median) / CROWD.spread);   // share of solvers slower than you
-  const p = Math.min(.995, Math.max(CROWD.fail + .005, CROWD.fail + (1 - CROWD.fail) * slower));
-  const W = 320, H = 92, X = z => (z + 3) / 6 * W, Y = z => H - pdf(z) * (H - 8);
-  const area = (a, b) => { let d = `M${X(a).toFixed(1)} ${H}`; for (let z = a; z <= b + 1e-9; z += .05) d += ` L${X(z).toFixed(1)} ${Y(z).toFixed(1)}`; return d + ` L${X(b).toFixed(1)} ${H} Z`; };
-  const line = () => { let d = ""; for (let z = -3; z <= 3.0001; z += .05) d += `${d ? " L" : "M"}${X(z).toFixed(1)} ${Y(z).toFixed(1)}`; return d; };
-  const zf = zOf(CROWD.fail), zy = Math.min(2.85, Math.max(-2.85, zOf(p))), xy = X(zy);
-  const anchor = xy > W - 40 ? "end" : xy < 40 ? "start" : "middle";
-  $("resCurveSvg").innerHTML =
-    `<path class="c-fail" d="${area(-3, zf)}"/><path class="c-win" d="${area(zf, 3)}"/><path class="c-line" d="${line()}"/>` +
-    `<line class="c-axis" x1="0" y1="${H}" x2="${W}" y2="${H}"/>` +
-    `<line class="c-you" x1="${xy}" y1="${Y(zy) - 4}" x2="${xy}" y2="${H}"/><circle class="c-dot" cx="${xy}" cy="${Y(zy)}" r="5"/>` +
-    `<text class="c-lbl" x="${xy}" y="${H + 16}" text-anchor="${anchor}">YOU</text>`;
-  $("resRank").innerHTML = `Better than <b>${Math.round(p * 100)}%</b> of players`;
+  const W = 320, B = 78, X = z => (z + 3) / 6 * W, Y = z => B - pdf(z) * (B - 8), Z = x => x / W * 6 - 3;
+  const zf = zOf(CROWD.fail), zMax = 2.85;
+  const own = Math.max(1, S.time), ownZ = Math.min(zMax, zOf(pOfTime(own)));
+  const edge = (a, b) => { let d = ""; for (let z = a; z <= b + 1e-9; z += .05) d += `${d ? " L" : "M"}${X(z).toFixed(1)} ${Y(z).toFixed(1)}`; return d; };
+  const area = (a, b) => `${edge(a, b)} L${X(b).toFixed(1)} ${B} L${X(a).toFixed(1)} ${B} Z`;
+  // time ticks under the solved side, slow on the left and fast on the right
+  const ticks = [];
+  [30, 20, 15, 10, 7, 5, 4, 3, 2, 1].forEach(m => {   // keep labels at least 38 units apart so they never overlap
+    const z = zOf(pOfTime(m * 60)), x = X(z);
+    if (z > zf + .55 && z < zMax && (!ticks.length || x - ticks[ticks.length - 1].x >= 38)) ticks.push({ m, x });
+  });
+  const tickSvg = ticks.map(k => `<line class="c-tick" x1="${k.x}" y1="${B}" x2="${k.x}" y2="${B + 3.5}"/><text class="c-ax c-tlbl" x="${k.x}" y="${B + 12}" text-anchor="middle">${k.m}:00</text>`).join("");
+  const svg = $("resCurveSvg");
+  svg.innerHTML =
+    `<defs><linearGradient id="rcW" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--cw)" stop-opacity=".45"/><stop offset="1" style="stop-color:var(--cw)" stop-opacity=".02"/></linearGradient>` +
+    `<linearGradient id="rcF" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--cf)" stop-opacity=".45"/><stop offset="1" style="stop-color:var(--cf)" stop-opacity=".02"/></linearGradient>` +
+    `<clipPath id="rcBeat"><rect id="rcClip" x="0" y="0" width="0" height="96"/></clipPath></defs>` +
+    `<g class="c-dim"><path d="${area(-3, zf)}" fill="url(#rcF)"/><path d="${area(zf, 3)}" fill="url(#rcW)"/></g>` +
+    `<g clip-path="url(#rcBeat)"><path d="${area(-3, zf)}" fill="url(#rcF)"/><path d="${area(zf, 3)}" fill="url(#rcW)"/></g>` +
+    `<path class="c-edge-f" d="${edge(-3, zf)}"/><path class="c-edge-w" d="${edge(zf, 3)}"/>` +
+    `<line class="c-base" x1="0" y1="${B}" x2="${W}" y2="${B}"/>${tickSvg}` +
+    `<text class="c-ax fail" x="${X((-3 + zf) / 2)}" y="${B + 12}" text-anchor="middle">OUT OF LIVES</text>` +
+    `<circle class="c-gold" cx="${X(ownZ)}" cy="${Y(ownZ)}" r="3.4"/>` +
+    `<line class="c-hline" id="rcLine" y2="${B}"/><circle class="c-handle" id="rcDot" r="4.2"/><text class="c-hlbl" id="rcLbl" y="${B + 12}" text-anchor="middle"></text>`;
+  // the handle snaps to whole 10-second steps; it can't go into the "out of lives" side
+  curveDrag = { t: own, own }; drawCurveAt(own);
   fig.hidden = false;
+}
+// drag (or arrow keys) along the curve to see how a faster or slower finish would rank
+{
+  const svg = $("resCurveSvg");
+  const at = e => {
+    const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * 320;
+    const z = Math.max(zOf(CROWD.fail) + .01, Math.min(2.85, x / 320 * 6 - 3));
+    return timeOfP(ncdf(z));
+  };
+  let dragging = false;
+  const redraw = t => { if (curveDrag) drawCurveAt(t); };
+  svg.addEventListener("pointerdown", e => { if (!curveDrag) return; dragging = true; svg.setPointerCapture(e.pointerId); redraw(at(e)); });
+  svg.addEventListener("pointermove", e => { if (dragging) redraw(at(e)); });
+  svg.addEventListener("pointerup", () => { dragging = false; });
+  svg.addEventListener("pointercancel", () => { dragging = false; });
+  svg.addEventListener("keydown", e => {
+    if (!curveDrag) return;
+    if (e.key === "ArrowRight") { e.preventDefault(); redraw(Math.max(10, curveDrag.t - 10)); }    // right = faster
+    if (e.key === "ArrowLeft") { e.preventDefault(); redraw(curveDrag.t + 10); }
+  });
+}
+function drawCurveAt(t) {
+  // re-place just the handle, keeping the chart and the gold dot
+  const W = 320, B = 78, X = z => (z + 3) / 6 * W, Y = z => B - pdf(z) * (B - 8);
+  const zf = zOf(CROWD.fail), own = curveDrag.own;
+  t = Math.max(10, Math.round(t / 10) * 10);
+  const p = pOfTime(t), z = Math.max(zf + .01, Math.min(2.85, zOf(p))), x = X(z), mine = t === Math.max(10, Math.round(own / 10) * 10);
+  $("rcClip").setAttribute("width", x);
+  const ln = $("rcLine"); ln.setAttribute("x1", x); ln.setAttribute("x2", x); ln.setAttribute("y1", Y(z));
+  const dot = $("rcDot"); dot.setAttribute("cx", x); dot.setAttribute("cy", Y(z));
+  const lb = $("rcLbl"); lb.setAttribute("x", Math.min(W - 18, Math.max(18, x))); lb.textContent = mine ? "YOU" : clock(t);
+  // a time label right under the handle steps aside so the two never overprint
+  document.querySelectorAll("#resCurveSvg .c-tlbl").forEach(el => { el.style.visibility = Math.abs(+el.getAttribute("x") - x) < 34 ? "hidden" : ""; });
+  const pct = pctText(p);
+  $("resRank").innerHTML = mine ? `Better than <b>${pct}%</b> of players` : `In <b>${clock(t)}</b>: better than <b>${pct}%</b>`;
+  const svg = $("resCurveSvg"); svg.setAttribute("aria-valuenow", pct); svg.setAttribute("aria-valuetext", `${clock(t)}, better than ${pct}% of players`);
+  curveDrag.t = t;
 }
 function showResult() {
   $("resTitle").textContent = S.status === "lost" ? "Out of lives" : "Board cleared";
