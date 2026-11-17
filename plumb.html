@@ -1576,7 +1576,7 @@ function load(i) {
   ORDER2 = [...P[P.length - 1].w].map((_, n) => n).sort((a, b) => (a * 41 + i * 7) % 13 - (b * 41 + i * 7) % 13);
   // a full bar stamps a letter into both special words; words pay 30% over this scale, so the bar fills fast
   { const n = P.map((_, r) => r).filter(r => !isSpecial(r) && !isCompound(r)); AVG = n.length ? Math.round(n.reduce((a, r) => a + plain(r), 0) / n.length / 5) * 5 : 50; }
-  BAR = Math.floor(P.reduce((sum, _, r) => sum + (isSpecial(r) ? 0 : baseWorth(r)), 0) * .95 * 1.25 / STAMPS / 5) * 5;   // x1.25: power-ups cost 25% more points
+  BAR = Math.floor(P.reduce((sum, _, r) => sum + (isSpecial(r) ? 0 : baseWorth(r)), 0) * .95 * 1.25 / 1.2 / STAMPS / 5) * 5;   // x1.25: power-ups cost 25% more points; /1.2: big-word letters come 20% more often
   S = store.get(SAVE + i) || fresh();
   duckBirths = (S.paid || []).filter(Boolean).length;   // a board opens with an empty pond; only words solved from here bring ducks
   fireUntil = 0;
