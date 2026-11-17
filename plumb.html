@@ -2759,7 +2759,7 @@ let songAt = 0;
 // play the next note of this season's song; hands back its letter (for the falling tile) and how long it lasts at normal speed
 function songNote() {
   const sg = seasonSong(), notes = sg.notes.split(" "), [n, b = "1"] = notes[songAt++ % notes.length].split(":"), dur = +b * sg.beat;
-  if (!muted) {
+  if (!muted && !SONG_OFF) {
     try {
       ac = ac || new (window.AudioContext || window.webkitAudioContext)();
       if (ac.state === "suspended") ac.resume();
@@ -2856,8 +2856,8 @@ function dropSfx(kind, step) {
   }
   if (kind === "lose") { plip(note(4), 0, .13, .3); plip(note(2), .25, .12, .35); plip(note(0), .55, .12, .5); }
 }
-// switched off while tracking down a harsh sound: letter landings (tick), correct word (good) and wrong guess (bad)
-const SFX_OFF = new Set(["tick", "good", "bad"]);
+// switched off while tracking down a harsh sound: big word cracked, puzzle solved, out of lives, and the menu song
+const SFX_OFF = new Set(["crack", "win", "lose"]), SONG_OFF = true;
 function sfx(kind, step = 0) {
   if (muted || SFX_OFF.has(kind)) return;
   try {
@@ -3086,7 +3086,7 @@ const SOUND_TEST = [
   ["Out of lives", "the puzzle is lost", () => sfx("lose")],
   ["Menu song note", "tapping the menu sky", () => { songNote(); }],
 ];
-const sndOff = i => i < 4;   // sounds 1-4 are switched off for now (see SFX_OFF)
+const sndOff = i => i >= 4;   // sounds 5-8 are switched off for now (see SFX_OFF and SONG_OFF)
 $("sndGrid").innerHTML = SOUND_TEST.map(([n, d], i) => `<button class="btn" data-snd="${i}"${sndOff(i) ? " disabled" : ""}>${i + 1}. ${n}<small>${sndOff(i) ? "switched off" : d}</small></button>`).join("");
 $("sndGrid").addEventListener("click", e => {
   const b = e.target.closest("[data-snd]"); if (!b) return;
