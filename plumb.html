@@ -150,6 +150,7 @@ header h1 { cursor: pointer; }
 .tut-card { position: fixed; z-index: 33; display: flex; flex-direction: column; gap: 10px; padding: 18px 18px 14px; background: var(--screen);
   border: 4px solid #ffe066; outline: 4px solid var(--bezel); box-shadow: 0 0 30px -6px #ffe066; }
 .tut-step { margin: 0; font-family: "Press Start 2P", monospace; font-size: .5rem; color: #ffe066; text-transform: uppercase; letter-spacing: .08em; }
+.tut-text u { text-decoration-thickness: 3px; text-underline-offset: 4px; }
 .tut-text { margin: 0; font-size: 1.45rem; line-height: 1.15; color: var(--white); min-height: 2.3em; }
 .tut-bar { height: 6px; background: var(--bezel-d); } .tut-bar i { display: block; height: 100%; width: 0; background: #ffe066; }
 .tut-card .link-btn { align-self: flex-end; }
@@ -620,7 +621,7 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 </div>
 
 <div class="tut-block" id="tutBlock" hidden></div>
-<div class="tut-welcome" id="tutWelcome" hidden><span>Welcome to</span><b>Cascade</b></div>
+<div class="tut-welcome" id="tutWelcome" hidden><span id="tutWelSmall">Welcome to</span><b id="tutWelBig">Cascade</b></div>
 <svg class="tut-arrows" id="tutArrows" hidden aria-hidden="true"><defs><marker id="tutHead" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#ffe066"/></marker></defs><path id="tutPath" fill="none" stroke="#ffe066" stroke-width="4" stroke-linecap="round" marker-end="url(#tutHead)"/><g id="tutRings"></g></svg>
 <div class="tut-card" id="tutCard" hidden role="status" aria-live="polite">
   <p class="tut-step" id="tutStep">Tutorial</p>
@@ -2580,7 +2581,7 @@ function tutPoint(target) {
   const L = p.getTotalLength(); p.style.strokeDasharray = L; p.animate([{ strokeDashoffset: L }, { strokeDashoffset: 0 }], { duration: 380, easing: "ease-out", fill: "forwards" });
 }
 function tutSay(n, of, text, target, rings = []) {
-  $("tutStep").textContent = `Tutorial · ${n} of ${of}`; $("tutText").textContent = text;
+  $("tutStep").textContent = `Tutorial · ${n} of ${of}`; $("tutText").innerHTML = text;
   tutCardPlace(); tutPoint(target); tutRing(rings);
 }
 // draw a yellow ring around each group of elements (a group is one element, a selector, or a list of elements)
@@ -2619,6 +2620,7 @@ async function runTutorial() {
   const steps = 8;   // welcome splash, then: read, guess, fall, compound, cascade words, pond, check letter, your turn
   try {
     // a big welcome first
+    $("tutWelSmall").textContent = "Welcome to"; $("tutWelSmall").hidden = false; $("tutWelBig").textContent = "Cascade";
     $("tutWelcome").removeAttribute("hidden"); $("tutCard").setAttribute("hidden", ""); sfx("win");
     await tutWait(1600, run);
     $("tutWelcome").setAttribute("hidden", ""); $("tutCard").removeAttribute("hidden");
@@ -2634,7 +2636,7 @@ async function runTutorial() {
     check();   // right! the letters drop
     tutSay(3, steps, "...and watch the letters fall down and fill in other words.", "#board");
     await tutWait(3600, run);
-    tutSay(4, steps, "The words with white outlines are compounds!", null, [segTiles(r, 1)]);
+    tutSay(4, steps, "The words with <u>white</u> outlines are COMPOUNDS!", null, [segTiles(r, 1)]);
     await tutType(r, 1, run, true);
     await tutWait(2800, run);
     tutSay(5, steps, "The cascade words are extra tough but complete so much of the puzzle.", null, [P[0].segs[0] && colsOf(0).map(c => tiles[0][c]), colsOf(P.length - 1).map(c => tiles[P.length - 1][c])]);
@@ -2647,7 +2649,11 @@ async function runTutorial() {
     await tutWait(3400, run);
     tutSay(8, steps, "Your turn!", null, []);
     $("tutArrows").setAttribute("hidden", "");
-    await tutWait(1800, run);
+    // a big "Your turn!" across the screen, like the welcome
+    $("tutCard").setAttribute("hidden", ""); $("tutWelSmall").hidden = true; $("tutWelBig").textContent = "Your turn!";
+    const w = $("tutWelcome"); w.removeAttribute("hidden"); w.style.animation = "none"; w.getBoundingClientRect(); w.style.animation = "";
+    const big = $("tutWelBig"); big.style.animation = "none"; big.getBoundingClientRect(); big.style.animation = ""; sfx("win");
+    await tutWait(1700, run);
   } catch (e) { /* skipped */ }
   if (run === tutRun) endTutorial();
 }
