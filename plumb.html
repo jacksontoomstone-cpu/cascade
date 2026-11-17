@@ -1935,7 +1935,7 @@ function stampUp() {
 const KT = "cx-tip1";
 let tipEl = null;
 function placeTip() {
-  const want = !TUT && idx === INTRO && playing() && !store.get(KT) && !P.some((p, r) => isCompound(r) && rowSolved(r));
+  const want = false;   // the on-board "Compound words" arrow is retired: the tutorial explains compounds now
   if (!want) { tipEl?.remove(); tipEl = null; return; }
   // the compound with the most empty room to its right gets the arrow
   let best = null;
