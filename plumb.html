@@ -123,7 +123,7 @@ header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin
 .menu { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 16px;
   background: radial-gradient(80% 70% at 50% 35%, hsl(var(--hue) calc(70% * var(--sk)) calc(12% + var(--lift))), var(--cab) 75%); }
 .menu[hidden] { display: none; }
-.menu canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
+.menu canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; touch-action: none; }
 .menu::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px); }
 .menu-box { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: stretch; gap: 12px; width: min(100%, 360px);
   padding: 28px 26px 24px; background: hsl(var(--hue) calc(70% * var(--sk)) calc(4% + var(--lift)) / .82); border: 4px solid var(--white); outline: 4px solid var(--bezel);
@@ -2529,13 +2529,26 @@ function skyStart() {
     size: 10 + z * 22, v: 30 + z * 95, ch: ABC[Math.random() * 26 | 0], bright: Math.random() < .18, z }; };
   // the sky starts empty: tap or click anywhere around the menu to drop a letter into the pond
   const drops = [];
-  const tap = e => {
-    if ($("menu").hidden || e.target.closest(".menu-box")) return;
-    const z = .45 + Math.random() * .55;
-    drops.push({ x: e.clientX - 8, y: e.clientY, size: 12 + z * 22, v: 20, ch: ABC[Math.random() * 26 | 0], bright: Math.random() < .5, z });
-    sfx("tick", Math.random() * 6 | 0);
+  // click to drop one; hold and drag to pour a stream of them
+  let held = false, lastX = 0, lastY = 0, lastT = 0;
+  const spawn = (x, y) => {
+    const z = .55 + Math.random() * .45;
+    drops.push({ x: x - 8, y, size: 12 + z * 22, v: 20, ch: ABC[Math.random() * 26 | 0], bright: Math.random() < .65, z });
   };
-  $("menu").onpointerdown = tap;
+  $("menu").onpointerdown = e => {
+    if ($("menu").hidden || e.target.closest(".menu-box")) return;
+    held = true; lastX = e.clientX; lastY = e.clientY; lastT = performance.now();
+    spawn(e.clientX, e.clientY); sfx("tick", Math.random() * 6 | 0);
+  };
+  $("menu").onpointermove = e => {
+    if (!held || e.target.closest(".menu-box")) return;
+    const now = performance.now(), moved = Math.hypot(e.clientX - lastX, e.clientY - lastY);
+    if (moved < 16 && now - lastT < 70) return;   // a new letter every few pixels of drag
+    lastX = e.clientX; lastY = e.clientY; lastT = now;
+    spawn(e.clientX, e.clientY);
+    if (Math.random() < .35) sfx("tick", Math.random() * 6 | 0);
+  };
+  $("menu").onpointerup = $("menu").onpointercancel = $("menu").onpointerleave = () => { held = false; };
   const rings = [], pads = Array.from({ length: Math.max(3, Math.round(W / 260)) }, (_, i) => ({ x: (i + .3 + Math.random() * .4) * W / Math.max(3, Math.round(W / 260)), d: .25 + Math.random() * .6, w: 26 + Math.random() * 22 }));
   const stars = Array.from({ length: Math.round(W / 22) }, () => ({ x: Math.random() * W, y: Math.random() * H * .6, p: Math.random() * 6 }));
   const px = (x, y, w, h) => g.fillRect(Math.round(x / 2) * 2, Math.round(y / 2) * 2, Math.round(w / 2) * 2, Math.round(h / 2) * 2);
@@ -2579,8 +2592,8 @@ function skyStart() {
     drops.forEach(d => {
       const y = Math.round(d.y / 4) * 4;
       g.font = `${Math.round(d.size)}px "Press Start 2P", monospace`;
-      g.globalAlpha = .35 + d.z * .65; g.shadowColor = glow; g.shadowBlur = d.bright ? 14 : 0;
-      g.fillStyle = d.bright ? glow : dim; g.fillText(d.ch, d.x, y);
+      g.globalAlpha = .85 + d.z * .15; g.shadowColor = glow; g.shadowBlur = d.bright ? 14 : 6;
+      g.fillStyle = d.bright ? glow : "#cfefff"; g.fillText(d.ch, d.x, y);
     });
     g.shadowBlur = 0; g.globalAlpha = 1;
     for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; r.r += r.grow * dt; r.life -= dt * .55; if (r.life <= 0) rings.splice(i, 1); }
