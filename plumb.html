@@ -138,6 +138,14 @@ header h1 { cursor: pointer; }
 .menu-box .btn.dim { background: var(--bezel-d); color: var(--muted); box-shadow: inset -3px -3px 0 var(--cab), inset 3px 3px 0 var(--bezel); }
 /* tutorial: a caption card in the open space on the right, a yellow arrow to whatever it's talking about */
 .tut-block { position: fixed; inset: 0; z-index: 30; }
+.tut-welcome { position: fixed; inset: 0; z-index: 34; display: grid; place-content: center; text-align: center; gap: 14px; pointer-events: none;
+  background: hsl(var(--hue) calc(70% * var(--sk)) calc(4% + var(--lift)) / .78); animation: tutwel 1.6s ease both; }
+.tut-welcome[hidden] { display: none; }
+.tut-welcome span { font-family: "Press Start 2P", monospace; font-size: clamp(.8rem, 2.4vw, 1.4rem); color: var(--white); text-transform: uppercase; letter-spacing: .1em; }
+.tut-welcome b { font-family: "Press Start 2P", monospace; font-weight: 400; font-size: clamp(2.4rem, 11vw, 6rem); color: var(--a); text-transform: uppercase;
+  text-shadow: 6px 6px 0 var(--ad), 0 0 30px var(--a); animation: tutpop 1.6s cubic-bezier(.2,1.4,.4,1) both; }
+@keyframes tutwel { 0% { opacity: 0; } 12%, 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes tutpop { 0% { transform: scale(.4); } 30% { transform: scale(1.08); } 45%, 100% { transform: scale(1); } }
 .tut-arrows { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 32; pointer-events: none; overflow: visible; filter: drop-shadow(2px 3px 0 rgba(0,0,0,.6)); }
 .tut-card { position: fixed; z-index: 33; display: flex; flex-direction: column; gap: 10px; padding: 18px 18px 14px; background: var(--screen);
   border: 4px solid #ffe066; outline: 4px solid var(--bezel); box-shadow: 0 0 30px -6px #ffe066; }
@@ -612,6 +620,7 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 </div>
 
 <div class="tut-block" id="tutBlock" hidden></div>
+<div class="tut-welcome" id="tutWelcome" hidden><span>Welcome to</span><b>Cascade</b></div>
 <svg class="tut-arrows" id="tutArrows" hidden aria-hidden="true"><defs><marker id="tutHead" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#ffe066"/></marker></defs><path id="tutPath" fill="none" stroke="#ffe066" stroke-width="4" stroke-linecap="round" marker-end="url(#tutHead)"/></svg>
 <div class="tut-card" id="tutCard" hidden role="status" aria-live="polite">
   <p class="tut-step" id="tutStep">Tutorial</p>
@@ -2587,30 +2596,40 @@ async function runTutorial() {
   load(INTRO); S = fresh(); S.started = false; build(); render();   // a clean scratch copy of the intro
   $("tutBlock").removeAttribute("hidden"); $("tutCard").removeAttribute("hidden");
   const prog = $("tutProg"); prog.style.transition = "none"; prog.style.width = "0"; prog.getBoundingClientRect();
-  prog.style.transition = "width 16s linear"; prog.style.width = "100%";
-  const steps = 6;
+  const steps = 8;
   try {
-    tutSay(1, steps, "Here's your clue. Solve it to fill in the matching word.", ".clue");
-    await tutWait(2200, run);
+    // a big welcome first
+    $("tutWelcome").removeAttribute("hidden"); $("tutCard").setAttribute("hidden", ""); sfx("win");
+    await tutWait(1600, run);
+    $("tutWelcome").setAttribute("hidden", ""); $("tutCard").removeAttribute("hidden");
+    prog.style.transition = "none"; prog.style.width = "0"; prog.getBoundingClientRect();
+    prog.style.transition = "width 31s linear"; prog.style.width = "100%";
+    tutSay(1, steps, "Here's your clue. Solve it to fill in the matching word on the board.", ".clue");
+    await tutWait(3600, run);
     tutSay(2, steps, "Type the answer and press Enter.", "#board");
-    const r1 = await tutType("BRASS", run);
-    await tutWait(500, run);
+    await tutType("BRASS", run);
+    await tutWait(1300, run);
     tutSay(3, steps, "Right letters fall down the board and fill matching spots in the words below.", "#board");
-    await tutWait(2600, run);
-    tutSay(4, steps, "Every word you solve drips into the pond.", ".bar");
-    await tutWait(2400, run);
+    await tutWait(4000, run);
+    const cmp = P.findIndex(p => p.segs.length > 1 && !p.side);
+    tutSay(4, steps, "White-outlined words are compounds: two words in one. Each half gets its own clue.", cmp >= 0 ? tiles[cmp][P[cmp].x] : "#board");
+    await tutWait(4200, run);
+    tutSay(5, steps, "Every word you solve drips into the pond and raises the water.", ".bar");
+    await tutWait(3600, run);
     S.score = (earned() + 1) * BAR - 5;   // nearly full, so the next word tops it off
-    tutSay(5, steps, "Fill it up and the wheel pumps letters into the big top and side words.", $("dam").hidden ? ".sidebox" : "#dam");
+    tutSay(6, steps, "Fill it up and the wheel pumps letters into the big top and side words.", $("dam").hidden ? ".sidebox" : "#dam");
     await tutType("SADDLE", run);
-    await tutWait(5200, run);
-    tutSay(6, steps, "Wrong guesses cost a life. You get 5. Good luck!", "#misses");
-    await tutWait(2400, run);
+    await tutWait(5600, run);
+    tutSay(7, steps, "The top and side words are the big puzzle. Crack them for a huge cascade!", tiles[0][P[0].x + 6]);
+    await tutWait(3800, run);
+    tutSay(8, steps, "Stuck? Check letter reveals one, but it costs a life. You get 5. Good luck!", "#letterBtn");
+    await tutWait(3600, run);
   } catch (e) { /* skipped */ }
   if (run === tutRun) endTutorial();
 }
 function endTutorial() {
   tutRun++; TUT = false;
-  ["tutBlock", "tutCard", "tutArrows"].forEach(id => $(id).setAttribute("hidden", ""));
+  ["tutBlock", "tutCard", "tutArrows", "tutWelcome"].forEach(id => $(id).setAttribute("hidden", ""));
   document.querySelectorAll(".hoses, .tilefill, .drip, .drop, .spray, .ripple, .faller").forEach(el => el.remove());
   load(INTRO); render();   // the real intro, with whatever progress the player already had
   toast("Your turn!");
