@@ -123,6 +123,10 @@ header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin
 .menu { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 16px;
   background: radial-gradient(80% 70% at 50% 35%, hsl(var(--hue) calc(70% * var(--sk)) calc(12% + var(--lift))), var(--cab) 75%); }
 .menu[hidden] { display: none; }
+.menu-song { position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top, 0px) + 18px); z-index: 1; margin: 0; text-align: center; pointer-events: none;
+  font-family: var(--pixel); font-size: .5rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); opacity: .8; }
+.menu-song .note { font-family: system-ui, sans-serif; font-size: 1.6em; vertical-align: -.15em; }
+html.clean .menu-song { text-transform: none; letter-spacing: 0; font-size: .85rem; color: #6b6f73; }
 .menu canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; touch-action: none; }
 .menu::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px); }
 .menu-box { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: stretch; gap: 12px; width: min(100%, 360px);
@@ -866,6 +870,7 @@ html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; colo
 
 <div class="menu" id="menu" hidden>
   <canvas id="menuSky" aria-hidden="true"></canvas>
+  <p class="menu-song" id="menuSong"></p>
   <div class="menu-box" role="dialog" aria-labelledby="menuTitle">
     <h1 id="menuTitle" class="menu-title">Cascade</h1>
     <p class="menu-sub" id="menuSub">Daily word puzzle</p>
@@ -2707,17 +2712,33 @@ function tone(f, at, dur, type = "sine", vol = .1) {
   g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + at + dur);
   o.connect(g).connect(ac.destination); o.start(ac.currentTime + at); o.stop(ac.currentTime + at + dur + .05);
 }
-// the menu's invisible piano: left side low, right side high, on a pentatonic scale so any run sounds pretty
-const PIANO = [130.81, 146.83, 164.81, 196, 220];   // C D E G A
-function pianoNote(x) {
-  if (muted) return;
-  try {
-    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
-    if (ac.state === "suspended") ac.resume();
-    const keys = 18, k = Math.max(0, Math.min(keys - 1, Math.floor(x / innerWidth * keys)));
-    const f = PIANO[k % 5] * 2 ** Math.floor(k / 5);
-    tone(f, 0, .9, "triangle", .09); tone(f * 2, 0, .35, "sine", .025);   // a soft key with a little sparkle on top
-  } catch {}
+/* ---------- the menu's seasonal song ----------
+   Every letter you drop on the menu plays the next note of a song for the time of year, and the letter that falls is
+   that note's name (C, D, E...). All public-domain melodies; it loops when it reaches the end. */
+const SONGS = [
+  { months: [10, 11], name: "Jingle Bells", notes: "E4 E4 E4 E4 E4 E4 E4 G4 C4 D4 E4 F4 F4 F4 F4 F4 E4 E4 E4 E4 D4 D4 E4 D4 G4 E4 E4 E4 E4 E4 E4 E4 G4 C4 D4 E4 F4 F4 F4 F4 F4 E4 E4 E4 G4 G4 F4 D4 C4" },
+  { months: [1, 2], name: "Ode to Joy", notes: "E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4 D4 D4 E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4 C4 C4" },
+  { months: [3, 4], name: "Morning Mood", notes: "G4 E4 D4 C4 D4 E4 G4 E4 D4 C4 D4 E4 D4 E4 G4 E4 G4 A4 E4 A4 G4 E4 D4 C4" },
+  { months: [5, 6, 7], name: "Take Me Out to the Ball Game", notes: "C4 C5 A4 G4 E4 G4 D4 C4 C5 A4 G4 E4 G4 A4 G#4 A4 E4 F4 G4 A4 F4 D4 A4 A4 A4 B4 C5 D5 B4 A4 G4 E4 D4" },
+  { months: [8, 9], name: "In the Hall of the Mountain King", notes: "B3 C#4 D4 E4 F#4 D4 F#4 F4 C#4 F4 E4 C4 E4 B3 C#4 D4 E4 F#4 D4 F#4 B4 A4 F#4 D4 F#4 A4" },
+  { months: [0], name: "Auld Lang Syne", notes: "G4 C5 C5 C5 E5 D5 C5 D5 E5 C5 C5 E5 G5 A5 A5 G5 E5 E5 C5 D5 C5 D5 E5 C5 A4 A4 G4 C5" },
+];
+const NOTE_SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+const noteHz = n => { const m = n.match(/^([A-G])(#?)(\d)$/); return 440 * 2 ** ((NOTE_SEMI[m[1]] + (m[2] ? 1 : 0) + (+m[3] + 1) * 12 - 69) / 12); };
+const seasonSong = () => SONGS.find(sg => sg.months.includes(new Date().getMonth())) || SONGS[0];
+let songAt = 0;
+// play the next note of this season's song and hand back its letter for the falling tile
+function songNote() {
+  const notes = seasonSong().notes.split(" "), n = notes[songAt++ % notes.length];
+  if (!muted) {
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === "suspended") ac.resume();
+      const f = noteHz(n);
+      tone(f, 0, .9, "triangle", .09); tone(f * 2, 0, .35, "sine", .025);   // a soft key with a little sparkle on top
+    } catch {}
+  }
+  return n[0];
 }
 /* ---------- water-drop sounds ----------
    Every sound is a drop: a sine "plip" whose pitch jumps up as it hits the water, plus a soft hiss of filtered noise for splashes.
@@ -3244,21 +3265,21 @@ function skyStart() {
   const drops = [];
   // click to drop one; hold and drag to pour a stream of them
   let held = false, lastX = 0, lastY = 0, lastT = 0;
-  const spawn = (x, y) => {
+  const spawn = (x, y, ch) => {
     const z = .55 + Math.random() * .45;
-    drops.push({ x: x - 8, y, size: 12 + z * 22, v: 20, ch: ABC[Math.random() * 26 | 0], bright: Math.random() < .65, z });
+    drops.push({ x: x - 8, y, size: 12 + z * 22, v: 20, ch, bright: Math.random() < .65, z });
   };
   $("menu").onpointerdown = e => {
     if ($("menu").hidden || e.target.closest(".menu-box")) return;
     held = true; lastX = e.clientX; lastY = e.clientY; lastT = performance.now();
-    spawn(e.clientX, e.clientY); pianoNote(e.clientX);
+    spawn(e.clientX, e.clientY, songNote());
   };
   $("menu").onpointermove = e => {
     if (!held || e.target.closest(".menu-box")) return;
     const now = performance.now(), moved = Math.hypot(e.clientX - lastX, e.clientY - lastY);
-    if (moved < 16 && now - lastT < 70) return;   // a new letter every few pixels of drag
+    if (moved < 28 && now - lastT < 150) return;   // a new note every so often while dragging, so the tune doesn't race
     lastX = e.clientX; lastY = e.clientY; lastT = now;
-    spawn(e.clientX, e.clientY); pianoNote(e.clientX);
+    spawn(e.clientX, e.clientY, songNote());
   };
   $("menu").onpointerup = $("menu").onpointercancel = $("menu").onpointerleave = () => { held = false; };
   const rings = [], pads = Array.from({ length: Math.max(3, Math.round(W / 260)) }, (_, i) => ({ x: (i + .3 + Math.random() * .4) * W / Math.max(3, Math.round(W / 260)), d: .25 + Math.random() * .6, w: 26 + Math.random() * 22 }));
@@ -3344,6 +3365,7 @@ function openMenu() {
   $("menuPlay").textContent = first ? "Play without tutorial" : dailyIdx() !== null ? "Play daily" : "Play";
   $("menuPlay").className = first ? "btn dim" : "btn primary";
   $("menuSub").textContent = dailyIdx() !== null ? `Daily word puzzle · ${dayLabel()}` : "Daily word puzzle";
+  songAt = 0; $("menuSong").innerHTML = `<span class="note">♪</span> Tap the sky to play ${seasonSong().name}`;
   $("menu").hidden = false; skyStart();
   setTimeout(() => $("menuPlay").focus({ preventScroll: true }), 50);
 }
