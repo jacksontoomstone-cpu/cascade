@@ -2515,36 +2515,96 @@ function claimUnlock() {
 
 /* ---------- menu ---------- */
 let skyRun = 0;
+// The menu: letters drift down out of a night sky and plop into a calm pixel pond, sending out rings.
 function skyStart() {
   const cv = $("menuSky"), g = cv.getContext("2d"), run = ++skyRun;
-  const fit = () => { const k = Math.min(2, devicePixelRatio || 1); cv.width = innerWidth * k; cv.height = innerHeight * k; g.setTransform(k, 0, 0, k, 0, 0); };
+  let W = innerWidth, H = innerHeight;
+  const fit = () => { W = innerWidth; H = innerHeight; const k = Math.min(2, devicePixelRatio || 1); cv.width = W * k; cv.height = H * k; g.setTransform(k, 0, 0, k, 0, 0); g.imageSmoothingEnabled = false; };
   fit(); addEventListener("resize", fit);
-  const css = getComputedStyle(document.documentElement), glow = css.getPropertyValue("--a").trim() || "#7fdcff", dim = css.getPropertyValue("--bezel-l").trim() || "#2b6d8a";
+  const css = getComputedStyle(document.documentElement), col = n => css.getPropertyValue(n).trim();
+  const glow = col("--a") || "#7fdcff", dim = col("--bezel-l") || "#2b6d8a", deep = col("--cab") || "#04121a", mid = col("--bezel") || "#1d4a5e", dark = col("--bezel-d") || "#0b2430";
   const ABC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const make = top => { const z = Math.random(); return { x: Math.random() * innerWidth, y: top ? -40 - Math.random() * innerHeight : Math.random() * innerHeight,
-    size: 10 + z * 22, v: 40 + z * 140, ch: ABC[Math.random() * 26 | 0], bright: Math.random() < .18, z }; };
-  const n = Math.round(innerWidth * innerHeight / 9000);
+  const surf = () => Math.round(H * .79 / 4) * 4;   // the pond's waterline
+  const make = top => { const z = Math.random(); return { x: Math.random() * W, y: top ? -40 - Math.random() * H * .6 : Math.random() * surf(),
+    size: 10 + z * 22, v: 30 + z * 95, ch: ABC[Math.random() * 26 | 0], bright: Math.random() < .18, z }; };
+  const n = Math.round(W * H / 11000);
   const drops = Array.from({ length: n }, () => make(false)).sort((a, b) => a.z - b.z);
-  let t0 = performance.now();
+  const rings = [], pads = Array.from({ length: Math.max(3, Math.round(W / 260)) }, (_, i) => ({ x: (i + .3 + Math.random() * .4) * W / Math.max(3, Math.round(W / 260)), d: .25 + Math.random() * .6, w: 26 + Math.random() * 22 }));
+  const stars = Array.from({ length: Math.round(W / 22) }, () => ({ x: Math.random() * W, y: Math.random() * H * .6, p: Math.random() * 6 }));
+  const px = (x, y, w, h) => g.fillRect(Math.round(x / 2) * 2, Math.round(y / 2) * 2, Math.round(w / 2) * 2, Math.round(h / 2) * 2);
+  let t0 = performance.now(), time = 0;
+  const pond = () => {
+    const S = surf(), depth = H - S;
+    // water: banded from the surface down, like an old palette
+    const bands = [mid, dark, deep];
+    bands.forEach((c, i) => { g.fillStyle = c; g.fillRect(0, S + depth * i / 3, W, depth / 3 + 1); });
+    g.globalAlpha = .55; g.fillStyle = dark; g.fillRect(0, S, W, depth); g.globalAlpha = 1;
+    // a bright waterline
+    g.fillStyle = glow; g.globalAlpha = .7; g.fillRect(0, S, W, 2); g.globalAlpha = 1;
+    // the moon's reflection: a wobbling column of short dashes under the moon
+    const mx = W * .82;
+    for (let k = 0; k < 9; k++) {
+      const y = S + 8 + k * (depth - 12) / 9, w = (26 - k * 2.2) * (1 + .25 * Math.sin(time * 1.6 + k));
+      g.globalAlpha = .55 - k * .05; g.fillStyle = "#fff6c8"; px(mx - w / 2 + Math.sin(time * 1.2 + k * .9) * 4, y, w, 2);
+    }
+    // slow shimmer: dashes drifting along the surface layers
+    g.fillStyle = glow;
+    for (let k = 0; k < 7; k++) {
+      const y = S + 6 + k * (depth - 10) / 7, off = (time * (8 + k * 3) * (k % 2 ? 1 : -1)) % 120;
+      g.globalAlpha = .22 - k * .02;
+      for (let x = -120 + off; x < W; x += 120) px(x + (k * 37) % 60, y, 18 + (k % 3) * 8, 2);
+    }
+    // lily pads bobbing on the water
+    pads.forEach(p => {
+      const y = S + p.d * depth * .5 + Math.sin(time * .8 + p.x) * 1.5;
+      g.globalAlpha = .9; g.fillStyle = mid; px(p.x - p.w / 2, y - 3, p.w, 6); px(p.x - p.w / 2 + 4, y - 5, p.w - 8, 10);
+      g.fillStyle = dim; px(p.x - p.w / 2 + 2, y - 3, p.w - 4, 2);
+      g.fillStyle = deep; px(p.x + p.w * .1, y - 5, 4, 6);   // the notch
+    });
+    // rings spreading from every letter that lands
+    rings.forEach(r => {
+      g.globalAlpha = Math.max(0, r.life) * .8; g.strokeStyle = glow; g.lineWidth = 2;
+      g.beginPath(); g.ellipse(r.x, r.y, r.r, r.r * .22, 0, 0, Math.PI * 2); g.stroke();
+    });
+    g.globalAlpha = 1;
+  };
+  const sky = () => {
+    // twinkling stars and a pixel moon
+    stars.forEach(st => { g.globalAlpha = .25 + .25 * Math.sin(time * 1.5 + st.p); g.fillStyle = "#cfefff"; px(st.x, st.y, 2, 2); });
+    g.globalAlpha = .95; g.fillStyle = "#fff6c8"; const mx = W * .82, my = H * .14, mr = Math.min(28, W * .04);
+    for (let y = -mr; y < mr; y += 2) { const w = Math.sqrt(mr * mr - y * y); px(mx - w, my + y, w * 2, 2); }
+    g.fillStyle = "#e8dca0"; px(mx - mr * .3, my - mr * .3, mr * .3, mr * .3); px(mx + mr * .2, my + mr * .15, mr * .25, mr * .25);
+    g.globalAlpha = 1;
+  };
+  const draw = dt => {
+    time += dt;
+    g.fillStyle = "rgba(0,0,0,.3)"; g.fillRect(0, 0, W, surf());   // short streaks behind falling letters, sky only
+    sky();
+    const S = surf();
+    drops.forEach(d => {
+      d.y += d.v * dt;
+      if (d.y >= S) {   // plop: a ring on the water, then the letter starts again from the top
+        rings.push({ x: d.x + d.size * .4, y: S + 2, r: 4, life: 1, grow: 22 + d.z * 30 });
+        Object.assign(d, make(true));
+        return;
+      }
+      if (Math.random() < dt * .5) d.ch = ABC[Math.random() * 26 | 0];
+      const y = Math.round(d.y / 4) * 4;
+      g.font = `${Math.round(d.size)}px "Press Start 2P", monospace`;
+      g.globalAlpha = .25 + d.z * .75; g.shadowColor = glow; g.shadowBlur = d.bright ? 14 : 0;
+      g.fillStyle = d.bright ? glow : dim; g.fillText(d.ch, d.x, y);
+    });
+    g.shadowBlur = 0; g.globalAlpha = 1;
+    for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; r.r += r.grow * dt; r.life -= dt * .55; if (r.life <= 0) rings.splice(i, 1); }
+    pond();
+  };
   const frame = now => {
     if (run !== skyRun || $("menu").hidden) return;
     const dt = Math.min(.05, (now - t0) / 1000); t0 = now;
-    g.fillStyle = "rgba(0,0,0,.28)"; g.fillRect(0, 0, innerWidth, innerHeight);   // leaves short streaks behind each letter
-    drops.forEach(d => {
-      d.y += d.v * dt;
-      if (d.y > innerHeight + 30) Object.assign(d, make(true), { y: -30 });
-      if (Math.random() < dt * .6) d.ch = ABC[Math.random() * 26 | 0];   // letters flicker as they fall
-      const y = Math.round(d.y / 4) * 4;                                  // move in 4px steps, like an old arcade screen
-      g.font = `${Math.round(d.size)}px "Press Start 2P", monospace`;
-      g.globalAlpha = .25 + d.z * .75;
-      g.shadowColor = glow; g.shadowBlur = d.bright ? 14 : 0;
-      g.fillStyle = d.bright ? glow : dim;
-      g.fillText(d.ch, d.x, y);
-    });
-    g.globalAlpha = 1; g.shadowBlur = 0;
+    draw(dt);
     requestAnimationFrame(frame);
   };
-  if (calm()) { g.clearRect(0, 0, innerWidth, innerHeight); drops.forEach(d => { g.font = `${Math.round(d.size)}px "Press Start 2P"`; g.globalAlpha = .25 + d.z * .6; g.fillStyle = d.bright ? glow : dim; g.fillText(d.ch, d.x, d.y); }); g.globalAlpha = 1; return; }
+  if (calm()) { g.fillStyle = deep; g.fillRect(0, 0, W, H); draw(0); return; }
   requestAnimationFrame(frame);
 }
 function openMenu() {
