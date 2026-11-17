@@ -154,6 +154,7 @@ header h1 { cursor: pointer; }
 .tut-text { margin: 0; font-size: 1.45rem; line-height: 1.15; color: var(--white); min-height: 2.3em; }
 .tut-bar { height: 6px; background: var(--bezel-d); } .tut-bar i { display: block; height: 100%; width: 0; background: #ffe066; }
 .tut-card .link-btn { align-self: flex-end; }
+.tut-nav { display: flex; gap: 10px; } .tut-nav .btn { flex: 1; } .tut-nav[hidden] { display: none; }
 .confirm-actions { display: flex; gap: 10px; justify-content: center; }
 .icon-btn { border: none; background: var(--bezel); box-shadow: inset -2px -2px 0 var(--bezel-d), inset 2px 2px 0 var(--bezel-l); border-radius: 0; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; padding: 0; }
 .icon-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.6; stroke-linecap: square; stroke-linejoin: miter; }
@@ -726,6 +727,7 @@ html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; colo
       <li><b id="startLives">5</b> lives</li>
     </ol>
     <button class="btn primary" data-close>Play</button>
+    <button class="link-btn" id="helpReplay">Replay tutorial</button>
   </div>
 </div>
 
@@ -762,6 +764,7 @@ html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; colo
   <p class="tut-step" id="tutStep">Tutorial</p>
   <p class="tut-text" id="tutText"></p>
   <div class="tut-bar"><i id="tutProg"></i></div>
+  <div class="tut-nav" id="tutNav" hidden><button class="btn" id="tutBack">Back</button><button class="btn primary" id="tutNext">Next</button></div>
   <button class="link-btn" id="tutSkip">Skip tutorial</button>
 </div>
 
@@ -2122,7 +2125,7 @@ function drop(r, cols) {
   landings.forEach(({ c, hits }, n) => {
     const src = tiles[r][c].getBoundingClientRect();
     const y0 = src.top - box.top, dist = end - y0;
-    const T = (300 + dist * 1.1) * (TUT ? 1.6 : 1), wait = n * (TUT ? 110 : 70);   // the tutorial's letters fall a bit slower so you can follow them
+    const T = (300 + dist * 1.1) * (TUT ? 1.6 * TUT_PACE : 1), wait = n * (TUT ? 110 * TUT_PACE : 70);   // the tutorial's letters fall a bit slower so you can follow them
     const f = document.createElement("div");
     f.className = "faller heat"; paint(f, r); f.textContent = letterAt(r, c);
     f.style.left = (src.left - box.left) + "px"; f.style.top = y0 + "px";
@@ -2759,8 +2762,8 @@ function wipeAll(input) {
   if (h7("ad\u2022" + v) !== A7) { toast("Wrong password"); return; }
   // back to a brand-new player: no progress, no purchase, no admin, default color (sound setting stays)
   PUZZLES.forEach((_, i) => store.set(SAVE + i, null));
-  [KT, K7, KH, KA, KS].forEach(k => store.set(k, null));
-  renderUnlim(); applyHue();
+  [KT, K7, KH, KA, KS, "cx-tut", "cx-tut-done"].forEach(k => store.set(k, null));
+  renderUnlim(); applyHue(); renderTutBtn();
   closeModals(); fireUntil = 0; load(INTRO);
   $("startLives").textContent = LIVES(); $("helpModal").hidden = false;
   toast("Reset to a fresh game");
@@ -2807,7 +2810,8 @@ function claimUnlock() {
    About 15 seconds: the intro plays itself on a scratch copy while a caption on the right explains each part,
    with an arrow pointing at it. Skip ends it any time. Nothing is saved; afterwards the real intro opens. */
 let tutRun = 0;
-const tutWait = (ms, run) => new Promise((ok, no) => setTimeout(() => run === tutRun ? ok() : no("skip"), ms));
+const TUT_PACE = 1.1;   // everything in the tutorial runs 10% slower than its listed timings
+const tutWait = (ms, run) => new Promise((ok, no) => setTimeout(() => run === tutRun ? ok() : no("skip"), ms * TUT_PACE));
 function tutCardPlace() {
   const c = $("tutCard"), ctrl = document.querySelector(".ctrl").getBoundingClientRect();
   if (wide.matches) Object.assign(c.style, { left: ctrl.left + "px", width: Math.min(420, innerWidth - ctrl.left - 24) + "px", top: (ctrl.bottom + 24) + "px", bottom: "", right: "" });
@@ -2872,7 +2876,7 @@ async function runTutorial() {
     await tutWait(1600, run);
     $("tutWelcome").setAttribute("hidden", ""); $("tutCard").removeAttribute("hidden");
     prog.style.transition = "none"; prog.style.width = "0"; prog.getBoundingClientRect();
-    prog.style.transition = "width 30s linear"; prog.style.width = "100%";
+    prog.style.transition = `width ${30 * TUT_PACE}s linear`; prog.style.width = "100%";
     const r = P.findIndex(p => p.segs.length > 1 && p.segs[0].word === "STRONG"), other = P.findIndex(p => p.w === "BRASS");
     S.row = r; S.seg = 0; S.cur = P[r].x; render();
     tutSay(1, steps, "Read the clue.", null, [".clue"]);
@@ -2910,7 +2914,8 @@ async function runTutorial() {
   if (run === tutRun) endTutorial();
 }
 function endTutorial() {
-  tutRun++; TUT = false;
+  if (REPLAY) return endReplay();
+  tutRun++; TUT = false; store.set("cx-tut-done", 1); renderTutBtn();
   setDrawer(false);
   ["tutBlock", "tutCard", "tutArrows", "tutWelcome"].forEach(id => $(id).setAttribute("hidden", ""));
   // the intro keeps everything the demo filled in: the player picks up right where it left off
@@ -2919,7 +2924,60 @@ function endTutorial() {
   setTimeout(keep, 400);   // once any letters still falling have landed, save again
 }
 $("tutSkip").addEventListener("click", endTutorial);
-addEventListener("resize", () => { if (TUT) { tutCardPlace(); } });
+
+/* ---------- replay: the same steps, clicked through by hand ----------
+   No typing and nothing falls: the player's own intro board stays as it is, and Back / Next walk the captions,
+   circles and arrows. Closing it returns to whatever puzzle they were on. Nothing is saved while it's open. */
+let REPLAY = null;
+function replaySteps() {
+  const C = CLEAN(), r = P.findIndex(p => p.segs.length > 1 && p.segs[0].word === "STRONG");
+  const at = (sg) => () => { S.row = r; S.seg = sg; S.cur = segCols(r, sg)[0]; render(); };
+  const steps = [
+    { text: "Read the clue.", rings: () => [".clue"], before: at(0) },
+    { text: "Guess the answer...", rings: () => [segTiles(r, 0)], before: at(0) },
+    { text: "...and watch the letters fall down and fill in other words.", target: "#board", before: at(0) },
+    { text: `The words with <u>${C ? "bold" : "white"}</u> outlines are COMPOUNDS!`, rings: () => [segTiles(r, 1)], before: at(1) },
+    { text: "The cascade words are extra tough but complete so much of the puzzle.", rings: () => [colsOf(0).map(c => tiles[0][c]), colsOf(P.length - 1).map(c => tiles[P.length - 1][c])] },
+    ...(C ? [] : [{ text: "Fill the pond with letters to help figure them out.", target: ".bar", drawer: true }]),
+    { text: "Check a letter for a life if you are stuck!", rings: () => ["#letterBtn"], drawer: true },
+    { text: "Your turn!" },
+  ];
+  return steps;
+}
+function showReplay() {
+  const { steps, at } = REPLAY, st = steps[at];
+  if (st.before) st.before();
+  setDrawer(!!st.drawer && phone.matches);
+  requestAnimationFrame(() => {   // let the drawer and board settle before measuring what to circle
+    tutSay(at + 1, steps.length, st.text, st.target || null, st.rings ? st.rings() : []);
+    if (!st.target && !st.rings) $("tutArrows").setAttribute("hidden", "");
+  });
+  $("tutBack").disabled = at === 0;
+  $("tutNext").textContent = at === steps.length - 1 ? "Done" : "Next";
+}
+function replayTutorial() {
+  if (TUT) return;
+  const back = idx;
+  closeModals(); closeMenu();
+  load(INTRO); TUT = true;   // TUT: no saving, no typing, the board can't be tapped
+  REPLAY = { back, at: 0, steps: replaySteps() };
+  $("tutBlock").removeAttribute("hidden"); $("tutCard").removeAttribute("hidden"); $("tutNav").hidden = false;
+  document.querySelector(".tut-bar").hidden = true; $("tutSkip").textContent = "Close";
+  showReplay();
+}
+function endReplay() {
+  const back = REPLAY.back; REPLAY = null; TUT = false;
+  setDrawer(false);
+  ["tutBlock", "tutCard", "tutArrows"].forEach(id => $(id).setAttribute("hidden", ""));
+  $("tutNav").hidden = true; document.querySelector(".tut-bar").hidden = false; $("tutSkip").textContent = "Skip tutorial";
+  load(back);   // back to the puzzle they were on, from its own save
+}
+$("tutBack").addEventListener("click", () => { if (REPLAY && REPLAY.at > 0) { REPLAY.at--; showReplay(); } });
+$("tutNext").addEventListener("click", () => { if (!REPLAY) return; if (REPLAY.at === REPLAY.steps.length - 1) return endReplay(); REPLAY.at++; showReplay(); });
+$("helpReplay").addEventListener("click", replayTutorial);
+// once someone has seen the tutorial, the menu's Tutorial button becomes "Replay tutorial" and opens the click-through
+function renderTutBtn() { $("menuHow").textContent = store.get("cx-tut-done") ? "Replay tutorial" : "Tutorial"; }
+addEventListener("resize", () => { if (REPLAY) showReplay(); else if (TUT) tutCardPlace(); });
 
 /* ---------- menu ---------- */
 let skyRun = 0;
@@ -3062,7 +3120,7 @@ $("menuPlay").addEventListener("click", () => {
   if (allDone() && paywall()) return;
 });
 $("menuTut").addEventListener("click", () => { store.set("cx-tut", 1); closeMenu(); runTutorial(); });
-$("menuHow").addEventListener("click", () => { closeMenu(); runTutorial(); });
+$("menuHow").addEventListener("click", () => { if (store.get("cx-tut-done")) return replayTutorial(); closeMenu(); runTutorial(); });
 $("menuStats").addEventListener("click", () => { closeMenu(); openStats(); });
 $("menuUnlim").addEventListener("click", () => { closeMenu(); ok7() ? openArchive() : paywall(false); });
 document.querySelector("header h1").addEventListener("click", e => { if (!e.target.closest("#adminBadge")) openMenu(); });
@@ -3093,7 +3151,7 @@ placeChrome();
 
 function start(data) {
   renderSound();
-  const fresh7 = claimUnlock(); renderUnlim(); applyHue(); applyMode();
+  const fresh7 = claimUnlock(); renderUnlim(); applyHue(); applyMode(); renderTutBtn();
   // new players start on the intro; once it's done they open on today's daily
   load(typeof data.idx === "number" ? data.idx : doneWith(INTRO) && dailyIdx() !== null ? dailyIdx() : INTRO);
   if (fresh7) { openArchive(); toast("Unlimited unlocked. Thanks!"); return; }
