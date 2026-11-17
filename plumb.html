@@ -277,7 +277,10 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 .hose-splash { fill: none; stroke: hsl(var(--hue) calc(90% * var(--sk)) calc(84% + var(--lift-a))); stroke-width: 2; }
 .hose-water { stroke-width: 7 !important; fill: none; stroke: hsl(var(--hue) calc(92% * var(--sk)) calc(58% + var(--lift-a))); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 3px hsl(var(--hue) calc(92% * var(--sk)) calc(58% + var(--lift-a)))); }
 .duck { position: fixed; z-index: 23; width: 30px; height: 24px; pointer-events: none; transform-origin: 50% 90%; }
+.duck .face { width: 100%; height: 100%; transition: transform .25s; }
+.duck.left .face { transform: scaleX(-1); }
 .duck svg { display: block; width: 100%; height: 100%; animation: bob 1.8s ease-in-out infinite; transform-origin: 50% 90%; filter: drop-shadow(1px 2px 0 rgba(0,0,0,.45)); }
+@keyframes flap { from { transform: rotate(-14deg) scaleY(.9); } to { transform: rotate(14deg) scaleY(1.08); } }
 @keyframes bob { 0%, 100% { transform: rotate(-5deg) translateY(0); } 50% { transform: rotate(5deg) translateY(-1.5px); } }
 .tile.await { color: transparent !important; text-shadow: none !important; }
 .tile.slap { animation: slap .38s cubic-bezier(.2,1.6,.4,1); z-index: 3; }
@@ -482,10 +485,10 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
     <div class="bar" role="img" aria-label="Water tank">
       <div class="bar-fill" id="barFill"></div>
       <div class="whirl" id="whirl" hidden></div>
-      <div class="duck" id="duck" aria-hidden="true"><svg viewBox="0 0 40 32"><ellipse cx="18" cy="22" rx="15" ry="9" fill="#ffd23a" stroke="#1a1206" stroke-width="2"/>
+      <template id="duckArt"><svg viewBox="0 0 40 32"><ellipse cx="18" cy="22" rx="15" ry="9" fill="#ffd23a" stroke="#1a1206" stroke-width="2"/>
         <path d="M5 18 Q2 12 7 13" fill="#ffd23a" stroke="#1a1206" stroke-width="2"/><circle cx="27" cy="11" r="8" fill="#ffd23a" stroke="#1a1206" stroke-width="2"/>
         <path d="M33 11 L40 12.5 L33 15 Z" fill="#ff8a1f" stroke="#1a1206" stroke-width="1.6" stroke-linejoin="round"/><circle cx="29" cy="9" r="1.8" fill="#1a1206"/>
-        <path d="M12 20 Q18 25 23 20" fill="none" stroke="#e0a800" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <path d="M12 20 Q18 25 23 20" fill="none" stroke="#e0a800" stroke-width="2" stroke-linecap="round"/></svg></template>
     </div>
     <div class="dam" id="dam" hidden aria-hidden="true">
       <svg viewBox="-30 -30 60 60" id="damSvg">
@@ -1219,7 +1222,7 @@ function fresh() {
 }
 function load(i) {
   if (typeof draining !== "undefined") {
-    if (duckOff) duckReturn();
+    clearDucks(); lastSplashX = null;
     draining = false; slapping.clear(); dripsLeft = 0; dripWait.splice(0).forEach(f => f());
     resetStation();
   }
@@ -1232,6 +1235,7 @@ function load(i) {
   { const n = P.map((_, r) => r).filter(r => !isSpecial(r) && !isCompound(r)); AVG = n.length ? Math.round(n.reduce((a, r) => a + plain(r), 0) / n.length / 5) * 5 : 50; }
   BAR = Math.floor(P.reduce((sum, _, r) => sum + (isSpecial(r) ? 0 : baseWorth(r)), 0) * .95 * 1.25 / STAMPS / 5) * 5;   // x1.25: power-ups cost 25% more points
   S = store.get(SAVE + i) || fresh();
+  duckBirths = (S.paid || []).filter(Boolean).length;   // a board opens with an empty pond; only words solved from here bring ducks
   fireUntil = 0;
   build();
   if (playing() && stampUp().length) save();   // catches a saved game up on letters it has already earned
@@ -1327,41 +1331,71 @@ const earned = () => Math.floor(S.score / BAR);
    drains, and the water turns into letters that fly up and slap onto the top and side words. */
 let draining = false, dripsLeft = 0, dripWait = [];
 const SHOWN = .85;   // water shows at most 85% full while filling, so it never looks full until it actually is
-/* ---------- the duck ----------
-   A rubber duck rides the water's surface. When the pond fills it gets knocked off and tumbles away, then plops back in. */
-let duckOff = false;
-function duckLoop() {
-  const d = $("duck");
-  if (!duckOff) {
-    const tb = tankBox();
-    if (!tb) d.style.display = "none";
-    else {
-      const lvl = $("barFill").getBoundingClientRect().height, w = d.offsetWidth || 30, h = d.offsetHeight || 24;
-      d.style.display = ""; d.style.left = (tb.left + tb.width * .72 - w / 2) + "px"; d.style.top = (tb.bottom - lvl - h * .78) + "px";
+/* ---------- ducks ----------
+   Every word you solve sends a rubber duck bobbing up out of the ripples its letters made. They paddle around the pond,
+   and when the water reaches the top they all take off and flap away. A new board starts with an empty pond. */
+let ducks = [], lastSplashX = null, duckBirths = 0;
+function makeDuck(x) {
+  const tb = tankBox(); if (!tb) return;
+  const d = document.createElement("div"); d.className = "duck"; d.setAttribute("aria-hidden", "true");
+  d.innerHTML = `<div class="face">${$("duckArt").innerHTML}</div>`;
+  document.body.appendChild(d);
+  const fx = Math.min(.9, Math.max(.1, ((x ?? tb.left + tb.width * (.3 + Math.random() * .5)) - tb.left) / tb.width));
+  const duck = { el: d, x: fx, dir: Math.random() < .5 ? -1 : 1, speed: .025 + Math.random() * .03, pause: 0, born: performance.now() };
+  ducks.push(duck);
+  placeDuck(duck, tb);
+  if (!calm()) d.animate([{ transform: "translateY(18px) scale(.4)", opacity: 0 }, { transform: "translateY(-6px) scale(1.1)", opacity: 1, offset: .6 }, { transform: "none" }],
+    { duration: 520, easing: "ease-out" });
+  sfx("tick", 6);
+}
+function placeDuck(duck, tb) {
+  const lvl = $("barFill").getBoundingClientRect().height, w = duck.el.offsetWidth || 30, h = duck.el.offsetHeight || 24;
+  duck.el.style.left = (tb.left + tb.width * duck.x - w / 2) + "px";
+  duck.el.style.top = (tb.bottom - lvl - h * .78) + "px";
+  duck.el.classList.toggle("left", duck.dir < 0);
+}
+let duckT = performance.now();
+function duckLoop(now) {
+  const dt = Math.min(.05, (now - duckT) / 1000); duckT = now;
+  const tb = tankBox();
+  ducks.forEach(d => {
+    if (d.gone) return;
+    d.el.style.display = tb ? "" : "none";
+    if (!tb) return;
+    // paddle along, now and then stop for a moment or turn around
+    if (!calm()) {
+      if (d.pause > 0) d.pause -= dt;
+      else {
+        d.x += d.dir * d.speed * dt;
+        if (d.x < .1 || d.x > .9) { d.dir *= -1; d.x = Math.min(.9, Math.max(.1, d.x)); }
+        if (Math.random() < dt * .25) d.pause = .6 + Math.random() * 1.2;
+        if (Math.random() < dt * .12) d.dir *= -1;
+      }
     }
-  }
+    placeDuck(d, tb);
+  });
   requestAnimationFrame(duckLoop);
 }
 requestAnimationFrame(duckLoop);
-function duckTumble() {
-  const d = $("duck"); if (calm() || d.style.display === "none") return;
-  duckOff = true;
-  const r = d.getBoundingClientRect(), fall = innerHeight - r.top + 60;
-  sfx("tick", 7); setTimeout(() => sfx("tick", 9), 90);   // squeak
-  d.animate([
-    { transform: "translate(0,0) rotate(0deg)" },
-    { transform: "translate(18px,-46px) rotate(-30deg)", offset: .22, easing: "ease-out" },     // knocked up into the air
-    { transform: "translate(44px,-58px) rotate(-200deg)", offset: .38, easing: "ease-in" },      // flips over
-    { transform: `translate(110px,${fall}px) rotate(-560deg)` }                                 // and drops off the screen
-  ], { duration: 1300, fill: "forwards" });
+function ducksFlyAway() {
+  const flock = ducks.filter(d => !d.gone); ducks = [];
+  if (flock.length) { sfx("tick", 7); setTimeout(() => sfx("tick", 9), 90); }
+  flock.forEach((d, n) => {
+    d.gone = true;
+    if (calm()) return d.el.remove();
+    const r = d.el.getBoundingClientRect(), side = d.dir || 1, up = r.top + 80;
+    // a startled hop, then a wobbly, flapping climb off the top of the screen
+    d.el.animate([
+      { transform: "translate(0,0) rotate(0deg)" },
+      { transform: `translate(${side * 6}px,-22px) rotate(${side * -12}deg)`, offset: .15, easing: "ease-out" },
+      { transform: `translate(${side * 40}px,${-up * .45}px) rotate(${side * 14}deg)`, offset: .5 },
+      { transform: `translate(${side * 70}px,${-up * .75}px) rotate(${side * -16}deg)`, offset: .75 },
+      { transform: `translate(${side * 110}px,${-up - 60}px) rotate(${side * 10}deg)` }
+    ], { duration: 1400 + n * 90, delay: n * 70, easing: "ease-in", fill: "forwards" }).onfinish = () => d.el.remove();
+    d.el.querySelector(".face svg").style.animation = "flap .14s ease-in-out infinite alternate";
+  });
 }
-function duckReturn() {
-  const d = $("duck"); if (!duckOff) return;
-  d.getAnimations().forEach(a => a.cancel());
-  duckOff = false;
-  requestAnimationFrame(() => d.animate([{ transform: "translateY(-120px) rotate(20deg)", opacity: 0 }, { transform: "translateY(-120px) rotate(20deg)", opacity: 1, offset: .05 },
-    { transform: "translateY(0) rotate(-8deg)", offset: .75, easing: "ease-in" }, { transform: "translateY(-6px) rotate(4deg)", offset: .88 }, { transform: "none" }], { duration: 750 }));
-}
+function clearDucks() { ducks.forEach(d => d.el.remove()); ducks = []; }
 // the water only rises once every falling drop has hit the surface
 const dripsDone = () => dripsLeft ? new Promise(res => dripWait.push(res)) : Promise.resolve();
 function dripLanded() { if (dripsLeft > 0 && --dripsLeft === 0) { dripWait.splice(0).forEach(f => f()); if (!draining) render(); } }
@@ -1387,6 +1421,7 @@ function drip(ch, x, fromY, row) {
   };
 }
 function splash(x, y) {
+  lastSplashX = x;
   // a few droplets jump up and fall back, and two rings spread across the surface
   [-1, -.4, .4, 1].forEach((k, n) => {
     const p = document.createElement("div"); p.className = "spray"; p.style.left = x + "px"; p.style.top = y + "px"; document.body.appendChild(p);
@@ -1431,7 +1466,7 @@ function drainTank(stamped, power = false) {
   dripsDone().then(() => {
   if (token !== idx) return finishDrain();
   fill.style.height = "100%";   // top it off first
-  setTimeout(() => { if (token === idx) duckTumble(); }, 900);
+  setTimeout(() => { if (token === idx) ducksFlyAway(); }, 900);
   // with the pump showing, water leaves the pond and keeps one steady speed all the way: inlet, riser, then out the hoses
   const T0 = 1400, DRAIN = viaDam ? 350 : 2700;
   setTimeout(() => {
@@ -1538,7 +1573,6 @@ function hose({ t, key, r }, token) {
   });
 }
 function finishDrain() {
-  setTimeout(duckReturn, 400);
   draining = false; slapping.clear(); $("whirl").hidden = true; $("barFill").classList.remove("drain");
   // the dam empties and its lights go back to gray
   resetStation();
@@ -1867,6 +1901,8 @@ function settle() {
     }
   });
   S.score += gain;
+  const born = P.filter((_, r) => S.paid[r]).length - duckBirths;   // words solved just now
+  if (born > 0) { duckBirths += born; dripsDone().then(() => { for (let i = 0; i < born; i++) setTimeout(() => makeDuck(lastSplashX != null ? lastSplashX + (i - (born - 1) / 2) * 34 : null), i * 160); }); }
   if (combo !== null) { toast(`Compound! ${W(combo)}`); sfx("win"); }   // points stay behind the scenes: the tank's water level shows them
   // each full bar stamps both special words at once
   const stamped = stampUp(), full = earned() > filledBefore;
