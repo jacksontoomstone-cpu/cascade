@@ -134,6 +134,17 @@ header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin
 .menu-box .btn { font-size: .7rem; padding: 14px; }
 .menu-box .btn.primary { font-size: .85rem; padding: 18px; }
 header h1 { cursor: pointer; }
+/* menu: for first-timers the tutorial is lit up and plain Play is dimmed */
+.menu-box .btn.dim { background: var(--bezel-d); color: var(--muted); box-shadow: inset -3px -3px 0 var(--cab), inset 3px 3px 0 var(--bezel); }
+/* tutorial: a caption card in the open space on the right, a yellow arrow to whatever it's talking about */
+.tut-block { position: fixed; inset: 0; z-index: 30; }
+.tut-arrows { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 32; pointer-events: none; overflow: visible; filter: drop-shadow(2px 3px 0 rgba(0,0,0,.6)); }
+.tut-card { position: fixed; z-index: 33; display: flex; flex-direction: column; gap: 10px; padding: 18px 18px 14px; background: var(--screen);
+  border: 4px solid #ffe066; outline: 4px solid var(--bezel); box-shadow: 0 0 30px -6px #ffe066; }
+.tut-step { margin: 0; font-family: "Press Start 2P", monospace; font-size: .5rem; color: #ffe066; text-transform: uppercase; letter-spacing: .08em; }
+.tut-text { margin: 0; font-size: 1.45rem; line-height: 1.15; color: var(--white); min-height: 2.3em; }
+.tut-bar { height: 6px; background: var(--bezel-d); } .tut-bar i { display: block; height: 100%; width: 0; background: #ffe066; }
+.tut-card .link-btn { align-self: flex-end; }
 .confirm-actions { display: flex; gap: 10px; justify-content: center; }
 .icon-btn { border: none; background: var(--bezel); box-shadow: inset -2px -2px 0 var(--bezel-d), inset 2px 2px 0 var(--bezel-l); border-radius: 0; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; padding: 0; }
 .icon-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.6; stroke-linecap: square; stroke-linejoin: miter; }
@@ -600,13 +611,23 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
   </div>
 </div>
 
+<div class="tut-block" id="tutBlock" hidden></div>
+<svg class="tut-arrows" id="tutArrows" hidden aria-hidden="true"><defs><marker id="tutHead" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#ffe066"/></marker></defs><path id="tutPath" fill="none" stroke="#ffe066" stroke-width="4" stroke-linecap="round" marker-end="url(#tutHead)"/></svg>
+<div class="tut-card" id="tutCard" hidden role="status" aria-live="polite">
+  <p class="tut-step" id="tutStep">Tutorial</p>
+  <p class="tut-text" id="tutText"></p>
+  <div class="tut-bar"><i id="tutProg"></i></div>
+  <button class="link-btn" id="tutSkip">Skip tutorial</button>
+</div>
+
 <div class="menu" id="menu" hidden>
   <canvas id="menuSky" aria-hidden="true"></canvas>
   <div class="menu-box" role="dialog" aria-labelledby="menuTitle">
     <h1 id="menuTitle" class="menu-title">Cascade</h1>
     <p class="menu-sub" id="menuSub">Daily word puzzle</p>
-    <button class="btn primary" id="menuPlay">Play</button>
-    <button class="btn" id="menuHow">How to play</button>
+    <button class="btn primary" id="menuTut">Play tutorial</button>
+    <button class="btn" id="menuPlay">Play</button>
+    <button class="btn" id="menuHow">Tutorial</button>
     <button class="btn" id="menuStats">Stats</button>
     <button class="btn" id="menuUnlim">Unlimited</button>
   </div>
@@ -1375,7 +1396,8 @@ function load(i) {
   if (playing() && stampUp().length) save();   // catches a saved game up on letters it has already earned
   render();
 }
-function save() { store.set(SAVE + idx, S); }
+let TUT = false;   // the tutorial plays a scratch copy of the intro: nothing it does is saved
+function save() { if (!TUT) store.set(SAVE + idx, S); }
 
 /* ---------- board ---------- */
 function build() {
@@ -2350,7 +2372,7 @@ function keyBtn(label, cls, fn, aria) {
   if (ri === 2) row.appendChild(keyBtn("⌫", "wide", back, "Delete"));
   $("kb").appendChild(row);
 });
-const anyModal = () => !$("menu").hidden || [...document.querySelectorAll(".modal")].some(m => !m.hidden);
+const anyModal = () => TUT || !$("menu").hidden || [...document.querySelectorAll(".modal")].some(m => !m.hidden);
 document.addEventListener("keydown", e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (anyModal()) { if (e.key === "Escape") closeModals(); return; }
@@ -2525,6 +2547,77 @@ function claimUnlock() {
   store.set(K7, q7()); return true;
 }
 
+/* ---------- tutorial ----------
+   About 15 seconds: the intro plays itself on a scratch copy while a caption on the right explains each part,
+   with an arrow pointing at it. Skip ends it any time. Nothing is saved; afterwards the real intro opens. */
+let tutRun = 0;
+const tutWait = (ms, run) => new Promise((ok, no) => setTimeout(() => run === tutRun ? ok() : no("skip"), ms));
+function tutCardPlace() {
+  const c = $("tutCard"), ctrl = document.querySelector(".ctrl").getBoundingClientRect();
+  if (wide.matches) Object.assign(c.style, { left: ctrl.left + "px", width: Math.min(420, innerWidth - ctrl.left - 24) + "px", top: (ctrl.bottom + 24) + "px", bottom: "", right: "" });
+  else Object.assign(c.style, { left: "16px", right: "16px", width: "", top: "", bottom: "84px" });
+}
+function tutPoint(target) {
+  const svg = $("tutArrows"), p = $("tutPath");
+  if (!target) { svg.setAttribute("hidden", ""); return; }
+  const c = $("tutCard").getBoundingClientRect(), t = (typeof target === "string" ? document.querySelector(target) : target).getBoundingClientRect();
+  const sx = wide.matches ? c.left : c.left + c.width / 2, sy = wide.matches ? c.top + c.height / 2 : c.top;
+  const ex = t.left + t.width / 2, ey = t.top + t.height / 2;
+  // stop just short of the target's edge so the arrowhead touches it
+  const dx = ex - sx, dy = ey - sy, len = Math.hypot(dx, dy) || 1, pad = Math.min(t.width, t.height) / 2 + 6;
+  const tx = ex - dx / len * pad, ty = ey - dy / len * pad, mx = (sx + tx) / 2, my = Math.min(sy, ty) - 60;
+  p.setAttribute("d", `M${sx} ${sy} Q${mx} ${my} ${tx} ${ty}`);
+  svg.removeAttribute("hidden");
+  const L = p.getTotalLength(); p.style.strokeDasharray = L; p.animate([{ strokeDashoffset: L }, { strokeDashoffset: 0 }], { duration: 380, easing: "ease-out", fill: "forwards" });
+}
+function tutSay(n, of, text, target) {
+  $("tutStep").textContent = `Tutorial · ${n} of ${of}`; $("tutText").textContent = text;
+  tutCardPlace(); tutPoint(target);
+}
+async function tutType(word, run) {
+  const r = P.findIndex(p => p.w === word); if (r < 0) return -1;
+  S.row = r; S.seg = 0; S.cur = P[r].x; render();
+  for (let j = 0; j < word.length; j++) { await tutWait(170, run); S.typed[r][j] = word[j]; S.cur = Math.min(P[r].x + j + 1, P[r].x + word.length - 1); render(); sfx("tick", j % 5); }
+  await tutWait(260, run); check();
+  return r;
+}
+async function runTutorial() {
+  const run = ++tutRun;
+  closeModals(); TUT = true;
+  load(INTRO); S = fresh(); S.started = false; build(); render();   // a clean scratch copy of the intro
+  $("tutBlock").removeAttribute("hidden"); $("tutCard").removeAttribute("hidden");
+  const prog = $("tutProg"); prog.style.transition = "none"; prog.style.width = "0"; prog.getBoundingClientRect();
+  prog.style.transition = "width 16s linear"; prog.style.width = "100%";
+  const steps = 6;
+  try {
+    tutSay(1, steps, "Here's your clue. Solve it to fill in the matching word.", ".clue");
+    await tutWait(2200, run);
+    tutSay(2, steps, "Type the answer and press Enter.", "#board");
+    const r1 = await tutType("BRASS", run);
+    await tutWait(500, run);
+    tutSay(3, steps, "Right letters fall down the board and fill matching spots in the words below.", "#board");
+    await tutWait(2600, run);
+    tutSay(4, steps, "Every word you solve drips into the pond.", ".bar");
+    await tutWait(2400, run);
+    S.score = (earned() + 1) * BAR - 5;   // nearly full, so the next word tops it off
+    tutSay(5, steps, "Fill it up and the wheel pumps letters into the big top and side words.", $("dam").hidden ? ".sidebox" : "#dam");
+    await tutType("SADDLE", run);
+    await tutWait(5200, run);
+    tutSay(6, steps, "Wrong guesses cost a life. You get 5. Good luck!", "#misses");
+    await tutWait(2400, run);
+  } catch (e) { /* skipped */ }
+  if (run === tutRun) endTutorial();
+}
+function endTutorial() {
+  tutRun++; TUT = false;
+  ["tutBlock", "tutCard", "tutArrows"].forEach(id => $(id).setAttribute("hidden", ""));
+  document.querySelectorAll(".hoses, .tilefill, .drip, .drop, .spray, .ripple, .faller").forEach(el => el.remove());
+  load(INTRO); render();   // the real intro, with whatever progress the player already had
+  toast("Your turn!");
+}
+$("tutSkip").addEventListener("click", endTutorial);
+addEventListener("resize", () => { if (TUT) { tutCardPlace(); } });
+
 /* ---------- menu ---------- */
 let skyRun = 0;
 // The menu: letters drift down out of a night sky and plop into a calm pixel pond, sending out rings.
@@ -2621,17 +2714,22 @@ function skyStart() {
 }
 function openMenu() {
   closeModals();
+  // first visit: "Play tutorial" is the lit button and plain Play is dimmed; after that it's Play first
+  const first = !store.get("cx-tut");
+  $("menuTut").hidden = !first; $("menuHow").hidden = first;
+  $("menuPlay").textContent = first ? "Play without tutorial" : "Play";
+  $("menuPlay").className = first ? "btn dim" : "btn primary";
   $("menuSub").textContent = dailyIdx() !== null ? `Daily word puzzle · ${dayLabel()}` : "Daily word puzzle";
   $("menu").hidden = false; skyStart();
   setTimeout(() => $("menuPlay").focus({ preventScroll: true }), 50);
 }
 const closeMenu = () => { $("menu").hidden = true; skyRun++; };
 $("menuPlay").addEventListener("click", () => {
-  closeMenu();
+  store.set("cx-tut", 1); closeMenu();
   if (allDone() && paywall()) return;
-  if (!store.get("cx-seen")) { store.set("cx-seen", 1); $("startLives").textContent = LIVES(); $("helpModal").hidden = false; }   // rules once, for first-timers
 });
-$("menuHow").addEventListener("click", () => { closeMenu(); $("startLives").textContent = LIVES(); $("helpModal").hidden = false; });
+$("menuTut").addEventListener("click", () => { store.set("cx-tut", 1); closeMenu(); runTutorial(); });
+$("menuHow").addEventListener("click", () => { closeMenu(); runTutorial(); });
 $("menuStats").addEventListener("click", () => { closeMenu(); openStats(); });
 $("menuUnlim").addEventListener("click", () => { closeMenu(); ok7() ? openArchive() : paywall(false); });
 document.querySelector("header h1").addEventListener("click", e => { if (!e.target.closest("#adminBadge")) openMenu(); });
