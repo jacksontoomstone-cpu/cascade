@@ -2734,7 +2734,8 @@ function skyStart() {
 function openMenu() {
   closeModals();
   // first visit: "Play tutorial" is the lit button and plain Play is dimmed; after that it's Play first
-  const first = !store.get("cx-tut");
+  const TUT_FIRST = false;   // off for now: everyone gets plain Play + Tutorial until the tutorial is ready to lead with
+  const first = TUT_FIRST && !store.get("cx-tut");
   $("menuTut").hidden = !first; $("menuHow").hidden = first;
   $("menuPlay").textContent = first ? "Play without tutorial" : "Play";
   $("menuPlay").className = first ? "btn dim" : "btn primary";
