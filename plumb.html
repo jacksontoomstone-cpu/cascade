@@ -2875,7 +2875,7 @@ function openMenu() {
   const TUT_FIRST = false;   // off for now: everyone gets plain Play + Tutorial until the tutorial is ready to lead with
   const first = TUT_FIRST && !store.get("cx-tut");
   $("menuTut").hidden = !first; $("menuHow").hidden = first;
-  $("menuPlay").textContent = first ? "Play without tutorial" : "Play";
+  $("menuPlay").textContent = first ? "Play without tutorial" : dailyIdx() !== null ? "Play daily" : "Play";
   $("menuPlay").className = first ? "btn dim" : "btn primary";
   $("menuSub").textContent = dailyIdx() !== null ? `Daily word puzzle · ${dayLabel()}` : "Daily word puzzle";
   $("menu").hidden = false; skyStart();
@@ -2895,6 +2895,9 @@ $("menuMode").addEventListener("click", () => {
 const closeMenu = () => { $("menu").hidden = true; skyRun++; };
 $("menuPlay").addEventListener("click", () => {
   store.set("cx-tut", 1); closeMenu();
+  // Play goes straight to today's daily: skipping the tutorial never strands anyone on the intro
+  const d = dailyIdx();
+  if (d !== null && idx !== d) load(d);
   if (allDone() && paywall()) return;
 });
 $("menuTut").addEventListener("click", () => { store.set("cx-tut", 1); closeMenu(); runTutorial(); });
