@@ -389,6 +389,39 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 .res-meter-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--a); box-shadow: 0 0 14px var(--a); transition: width 1.1s steps(20); }
 .res-meter span { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--pixel); font-size: .8rem; color: var(--white); text-shadow: 2px 2px 0 var(--bezel), -1px -1px 0 var(--bezel); }
 .res-stats { display: flex; justify-content: center; gap: 40px; text-align: center; }
+/* the result window: wider than other pop-ups, with a bigger chart */
+.sheet.res-sheet { width: min(100% - 8px, 600px); gap: 16px; padding: 26px 28px 22px; }
+.res-sheet .res-stats b { font-size: 1.6rem; }
+.res-sheet .res-meter { height: 40px; }
+.res-sheet .res-curve { margin-top: 8px; }
+.res-sheet .res-curve figcaption { font-size: .68rem; }
+/* statistics in the empty right-hand column on wide screens (phones keep the pop-up) */
+.side-stats { display: none; }
+@media (min-width: 860px) {
+  .side-stats:not([hidden]) { display: flex; flex-direction: column; gap: 14px; grid-column: 2; grid-row: 3; align-self: start; max-height: 100%; min-height: 0; overflow-y: auto;
+    padding: 18px 18px 16px; background: var(--screen); box-shadow: 0 0 0 3px var(--bezel), 0 0 0 5px var(--bezel-d); animation: ssIn .2s ease-out; }
+  @media (pointer: fine) { .side-stats:not([hidden]) { grid-column: 3; } }
+}
+@keyframes ssIn { from { opacity: 0; transform: translateY(8px); } }
+.ss-head { display: flex; align-items: center; justify-content: space-between; }
+.ss-head h2 { margin: 0; font-family: var(--pixel); font-weight: 400; font-size: .9rem; text-transform: uppercase; color: var(--a); }
+.ss-head .close { position: static; border: none; background: transparent; color: var(--white); font-family: var(--pixel); font-size: 1rem; cursor: pointer; width: 34px; height: 34px; }
+.side-stats .arch-head { margin: 4px 0 0; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; color: var(--muted); }
+.ss-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ss-list li { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 10px 12px; background: var(--cab); box-shadow: inset 0 0 0 2px var(--bezel); font-size: 1.15rem; }
+.ss-list li.can { cursor: pointer; } .ss-list li.can:hover { box-shadow: inset 0 0 0 2px var(--a); }
+.ss-list li.cur { box-shadow: inset 0 0 0 2px var(--white); }
+.ss-list .nm { font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; }
+.ss-list .tg { font-family: var(--pixel); font-size: .45rem; text-transform: uppercase; padding: 5px 7px; }
+.ss-list .won .tg, .ss-list li.won .tg { background: var(--a); color: #04121a; }
+.ss-list li.lost .tg { background: var(--bad); color: #fff; }
+.ss-list .mt { color: var(--muted); font-variant-numeric: tabular-nums; }
+html.clean .side-stats:not([hidden]) { background: #fff; box-shadow: 0 0 0 1px #d3d6da; border-radius: 10px; }
+html.clean .ss-head h2 { font-family: Georgia, "Times New Roman", serif; font-weight: 700; text-transform: none; color: #121212; font-size: 1.2rem; }
+html.clean .ss-list li { background: #f6f7f8; box-shadow: none; border-radius: 6px; }
+html.clean .ss-list .nm, html.clean .ss-list .tg { font-family: var(--pixel); text-transform: none; font-size: .85rem; }
+html.clean .ss-list li.won .tg { background: var(--c-done); color: #fff; border-radius: 4px; }
+html.clean .ss-list li.lost .tg { border-radius: 4px; }
 /* the two big buttons under every result */
 .res-big { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
 .res-big .btn { padding: 17px 10px; font-size: .7rem; }
@@ -733,6 +766,18 @@ html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; colo
     </div>
 
     <div class="kb" id="kb"></div>
+
+    <aside class="side-stats" id="sideStats" hidden aria-labelledby="sideStatsTitle">
+      <div class="ss-head"><h2 id="sideStatsTitle">Statistics</h2><button class="close" id="sideStatsClose" aria-label="Close statistics">×</button></div>
+      <div class="stat-grid">
+        <div><b id="ssPlayed">0</b><small>Played</small></div>
+        <div><b id="ssWin">0%</b><small>Solved</small></div>
+        <div><b id="ssStreak">0</b><small>Streak</small></div>
+        <div><b id="ssBest">0</b><small>Best streak</small></div>
+      </div>
+      <p class="arch-head">Completed puzzles</p>
+      <ol class="ss-list" id="ssList"></ol>
+    </aside>
   </main>
 </div>
 <div class="drawer-scrim" id="drawerScrim" hidden></div>
@@ -879,7 +924,7 @@ html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; colo
 </div>
 
 <div class="modal" id="resultModal" hidden>
-  <div class="sheet" role="dialog" aria-labelledby="resTitle">
+  <div class="sheet res-sheet" role="dialog" aria-labelledby="resTitle">
     <button class="close" data-close aria-label="Close">×</button>
     <h2 id="resTitle">Solved</h2>
     <div class="res-meter" role="img" id="resMeter"><div class="res-meter-fill" id="resFill"></div><span id="resPct">0%</span></div>
@@ -2354,8 +2399,30 @@ function openStats() {
   $("stStreak").textContent = liveStreak(st); $("stBest").textContent = st.best;
   const order = timeline().filter(i => st.done[i]);
   $("stDone").innerHTML = order.length ? order.map(i => `<span class="${st.done[i]}">${boardName(+i)}</span>`).join("") : '<span>None yet</span>';
-  closeModals(); $("statsModal").hidden = false;
+  closeModals();
+  if (wide.matches) return openSideStats();   // wide screens: the panel in the empty right column
+  $("statsModal").hidden = false;
 }
+// every finished puzzle, newest first, with its time and lives; click one to open it
+function openSideStats() {
+  const st = stats(), keys = Object.keys(st.done), won = keys.filter(k => st.done[k] === "won").length;
+  $("ssPlayed").textContent = keys.length;
+  $("ssWin").textContent = keys.length ? Math.round(won / keys.length * 100) + "%" : "0%";
+  $("ssStreak").textContent = liveStreak(st); $("ssBest").textContent = st.best;
+  const known = timeline(), order = [...known.filter(i => st.done[i]), ...keys.map(Number).filter(i => !known.includes(i))].reverse();
+  $("ssList").innerHTML = order.length ? order.map(i => {
+    const sv = store.get(SAVE + i), res = st.done[i], meta = sv && sv.status !== "playing" ? `${clock(sv.time || 0)} · ${Math.max(0, LIVES() - (sv.misses || 0))}♥` : "";
+    return `<li class="${res}${canPlay(i) ? " can" : ""}${i === idx ? " cur" : ""}" data-i="${i}"><span class="nm">${boardName(i)}</span><span class="mt">${meta}</span><span class="tg">${res === "won" ? "Solved" : "Missed"}</span></li>`;
+  }).join("") : '<li><span class="nm">None yet</span></li>';
+  $("sideStats").hidden = false;
+}
+$("ssList").addEventListener("click", e => {
+  const li = e.target.closest("li.can"); if (!li) return;
+  const i = +li.dataset.i; if (i !== idx) load(i);
+  openSideStats();
+});
+$("sideStatsClose").addEventListener("click", () => { $("sideStats").hidden = true; });
+wide.addEventListener?.("change", () => { if (!wide.matches) $("sideStats").hidden = true; });
 function win() {
   recordFinish("won");
   kbIn.blur();
