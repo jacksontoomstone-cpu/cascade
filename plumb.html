@@ -2715,30 +2715,30 @@ function tone(f, at, dur, type = "sine", vol = .1) {
 /* ---------- the menu's seasonal song ----------
    Every letter you drop on the menu plays the next note of a song for the time of year, and the letter that falls is
    that note's name (C, D, E...). All public-domain melodies; it loops when it reaches the end. */
-const SONGS = [
-  { months: [10, 11], name: "Jingle Bells", notes: "E4 E4 E4 E4 E4 E4 E4 G4 C4 D4 E4 F4 F4 F4 F4 F4 E4 E4 E4 E4 D4 D4 E4 D4 G4 E4 E4 E4 E4 E4 E4 E4 G4 C4 D4 E4 F4 F4 F4 F4 F4 E4 E4 E4 G4 G4 F4 D4 C4" },
-  { months: [1, 2], name: "Ode to Joy", notes: "E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4 D4 D4 E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4 C4 C4" },
-  { months: [3, 4], name: "Morning Mood", notes: "G4 E4 D4 C4 D4 E4 G4 E4 D4 C4 D4 E4 D4 E4 G4 E4 G4 A4 E4 A4 G4 E4 D4 C4" },
-  { months: [5, 6, 7], name: "Take Me Out to the Ball Game", notes: "C4 C5 A4 G4 E4 G4 D4 C4 C5 A4 G4 E4 G4 A4 G#4 A4 E4 F4 G4 A4 F4 D4 A4 A4 A4 B4 C5 D5 B4 A4 G4 E4 D4" },
-  { months: [8, 9], name: "In the Hall of the Mountain King", notes: "B3 C#4 D4 E4 F#4 D4 F#4 F4 C#4 F4 E4 C4 E4 B3 C#4 D4 E4 F#4 D4 F#4 B4 A4 F#4 D4 F#4 A4" },
-  { months: [0], name: "Auld Lang Syne", notes: "G4 C5 C5 C5 E5 D5 C5 D5 E5 C5 C5 E5 G5 A5 A5 G5 E5 E5 C5 D5 C5 D5 E5 C5 A4 A4 G4 C5" },
+const SONGS = [   // "note:beats" (beats default to 1); beat = seconds per beat at normal speed
+  { months: [10, 11], name: "Jingle Bells", beat: .36, notes: "E4 E4 E4:2 E4 E4 E4:2 E4 G4 C4:1.5 D4:.5 E4:4 F4 F4 F4:1.5 F4:.5 F4 E4 E4 E4:.5 E4:.5 E4 D4 D4 E4 D4:2 G4:2 E4 E4 E4:2 E4 E4 E4:2 E4 G4 C4:1.5 D4:.5 E4:4 F4 F4 F4:1.5 F4:.5 F4 E4 E4 E4:.5 E4:.5 G4 G4 F4 D4 C4:4" },
+  { months: [1, 2], name: "Ode to Joy", beat: .42, notes: "E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4:1.5 D4:.5 D4:2 E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4:1.5 C4:.5 C4:2" },
+  { months: [3, 4], name: "Morning Mood", beat: .26, notes: "G4 E4 D4 C4 D4 E4:3 G4 E4 D4 C4 D4 E4:3 D4 E4 G4 E4 G4 A4:3 E4 A4 G4 E4 D4 C4:4" },
+  { months: [5, 6, 7], name: "Take Me Out to the Ball Game", beat: .3, notes: "C4:2 C5 A4 G4 E4 G4:3 D4:3 C4:2 C5 A4 G4 E4 G4:6 A4 G#4 A4 E4 F4 G4 A4:2 F4 D4:3 A4:2 A4 A4 B4 C5 D5 B4 A4 G4 E4 D4:3" },
+  { months: [8, 9], name: "In the Hall of the Mountain King", beat: .24, notes: "B3 C#4 D4 E4 F#4 D4 F#4:2 F4 C#4 F4:2 E4 C4 E4:2 B3 C#4 D4 E4 F#4 D4 F#4 B4 A4 F#4 D4 F#4 A4:2" },
+  { months: [0], name: "Auld Lang Syne", beat: .42, notes: "G4 C5:1.5 C5:.5 C5 E5 D5:1.5 C5:.5 D5 E5:.5 D5:.5 C5:1.5 C5:.5 E5 G5 A5:3 A5 G5:1.5 E5:.5 E5 C5 D5:1.5 C5:.5 D5 E5:.5 D5:.5 C5:1.5 A4:.5 A4 G4 C5:3" },
 ];
 const NOTE_SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 const noteHz = n => { const m = n.match(/^([A-G])(#?)(\d)$/); return 440 * 2 ** ((NOTE_SEMI[m[1]] + (m[2] ? 1 : 0) + (+m[3] + 1) * 12 - 69) / 12); };
 const seasonSong = () => SONGS.find(sg => sg.months.includes(new Date().getMonth())) || SONGS[0];
 let songAt = 0;
-// play the next note of this season's song and hand back its letter for the falling tile
+// play the next note of this season's song; hands back its letter (for the falling tile) and how long it lasts at normal speed
 function songNote() {
-  const notes = seasonSong().notes.split(" "), n = notes[songAt++ % notes.length];
+  const sg = seasonSong(), notes = sg.notes.split(" "), [n, b = "1"] = notes[songAt++ % notes.length].split(":"), dur = +b * sg.beat;
   if (!muted) {
     try {
       ac = ac || new (window.AudioContext || window.webkitAudioContext)();
       if (ac.state === "suspended") ac.resume();
       const f = noteHz(n);
-      tone(f, 0, .9, "triangle", .09); tone(f * 2, 0, .35, "sine", .025);   // a soft key with a little sparkle on top
+      tone(f, 0, Math.max(.35, Math.min(1.2, dur * 1.4)), "triangle", .09); tone(f * 2, 0, .3, "sine", .025);   // a soft key with a little sparkle on top
     } catch {}
   }
-  return n[0];
+  return { ch: n[0], dur };
 }
 /* ---------- water-drop sounds ----------
    Every sound is a drop: a sine "plip" whose pitch jumps up as it hits the water, plus a soft hiss of filtered noise for splashes.
@@ -3264,24 +3264,26 @@ function skyStart() {
   // the sky starts empty: tap or click anywhere around the menu to drop a letter into the pond
   const drops = [];
   // click to drop one; hold and drag to pour a stream of them
-  let held = false, lastX = 0, lastY = 0, lastT = 0;
-  const spawn = (x, y, ch) => {
+  let held = false, lastX = 0, lastY = 0;
+  const spawn = (x, y, ch) => {   // ch: the note's letter
     const z = .55 + Math.random() * .45;
     drops.push({ x: x - 8, y, size: 12 + z * 22, v: 20, ch, bright: Math.random() < .65, z });
   };
+  // tap: one note per tap, at whatever speed you tap. Hold: the song plays on by itself at its normal speed,
+  // each note dropping a letter wherever the pointer is (drag to move where they fall)
+  let holdT = null;
+  const playOn = () => {
+    const n = songNote(); spawn(lastX, lastY, n.ch);
+    holdT = setTimeout(() => { if (held && !$("menu").hidden) playOn(); }, n.dur * 1000);
+  };
+  const stop = () => { held = false; clearTimeout(holdT); holdT = null; };
   $("menu").onpointerdown = e => {
     if ($("menu").hidden || e.target.closest(".menu-box")) return;
-    held = true; lastX = e.clientX; lastY = e.clientY; lastT = performance.now();
-    spawn(e.clientX, e.clientY, songNote());
+    held = true; lastX = e.clientX; lastY = e.clientY; clearTimeout(holdT);
+    playOn();
   };
-  $("menu").onpointermove = e => {
-    if (!held || e.target.closest(".menu-box")) return;
-    const now = performance.now(), moved = Math.hypot(e.clientX - lastX, e.clientY - lastY);
-    if (moved < 28 && now - lastT < 150) return;   // a new note every so often while dragging, so the tune doesn't race
-    lastX = e.clientX; lastY = e.clientY; lastT = now;
-    spawn(e.clientX, e.clientY, songNote());
-  };
-  $("menu").onpointerup = $("menu").onpointercancel = $("menu").onpointerleave = () => { held = false; };
+  $("menu").onpointermove = e => { if (held) { lastX = e.clientX; lastY = e.clientY; } };
+  $("menu").onpointerup = $("menu").onpointercancel = $("menu").onpointerleave = stop;
   const rings = [], pads = Array.from({ length: Math.max(3, Math.round(W / 260)) }, (_, i) => ({ x: (i + .3 + Math.random() * .4) * W / Math.max(3, Math.round(W / 260)), d: .25 + Math.random() * .6, w: 26 + Math.random() * 22 }));
   const stars = Array.from({ length: Math.round(W / 22) }, () => ({ x: Math.random() * W, y: Math.random() * H * .6, p: Math.random() * 6 }));
   const px = (x, y, w, h) => g.fillRect(Math.round(x / 2) * 2, Math.round(y / 2) * 2, Math.round(w / 2) * 2, Math.round(h / 2) * 2);
