@@ -226,7 +226,7 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
 .tile.locked.active { border-color: var(--white); }
 .tile.revealed { background: var(--screen); color: var(--muted); border-style: dashed; border-color: var(--muted); }
 .tile.revealed::after { display: none; }
-/* a fallen letter in the word you're on, faded: still readable, but the square counts as empty until you type over it */
+/* a fallen letter in the word you're on, faded: type over it to replace it, or skip it and it counts as it is */
 .tile.ghost { color: color-mix(in srgb, var(--white) 42%, transparent); text-shadow: none; }
 html.clean .tile.ghost { color: rgba(18, 18, 18, .35); }
 /* compound words: white outline and a steady glow, so they stand out as the big plays */
@@ -2098,16 +2098,16 @@ function render() {
 function select(r, c) {
   if (S.status === "lost" && !busy) { S.row = r; S.seg = segAt(r, c); S.cur = c; render(); return; }   // out of lives: tap any word to read its clue
   if (!playing() || shaking) return; S.started = true; S.row = r; S.seg = segAt(r, c); S.cur = c; render(); }
-/* Letters that fall into a word you haven't solved are hints: in the word you're on they show faded, and you type
-   over them like any other square. A word only counts once every square is typed in (a word whose letters all fell in
-   is already solved). */
+/* Letters that fall into a word you haven't solved are hints: in the word you're on they show faded, and typing walks
+   over them like any other square. Type over one to replace it, or skip past it (arrow keys, space, or just pressing
+   Enter) and it counts as it is. A word whose letters all fell in is already solved. */
 function nextOpen(from, d = 1) {
   const cols = segCols(S.row, S.seg), c = from + d;
   return cols.includes(c) ? c : -1;
 }
 function firstOpen(r, s) {
   const cols = segCols(r, s);
-  return cols.find(c => !S.typed[r][c - X(r)]) ?? cols[0];
+  return cols.find(c => !S.typed[r][c - X(r)] && !isLocked(r, c)) ?? cols.find(c => !S.typed[r][c - X(r)]) ?? cols[0];
 }
 function goToNext() { // the rest of this word first, then the first unsolved piece from the top down
   const k = P[S.row].segs.findIndex((_, i) => !segSolved(S.row, i));
@@ -2160,7 +2160,8 @@ function check() {
     if (!checkQueued) { checkQueued = true; const wait = () => busy || shaking ? setTimeout(wait, 60) : (checkQueued = false, check()); setTimeout(wait, 60); }
     return;
   }
-  const r = S.row, shown = c => S.typed[r][c - X(r)];   // only typed letters count; fallen ones are hints
+  // what's in each square: what you typed, or else a fallen letter you skipped past (it counts as it is)
+  const r = S.row, shown = c => S.typed[r][c - X(r)] || (isLocked(r, c) ? letterAt(r, c) : "");
   if (!segCols(r, S.seg).every(shown)) {
     const k = P[r].segs.findIndex((_, i) => !segSolved(r, i) && segCols(r, i).every(shown));
     if (k >= 0) { S.seg = k; S.cur = firstOpen(r, k); }
@@ -2208,7 +2209,7 @@ function peek() {
   if (!playing() || busy) return;
   const r = S.row, c = S.cur;
   if (isSpecial(r)) { toast("These letters only come from the bar"); return; }
-  if (isLocked(r, c)) { toast("That letter is already showing: type it in"); return; }
+  if (isLocked(r, c)) { toast("That letter is already showing"); return; }
   if (S.misses >= LIVES() - 1) { toast("That would cost your last life"); return; }
   S.locked[r][c - X(r)] = true; S.typed[r][c - X(r)] = letterAt(r, c); S.misses++; S.log.push("h");
   sfx("good");
@@ -2987,7 +2988,7 @@ document.addEventListener("keydown", e => {
   else if (e.key === "Backspace") { back(); e.preventDefault(); }
   else if (e.key === "Enter") { check(); e.preventDefault(); }
   else if (e.key === "ArrowLeft") move(-1);
-  else if (e.key === "ArrowRight") move(1);
+  else if (e.key === "ArrowRight" || e.key === " ") { move(1); e.preventDefault(); }   // space skips a square too
   else if (e.key === "ArrowUp") { moveRow(-1); e.preventDefault(); }
   else if (e.key === "ArrowDown") { moveRow(1); e.preventDefault(); }
 });
