@@ -2856,8 +2856,8 @@ function dropSfx(kind, step) {
   }
   if (kind === "lose") { plip(note(4), 0, .13, .3); plip(note(2), .25, .12, .35); plip(note(0), .55, .12, .5); }
 }
-// tracking down a harsh sound one at a time: right now only "big word cracked" (crack, sound 5) is off
-const SFX_OFF = new Set(["crack"]), SONG_OFF = false;
+// sounds that are switched off (none right now; "crack" was rebuilt after it turned out to be the harsh one)
+const SFX_OFF = new Set(), SONG_OFF = false;
 function sfx(kind, step = 0) {
   if (muted || SFX_OFF.has(kind)) return;
   try {
@@ -2869,10 +2869,10 @@ function sfx(kind, step = 0) {
     // a landing letter: a soft, round "pip" on a pentatonic scale (it used to be a sharp triangle blip that sounded like a drum hit)
     if (kind === "tick") tone([523.25, 587.33, 659.25, 783.99, 880, 1046.5][Math.max(0, step) % 6], 0, .18, "sine", .05, .02);
     if (kind === "bad") tone(170, 0, .22, "square", .05);
-    if (kind === "crack") {   // a bright major fanfare: quick climb, then a held chord
-      [523, 659, 784, 1047].forEach((f, i) => { tone(f, i * .09, .22, "square", .035); tone(f, i * .09, .3, "triangle", .08); });
-      [1047, 1319, 1568].forEach(f => tone(f, .4, 1.1, "triangle", .06));
-      tone(523, .4, 1.1, "square", .025);
+    if (kind === "crack") {   // a soft, warm fanfare: a gentle climb, then a low held chord. (The old one stacked buzzy square
+      // waves on a high chord with hard starts, which came out as a harsh, drum-like hit.)
+      [392, 523.25, 659.25, 783.99].forEach((f, i) => tone(f, i * .1, .32, "sine", .07, .02));
+      [261.63, 392, 523.25].forEach(f => tone(f, .42, 1.2, "sine", .045, .06));
     }
     if (kind === "win") [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .11, .35, "triangle", .09));
     if (kind === "lose") { tone(330, 0, .3, "triangle", .08); tone(247, .22, .5, "triangle", .08); }
@@ -3086,7 +3086,7 @@ const SOUND_TEST = [
   ["Out of lives", "the puzzle is lost", () => sfx("lose")],
   ["Menu song note", "tapping the menu sky", () => { songNote(); }],
 ];
-const sndOff = i => i === 4;   // only "big word cracked" (5) is off (see SFX_OFF)
+const sndOff = () => false;   // every sound is on (see SFX_OFF)
 $("sndGrid").innerHTML = SOUND_TEST.map(([n, d], i) => `<button class="btn" data-snd="${i}"${sndOff(i) ? " disabled" : ""}>${i + 1}. ${n}<small>${sndOff(i) ? "switched off" : d}</small></button>`).join("");
 $("sndGrid").addEventListener("click", e => {
   const b = e.target.closest("[data-snd]"); if (!b) return;
