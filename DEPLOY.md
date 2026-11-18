@@ -108,3 +108,18 @@ Community lists for browsing: `ComposioHQ/awesome-claude-skills` and `travisvn/a
 - [ ] Optional: an automated playthrough test with the webapp-testing skill.
 
 **Heads-up:** saved progress lives in each browser, per site. Progress on the claude.ai version won't carry over to the Vercel site, and progress there won't come back.
+
+## Real player results (the "Better than X%" curve)
+
+When someone finishes a puzzle on playcascade.io, the game sends one anonymous line to `api/results.js`: which board, solved or not, the solve time, and how much of the board was filled in. No names, IDs or IP addresses are stored. The curve and the stats panel blend those real results with a built-in baseline for each puzzle (`BASELINES` in `plumb.html`). With n players, the real numbers count for n / (n + 25), so the baseline fades out after a few dozen finishes. Admin play-testing is never sent.
+
+The API needs a Redis database connected to the Vercel project. Until it has one, it answers 503 and the game quietly uses the baselines.
+
+**Setup (one time, about 2 minutes):**
+1. Open vercel.com, then the Cascade project.
+2. Open the **Storage** tab, click **Create Database**, and choose **Upstash for Redis** (free plan). Name it something like `cascade-results` and pick the region closest to you.
+3. When it asks which project to connect, choose the Cascade project with all environments ticked. This adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` to the project.
+4. Redeploy: **Deployments**, then the newest deployment, then **⋯**, then **Redeploy**. Or just push any change.
+5. Check it: open `https://www.playcascade.io/api/results?p=22`. It should show `{"n":0,"won":{},"lost":{}}`. A "not connected" error means the variables didn't reach the project, so redeploy again.
+
+**When you add a new daily,** give it a line in `BASELINES` with your guess at the share of players who run out of lives and a typical solve time. Boards without one fall back to 30% and 9 minutes.

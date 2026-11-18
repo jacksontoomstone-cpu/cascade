@@ -2424,6 +2424,7 @@ function recordFinish(status) {
   const st = stats();
   if (st.done[idx]) return;   // replays and resets don't count twice
   st.done[idx] = status;
+  sendResult(status);
   if (DAILY.includes(idx) && idx === dailyIdx()) {   // only today's daily moves the streak
     if (status === "won") { st.streak = st.last === dayBefore(today()) ? st.streak + 1 : 1; st.last = today(); st.best = Math.max(st.best, st.streak); }
     else { st.streak = 0; st.last = null; }
@@ -2454,13 +2455,14 @@ function openSideStats() {
     const meta = done ? `${clock(sv.time || 0)} · ${Math.max(0, LIVES() - (sv.misses || 0))}♥` : "";
     // percentile from the same estimated crowd as the finish curve: solves rank by time, misses by how much got filled
     let pct = null;
-    if (done && res === "won") pct = pctText(pOfTime(sv.time || 1));
-    else if (done && sv.locked) { const all = sv.locked.flat(), c = all.filter(Boolean).length / all.length; pct = pctText(CROWD.fail * Math.max(.01, c)); }
+    if (done && res === "won") pct = pctText(pOfTime(sv.time || 1, crowdFor(i)));
+    else if (done && sv.locked) { const all = sv.locked.flat(); pct = pctText(pOfLost(Math.floor(all.filter(Boolean).length / all.length * 100), crowdFor(i))); }
     const cls = `${res}${i === INTRO ? " intro" : ""}${canPlay(i) ? " can" : ""}${i === idx ? " cur" : ""}`;
     return `<li class="${cls}" data-i="${i}" style="--pct:${pct ?? 0}%"><span class="nm">${boardName(i)}</span><span class="tg">${res === "won" ? "Solved" : "Missed"}</span>` +
       `<span class="mt">${meta}</span><span class="pc">${pct == null ? "" : `Better than <b>${pct}%</b>`}</span></li>`;
   }).join("") : '<li><span class="nm">None yet</span></li>';
   $("sideStats").hidden = false;
+  order.forEach(i => fetchCrowd(i, () => { if (!$("sideStats").hidden) openSideStats(); }));   // real percentiles as they arrive
 }
 $("ssList").addEventListener("click", e => {
   const li = e.target.closest("li.can"); if (!li) return;
@@ -2593,25 +2595,82 @@ function shareText() {
   const n = livesLeft();
   return `Cascade ${boardName(idx)}\n${filled()}% · ${clock(S.time)} · ${n} ${n === 1 ? "life" : "lives"} left`;
 }
-/* ---------- finish curve ----------
-   Shown on a win. There's no shared results server yet, so the crowd is modeled: about 30% of players run out of lives,
-   and solve times spread log-normally around a typical time for the board. Your spot is everyone who failed plus every
-   solver slower than you. Swap CROWD for real numbers once results are collected. */
-const CROWD = { fail: .3, median: 9 * 60, spread: .55 };   // share who fail, median solve seconds, log-normal sigma
+/* ---------- the crowd: how everyone else did on a puzzle ----------
+   Each puzzle starts from a baseline guess of how hard it is (BASELINES: share of players who run out of lives, and a
+   typical solve time). As real finishes come in from /api/results, they're blended in: with n players the real numbers
+   count for n / (n + 25), so a handful of results nudges the curve and a few dozen take it over. Your spot on the curve
+   is everyone who ran out of lives plus every solver slower than you. */
+const BASELINES = {   // board index: [share who run out of lives, typical solve time in seconds]
+  18: [.15, 7 * 60],     // intro: gentle clues, and most people have just watched the tutorial
+  19: [.25, 8 * 60],     // Nov 16: lots of fill-in-the-blanks
+  20: [.3, 9 * 60],      // draft
+  21: [.32, 9.5 * 60],   // Nov 17: harder compounds
+  22: [.35, 10 * 60],    // Nov 18
+  23: [.35, 10 * 60],    // Nov 19
+};
+const crowdData = {};   // board index -> { n, won: { "solve time / 10s": count }, lost: { "percent done, in 5s": count } }
+function crowdFor(i) {
+  const [fail, median] = BASELINES[i] || [.3, 9 * 60], h = crowdData[i], n = h?.n || 0;
+  return { fail, median, spread: .55, h: n ? h : null, n, w: n / (n + 25) };
+}
+let CROWD = crowdFor(-1);   // the puzzle the result window is showing
+const sumOf = o => Object.values(o || {}).reduce((a, b) => a + b, 0);
+// real results live behind /api/results on the deployed site (playcascade.io or a Vercel preview); anywhere else
+// (the claude.ai artifact, a local preview) the game just uses the baselines
+const RESULTS_API = /(^|\.)playcascade\.io$|\.vercel\.app$/.test(location.hostname) ? "/api/results" : null;
+// one anonymous line per finished puzzle: which board, solved or not, the time, and how much was filled in
+function sendResult(status) {
+  if (!RESULTS_API || adm() || TUT) return;   // admin play-testing doesn't count
+  const body = JSON.stringify({ p: idx, s: status, t: S.time, c: filled() });
+  try { fetch(RESULTS_API, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {}); } catch {}
+}
+// fetch a puzzle's results (at most once a minute), then call back so the chart or list can redraw with them
+const crowdAsked = {};
+function fetchCrowd(i, then) {
+  if (!RESULTS_API || (crowdAsked[i] && Date.now() - crowdAsked[i] < 60000)) return;
+  crowdAsked[i] = Date.now();
+  fetch(`${RESULTS_API}?p=${i}`).then(r => r.ok ? r.json() : null)
+    .then(h => { if (h && typeof h.n === "number") { crowdData[i] = h; if (then) then(); } }).catch(() => {});
+}
+// share of all players who ran out of lives
+const failShare = (c = CROWD) => c.h ? c.w * sumOf(c.h.lost) / c.n + (1 - c.w) * c.fail : c.fail;
 const erf = x => { const t = 1 / (1 + .3275911 * Math.abs(x)), y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - .284496736) * t + .254829592) * t * Math.exp(-x * x); return x < 0 ? -y : y; };
 const ncdf = z => .5 * (1 + erf(z / Math.SQRT2));
 const pdf = z => Math.exp(-z * z / 2);
 const zOf = p => { let lo = -6, hi = 6; for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; ncdf(m) < p ? lo = m : hi = m; } return (lo + hi) / 2; };
 let curveDrag = null;
-// position on the curve (as a share of all players beaten) <-> solve time, using the CROWD model
-const pOfTime = t => Math.min(.99, Math.max(CROWD.fail + .005, CROWD.fail + (1 - CROWD.fail) * (1 - ncdf(Math.log(Math.max(1, t) / CROWD.median) / CROWD.spread))));
-const timeOfP = p => CROWD.median * Math.exp(CROWD.spread * zOf(1 - (p - CROWD.fail) / (1 - CROWD.fail)));
+// share of players a solve in t seconds beats: everyone who failed, plus every solver who was slower
+function pOfTime(t, c = CROWD) {
+  t = Math.max(1, t);
+  let p = c.fail + (1 - c.fail) * (1 - ncdf(Math.log(t / c.median) / c.spread));
+  if (c.h) {
+    const b = Math.floor(t / 10);
+    const slower = Object.entries(c.h.won).reduce((a, [k, v]) => a + (+k > b ? v : +k === b ? v / 2 : 0), 0);
+    p = c.w * (sumOf(c.h.lost) + slower) / c.n + (1 - c.w) * p;
+  }
+  return Math.min(.99, Math.max(failShare(c) + .005, p));
+}
+// share of players a board that ran out of lives at pct% done beats: everyone else who failed with less filled in
+function pOfLost(pct, c = CROWD) {
+  let p = c.fail * Math.max(.01, pct / 100);
+  if (c.h) {
+    const below = Object.entries(c.h.lost).reduce((a, [k, v]) => a + (+k < pct ? v : +k === pct ? v / 2 : 0), 0);
+    p = c.w * below / c.n + (1 - c.w) * p;
+  }
+  return Math.max(.001, Math.min(failShare(c) - .001, p));
+}
+// and back again, for dragging the dot: the time (or percent done) that sits at a given share
+const timeOfP = (p, c = CROWD) => { let lo = 5, hi = 7200; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; pOfTime(m, c) > p ? lo = m : hi = m; } return (lo + hi) / 2; };
+const cOfP = (p, c = CROWD) => { let lo = 0, hi = 100; for (let i = 0; i < 30; i++) { const m = (lo + hi) / 2; pOfLost(m, c) < p ? lo = m : hi = m; } return (lo + hi) / 2; };
 const pctText = p => Math.min(99, Math.floor(p * 100));   // never "better than 100%"
 function drawCurve() {
   const fig = $("resCurve");
   if (S.status !== "won") { fig.hidden = true; return; }
   const W = 320, B = 78, X = z => (z + 3) / 6 * W, Y = z => B - pdf(z) * (B - 8), Z = x => x / W * 6 - 3;
-  const zf = zOf(CROWD.fail), zMax = 2.85;
+  CROWD = crowdFor(idx);
+  const n = CROWD.n;
+  $("resHint").textContent = `Drag the dot to try other finishes · ${n ? `${n} player${n === 1 ? "" : "s"} so far` : "estimated"}`;
+  const zf = zOf(failShare()), zMax = 2.85;
   const own = Math.max(1, S.time), ownZ = Math.min(zMax, zOf(pOfTime(own)));
   const edge = (a, b) => { let d = ""; for (let z = a; z <= b + 1e-9; z += .05) d += `${d ? " L" : "M"}${X(z).toFixed(1)} ${Y(z).toFixed(1)}`; return d; };
   const area = (a, b) => `${edge(a, b)} L${X(b).toFixed(1)} ${B} L${X(a).toFixed(1)} ${B} Z`;
@@ -2641,10 +2700,10 @@ function drawCurve() {
 // drag (or arrow keys) along the curve: on the solved side it shows how a faster or slower time would rank (10-second steps);
 // in the red "out of lives" side it shows how far a board got before the lives ran out (5% steps)
 {
-  const svg = $("resCurveSvg"), F = () => CROWD.fail;
+  const svg = $("resCurveSvg"), F = () => failShare();
   const at = e => {
     const r = svg.getBoundingClientRect(), z = Math.max(-2.85, Math.min(2.85, (e.clientX - r.left) / r.width * 6 - 3));
-    return z < zOf(F()) ? { c: ncdf(z) / F() * 100 } : { t: timeOfP(ncdf(z)) };
+    return z < zOf(F()) ? { c: cOfP(ncdf(z)) } : { t: timeOfP(ncdf(z)) };
   };
   let dragging = false;
   const redraw = pos => { if (curveDrag) drawCurveAt(pos); };
@@ -2664,11 +2723,11 @@ function drawCurve() {
 function drawCurveAt(pos) {
   // re-place just the handle, keeping the chart and the gold dot
   const W = 320, B = 78, X = z => (z + 3) / 6 * W, Y = z => B - pdf(z) * (B - 8);
-  const zf = zOf(CROWD.fail), own = curveDrag.own, svg = $("resCurveSvg");
+  const zf = zOf(failShare()), own = curveDrag.own, svg = $("resCurveSvg");
   let p, z, lbl, cap, txt;
   if (pos.c != null) {   // out of lives, some share of the board filled
     const c = Math.max(0, Math.min(95, Math.round(pos.c / 5) * 5));
-    p = CROWD.fail * Math.max(.01, c / 100); z = Math.max(-2.85, Math.min(zf - .01, zOf(p)));
+    p = pOfLost(c); z = Math.max(-2.85, Math.min(zf - .01, zOf(p)));
     curveDrag.c = c; curveDrag.t = null;
     lbl = `${c}%`; cap = `<b>${c}%</b> done, out of lives: better than <b>${pctText(p)}%</b>`; txt = `out of lives at ${c}% complete`;
   } else {
@@ -2698,6 +2757,8 @@ function showResult() {
   $("resLives").textContent = `${livesLeft()}/${LIVES()}`;
   $("nextBtn").textContent = "Next puzzle";
   drawCurve();
+  const shown = idx;
+  fetchCrowd(idx, () => { if (!$("resultModal").hidden && idx === shown) drawCurve(); });   // redraw with real results once they arrive
   $("resultModal").hidden = false;
   requestAnimationFrame(() => requestAnimationFrame(() => { $("resFill").style.width = pct + "%"; }));
 }
