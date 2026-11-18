@@ -2917,8 +2917,8 @@ function dropSfx(kind, step) {
   }
   if (kind === "lose") { plip(note(4), 0, .13, .3); plip(note(2), .25, .12, .35); plip(note(0), .55, .12, .5); }
 }
-// sounds that are switched off (none right now; "crack" was rebuilt after it turned out to be the harsh one)
-const SFX_OFF = new Set(), SONG_OFF = false;
+// sounds that are switched off: "crack" (big word cracked, sound 5) still made the harsh hit even after it was rebuilt softer
+const SFX_OFF = new Set(["crack"]), SONG_OFF = false;
 function sfx(kind, step = 0) {
   if (muted || SFX_OFF.has(kind)) return;
   try {
@@ -3147,7 +3147,7 @@ const SOUND_TEST = [
   ["Out of lives", "the puzzle is lost", () => sfx("lose")],
   ["Menu song note", "tapping the menu sky", () => { songNote(); }],
 ];
-const sndOff = () => false;   // every sound is on (see SFX_OFF)
+const sndOff = i => i === 4;   // "big word cracked" (5) is off (see SFX_OFF)
 $("sndGrid").innerHTML = SOUND_TEST.map(([n, d], i) => `<button class="btn" data-snd="${i}"${sndOff(i) ? " disabled" : ""}>${i + 1}. ${n}<small>${sndOff(i) ? "switched off" : d}</small></button>`).join("");
 $("sndGrid").addEventListener("click", e => {
   const b = e.target.closest("[data-snd]"); if (!b) return;
