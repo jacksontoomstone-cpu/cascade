@@ -226,9 +226,9 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
 .tile.locked.active { border-color: var(--white); }
 .tile.revealed { background: var(--screen); color: var(--muted); border-style: dashed; border-color: var(--muted); }
 .tile.revealed::after { display: none; }
-/* an earlier guess, faded: still readable, but the square counts as empty until you type over it */
-.tile.ghost { color: var(--muted); opacity: .45; text-shadow: none; }
-html.clean .tile.ghost { color: #9a9ea2; opacity: 1; }
+/* a fallen letter in the word you're on, faded: still readable, but the square counts as empty until you type over it */
+.tile.ghost { color: color-mix(in srgb, var(--white) 42%, transparent); text-shadow: none; }
+html.clean .tile.ghost { color: rgba(18, 18, 18, .35); }
 /* compound words: white outline and a steady glow, so they stand out as the big plays */
 .tile.cmp { border: 3px solid var(--white); box-shadow: 0 0 0 1px hsl(0 0% 0% / .6), 0 0 12px 2px hsl(0 0% 100% / .7); }
 .tile.cmp::after { background: var(--white); height: 8px; top: calc(50% - 4px); }
@@ -2050,17 +2050,18 @@ function render() {
     const t = tiles[r][c], j = c - X(r), s = segAt(r, c), g = P[r].segs[s];
     const lock = S.locked[r][j] && !pending.has(cellKey(r, c));
     const revealed = !playing() && !S.locked[r][j];
-    const ghost = !lock && !revealed && !S.typed[r][j] && S.ghost?.[r]?.[j] ? S.ghost[r][j] : "";   // a faded earlier guess
-    const L = lock || revealed ? W(r)[j] : S.typed[r][j] || ghost;
     const sel = r === S.row && s === S.seg && (playing() || S.status === "lost");
+    // a fallen letter in the word you're on is a hint: faded until you type over it
+    const hint = lock && sel && playing() && !segSolved(r, s), ghost = hint && !S.typed[r][j];
+    const L = hint ? S.typed[r][j] || W(r)[j] : lock || revealed ? W(r)[j] : S.typed[r][j];
     t.textContent = L;
     t.className = "tile heat" + (isCompound(r) ? " cmp" : "") + (j === g.a ? " first" : "") + (j === g.b - 1 ? " last" : "") +
-      (lock ? " locked" : revealed ? " revealed" : "") + (sel ? " active" : "") +
+      (lock && !hint ? " locked" : revealed ? " revealed" : "") + (sel ? " active" : "") +
       (sel && playing() && c === S.cur && !segSolved(r, s) ? " cur" : "") +
-      (isSpecial(r) ? " pwt" : "") + (isSpecial(r) && lock && !crackedOf(r) ? " imprint" : "") +
+      (isSpecial(r) ? " pwt" : "") + (isSpecial(r) && lock && !hint && !crackedOf(r) ? " imprint" : "") +
       (litCells.has(cellKey(r, c)) ? " lit" : "") + (hotCells.has(cellKey(r, c)) ? " hot" : "") + (slapping.has(cellKey(r, c)) ? " await" : "") +
       (ghost ? " ghost" : "");
-    t.setAttribute("aria-label", `Word ${r + 1}, letter ${j - g.a + 1}${ghost ? `, empty (earlier guess ${ghost})` : L ? ", " + L : ", empty"}`);
+    t.setAttribute("aria-label", `Word ${r + 1}, letter ${j - g.a + 1}${ghost ? `, empty (hint ${L})` : L ? ", " + L : ", empty"}`);
   }));
   const r = S.row, s = S.seg, g = P[r].segs[s];
   paint($("clue"), r);
@@ -2096,28 +2097,17 @@ function render() {
 /* ---------- input ---------- */
 function select(r, c) {
   if (S.status === "lost" && !busy) { S.row = r; S.seg = segAt(r, c); S.cur = c; render(); return; }   // out of lives: tap any word to read its clue
-  if (!playing() || shaking) return;
-  const sg = segAt(r, c), moved = r !== S.row || sg !== S.seg;
-  S.started = true; S.row = r; S.seg = sg; S.cur = c;
-  // coming back to a word with letters you typed earlier: they fade to faint hints, and you type the word in again
-  // from its first open square (locked letters stay as they are)
-  if (moved) {
-    const open = segCols(r, sg).filter(cc => !isLocked(r, cc));
-    if (open.some(cc => S.typed[r][cc - X(r)])) {
-      S.ghost = S.ghost || P.map(p => Array(p.w.length).fill(""));
-      open.forEach(cc => { const j = cc - X(r); if (S.typed[r][j]) { S.ghost[r][j] = S.typed[r][j]; S.typed[r][j] = ""; } });
-      S.cur = open[0]; save();
-    }
-  }
-  render(); }
+  if (!playing() || shaking) return; S.started = true; S.row = r; S.seg = segAt(r, c); S.cur = c; render(); }
+/* Letters that fall into a word you haven't solved are hints: in the word you're on they show faded, and you type
+   over them like any other square. A word only counts once every square is typed in (a word whose letters all fell in
+   is already solved). */
 function nextOpen(from, d = 1) {
-  const cols = segCols(S.row, S.seg);
-  for (let c = from + d; cols.includes(c); c += d) if (!isLocked(S.row, c)) return c;
-  return -1;
+  const cols = segCols(S.row, S.seg), c = from + d;
+  return cols.includes(c) ? c : -1;
 }
 function firstOpen(r, s) {
   const cols = segCols(r, s);
-  return cols.find(c => !isLocked(r, c) && !S.typed[r][c - X(r)]) ?? cols.find(c => !isLocked(r, c)) ?? cols[0];
+  return cols.find(c => !S.typed[r][c - X(r)]) ?? cols[0];
 }
 function goToNext() { // the rest of this word first, then the first unsolved piece from the top down
   const k = P[S.row].segs.findIndex((_, i) => !segSolved(S.row, i));
@@ -2129,8 +2119,7 @@ function goToNext() { // the rest of this word first, then the first unsolved pi
 function type(ch) {
   if (!playing() || shaking || segSolved(S.row, S.seg)) return;
   S.started = true;
-  let c = S.cur;
-  if (isLocked(S.row, c)) { c = nextOpen(c); if (c < 0) return; }
+  const c = S.cur;
   S.typed[S.row][c - X(S.row)] = ch;
   const n = nextOpen(c);
   S.cur = n >= 0 ? n : c;
@@ -2143,14 +2132,14 @@ function type(ch) {
 function back() {
   if (!playing() || shaking) return;
   const r = S.row, c = S.cur;
-  if (!isLocked(r, c) && S.typed[r][c - X(r)]) S.typed[r][c - X(r)] = "";
+  if (S.typed[r][c - X(r)]) S.typed[r][c - X(r)] = "";
   else {
     const p = nextOpen(c, -1);
     if (p >= 0) { S.typed[r][p - X(r)] = ""; S.cur = p; }
     else {   // start of a half: step back into the previous unsolved half
       const k = P[r].segs.map((_, i) => i).filter(i => i < S.seg && !segSolved(r, i)).pop();
       if (k !== undefined) {
-        const open = segCols(r, k).filter(cc => !isLocked(r, cc)), q = open[open.length - 1];
+        const open = segCols(r, k), q = open[open.length - 1];
         S.seg = k; S.cur = q; S.typed[r][q - X(r)] = "";
       }
     }
@@ -2171,7 +2160,7 @@ function check() {
     if (!checkQueued) { checkQueued = true; const wait = () => busy || shaking ? setTimeout(wait, 60) : (checkQueued = false, check()); setTimeout(wait, 60); }
     return;
   }
-  const r = S.row, shown = c => isLocked(r, c) ? letterAt(r, c) : S.typed[r][c - X(r)];
+  const r = S.row, shown = c => S.typed[r][c - X(r)];   // only typed letters count; fallen ones are hints
   if (!segCols(r, S.seg).every(shown)) {
     const k = P[r].segs.findIndex((_, i) => !segSolved(r, i) && segCols(r, i).every(shown));
     if (k >= 0) { S.seg = k; S.cur = firstOpen(r, k); }
@@ -2200,15 +2189,15 @@ function check() {
   } else {
     S.misses++; S.log.push("x");
     sfx("bad");
-    cols.filter(c => !isLocked(r, c)).forEach(c => { const t = tiles[r][c]; t.classList.remove("wrong"); void t.offsetWidth; t.classList.add("wrong"); });
+    cols.forEach(c => { const t = tiles[r][c]; t.classList.remove("wrong"); void t.offsetWidth; t.classList.add("wrong"); });
     if (S.misses >= LIVES()) { setTimeout(lose, 450); return; }
     const left = LIVES() - S.misses;
     toast(`Not ${guess}. ${left} ${left === 1 ? "life" : "lives"} left`);
     busy = shaking = true; save();
     setTimeout(() => {
       busy = shaking = false;
-      cols.forEach(c => { if (!isLocked(r, c)) S.typed[r][c - X(r)] = ""; });
-      S.cur = firstOpen(r, s);
+      cols.forEach(c => { S.typed[r][c - X(r)] = ""; });
+      S.cur = cols[0];
       render(); save();
     }, 450);
   }
@@ -2219,9 +2208,9 @@ function peek() {
   if (!playing() || busy) return;
   const r = S.row, c = S.cur;
   if (isSpecial(r)) { toast("These letters only come from the bar"); return; }
-  if (isLocked(r, c)) { toast("That letter is already locked in"); return; }
+  if (isLocked(r, c)) { toast("That letter is already showing: type it in"); return; }
   if (S.misses >= LIVES() - 1) { toast("That would cost your last life"); return; }
-  S.locked[r][c - X(r)] = true; S.misses++; S.log.push("h");
+  S.locked[r][c - X(r)] = true; S.typed[r][c - X(r)] = letterAt(r, c); S.misses++; S.log.push("h");
   sfx("good");
   drop(r, [c]);
 }
