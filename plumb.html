@@ -2856,8 +2856,8 @@ function dropSfx(kind, step) {
   }
   if (kind === "lose") { plip(note(4), 0, .13, .3); plip(note(2), .25, .12, .35); plip(note(0), .55, .12, .5); }
 }
-// switched off while tracking down a harsh sound: big word cracked, puzzle solved, out of lives, and the menu song
-const SFX_OFF = new Set(["crack", "win", "lose"]), SONG_OFF = true;
+// every game sound is on; only the menu (home screen) song stays off
+const SFX_OFF = new Set(), SONG_OFF = true;
 function sfx(kind, step = 0) {
   if (muted || SFX_OFF.has(kind)) return;
   try {
@@ -3086,7 +3086,7 @@ const SOUND_TEST = [
   ["Out of lives", "the puzzle is lost", () => sfx("lose")],
   ["Menu song note", "tapping the menu sky", () => { songNote(); }],
 ];
-const sndOff = i => i >= 4;   // sounds 5-8 are switched off for now (see SFX_OFF and SONG_OFF)
+const sndOff = i => i === 7;   // only the menu song (8) is off (see SONG_OFF)
 $("sndGrid").innerHTML = SOUND_TEST.map(([n, d], i) => `<button class="btn" data-snd="${i}"${sndOff(i) ? " disabled" : ""}>${i + 1}. ${n}<small>${sndOff(i) ? "switched off" : d}</small></button>`).join("");
 $("sndGrid").addEventListener("click", e => {
   const b = e.target.closest("[data-snd]"); if (!b) return;
@@ -3425,6 +3425,7 @@ function openMenu() {
   $("menuPlay").className = first ? "btn dim" : "btn primary";
   $("menuSub").textContent = dailyIdx() !== null ? `Daily word puzzle · ${dayLabel()}` : "Daily word puzzle";
   songAt = 0; $("menuSong").innerHTML = `<span class="note">♪</span> Tap the sky to play ${seasonSong().name}`;
+  $("menuSong").hidden = SONG_OFF;   // no song caption while the menu song is switched off
   $("menu").hidden = false; skyStart();
   setTimeout(() => $("menuPlay").focus({ preventScroll: true }), 50);
 }
