@@ -226,6 +226,9 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; 
 .tile.locked.active { border-color: var(--white); }
 .tile.revealed { background: var(--screen); color: var(--muted); border-style: dashed; border-color: var(--muted); }
 .tile.revealed::after { display: none; }
+/* an earlier guess, faded: still readable, but the square counts as empty until you type over it */
+.tile.ghost { color: var(--muted); opacity: .45; text-shadow: none; }
+html.clean .tile.ghost { color: #9a9ea2; opacity: 1; }
 /* compound words: white outline and a steady glow, so they stand out as the big plays */
 .tile.cmp { border: 3px solid var(--white); box-shadow: 0 0 0 1px hsl(0 0% 0% / .6), 0 0 12px 2px hsl(0 0% 100% / .7); }
 .tile.cmp::after { background: var(--white); height: 8px; top: calc(50% - 4px); }
@@ -2047,15 +2050,17 @@ function render() {
     const t = tiles[r][c], j = c - X(r), s = segAt(r, c), g = P[r].segs[s];
     const lock = S.locked[r][j] && !pending.has(cellKey(r, c));
     const revealed = !playing() && !S.locked[r][j];
-    const L = lock || revealed ? W(r)[j] : S.typed[r][j];
+    const ghost = !lock && !revealed && !S.typed[r][j] && S.ghost?.[r]?.[j] ? S.ghost[r][j] : "";   // a faded earlier guess
+    const L = lock || revealed ? W(r)[j] : S.typed[r][j] || ghost;
     const sel = r === S.row && s === S.seg && (playing() || S.status === "lost");
     t.textContent = L;
     t.className = "tile heat" + (isCompound(r) ? " cmp" : "") + (j === g.a ? " first" : "") + (j === g.b - 1 ? " last" : "") +
       (lock ? " locked" : revealed ? " revealed" : "") + (sel ? " active" : "") +
       (sel && playing() && c === S.cur && !segSolved(r, s) ? " cur" : "") +
       (isSpecial(r) ? " pwt" : "") + (isSpecial(r) && lock && !crackedOf(r) ? " imprint" : "") +
-      (litCells.has(cellKey(r, c)) ? " lit" : "") + (hotCells.has(cellKey(r, c)) ? " hot" : "") + (slapping.has(cellKey(r, c)) ? " await" : "");
-    t.setAttribute("aria-label", `Word ${r + 1}, letter ${j - g.a + 1}${L ? ", " + L : ", empty"}`);
+      (litCells.has(cellKey(r, c)) ? " lit" : "") + (hotCells.has(cellKey(r, c)) ? " hot" : "") + (slapping.has(cellKey(r, c)) ? " await" : "") +
+      (ghost ? " ghost" : "");
+    t.setAttribute("aria-label", `Word ${r + 1}, letter ${j - g.a + 1}${ghost ? `, empty (earlier guess ${ghost})` : L ? ", " + L : ", empty"}`);
   }));
   const r = S.row, s = S.seg, g = P[r].segs[s];
   paint($("clue"), r);
@@ -2091,7 +2096,20 @@ function render() {
 /* ---------- input ---------- */
 function select(r, c) {
   if (S.status === "lost" && !busy) { S.row = r; S.seg = segAt(r, c); S.cur = c; render(); return; }   // out of lives: tap any word to read its clue
-  if (!playing() || shaking) return; S.started = true; S.row = r; S.seg = segAt(r, c); S.cur = c; render(); }
+  if (!playing() || shaking) return;
+  const sg = segAt(r, c), moved = r !== S.row || sg !== S.seg;
+  S.started = true; S.row = r; S.seg = sg; S.cur = c;
+  // coming back to a word with letters you typed earlier: they fade to faint hints, and you type the word in again
+  // from its first open square (locked letters stay as they are)
+  if (moved) {
+    const open = segCols(r, sg).filter(cc => !isLocked(r, cc));
+    if (open.some(cc => S.typed[r][cc - X(r)])) {
+      S.ghost = S.ghost || P.map(p => Array(p.w.length).fill(""));
+      open.forEach(cc => { const j = cc - X(r); if (S.typed[r][j]) { S.ghost[r][j] = S.typed[r][j]; S.typed[r][j] = ""; } });
+      S.cur = open[0]; save();
+    }
+  }
+  render(); }
 function nextOpen(from, d = 1) {
   const cols = segCols(S.row, S.seg);
   for (let c = from + d; cols.includes(c); c += d) if (!isLocked(S.row, c)) return c;
