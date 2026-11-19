@@ -744,6 +744,7 @@ html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; colo
     <div class="icons">
       <button class="icon-btn text-btn" id="unlimBtn">Unlimited</button>
       <button class="icon-btn color-btn" id="colorBtn" aria-label="Board color" hidden><i></i></button>
+      <button class="icon-btn" id="pauseBtn" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg></button>
       <button class="icon-btn" id="statsBtn" aria-label="Statistics"><svg viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-9"/></svg></button>
       <button class="icon-btn" id="soundBtn" aria-label="Sound on"><svg viewBox="0 0 24 24" id="soundIcon"></svg></button>
       <button class="icon-btn" id="helpBtn" aria-label="How to play"><svg viewBox="0 0 24 24"><path d="M9.2 9a3 3 0 1 1 4.3 2.7c-.9.5-1.5 1.2-1.5 2.3M12 17.5v.01"/></svg></button>
@@ -3536,8 +3537,10 @@ function skyStart() {
   if (calm()) { if (!clean) { g.fillStyle = deep; g.fillRect(0, 0, W, H); } draw(0); return; }
   requestAnimationFrame(frame);
 }
-function openMenu() {
+let pausedIdx = null;   // set while the menu is up because you paused a puzzle: Play becomes Resume and takes you back to it
+function openMenu(pause = false) {
   closeModals();
+  pausedIdx = pause && S && playing() ? idx : null;
   // first visit: "Play tutorial" is the lit button and plain Play is dimmed; after that it's Play first
   const TUT_FIRST = false;   // off for now: everyone gets plain Play + Tutorial until the tutorial is ready to lead with
   const first = TUT_FIRST && !store.get("cx-tut");
@@ -3545,6 +3548,11 @@ function openMenu() {
   $("menuPlay").textContent = first ? "Play without tutorial" : dailyIdx() !== null ? "Play daily" : "Play";
   $("menuPlay").className = first ? "btn dim" : "btn primary";
   $("menuSub").textContent = dailyIdx() !== null ? `Daily word puzzle · ${dayLabel()}` : "Daily word puzzle";
+  if (pausedIdx !== null) {
+    $("menuTut").hidden = true; $("menuHow").hidden = false;
+    $("menuPlay").textContent = "Resume"; $("menuPlay").className = "btn primary";
+    $("menuSub").textContent = `Paused at ${clock(S.time)}`;
+  }
   songAt = 0; $("menuSong").innerHTML = `<span class="note">♪</span> Tap the sky to play ${seasonSong().name}`;
   $("menuSong").hidden = SONG_OFF;   // no song caption while the menu song is switched off
   $("menu").hidden = false; skyStart();
@@ -3563,12 +3571,18 @@ $("menuMode").addEventListener("click", () => {
 });
 const closeMenu = () => { $("menu").hidden = true; skyRun++; };
 $("menuPlay").addEventListener("click", () => {
+  if (pausedIdx !== null) {   // back into the paused puzzle; the clock picks up as soon as the menu is gone
+    const back = pausedIdx; pausedIdx = null; closeMenu();
+    if (idx !== back) load(back);
+    return;
+  }
   store.set("cx-tut", 1); closeMenu();
   // Play goes straight to today's daily: skipping the tutorial never strands anyone on the intro
   const d = dailyIdx();
   if (d !== null && idx !== d) load(d);
   if (allDone() && paywall()) return;
 });
+$("pauseBtn").addEventListener("click", () => openMenu(true));
 $("menuTut").addEventListener("click", () => { store.set("cx-tut", 1); closeMenu(); runTutorial(); });
 $("menuHow").addEventListener("click", () => { if (store.get("cx-tut-done")) return replayTutorial(); closeMenu(); runTutorial(); });
 $("menuStats").addEventListener("click", () => { closeMenu(); openStats(); });
@@ -3594,7 +3608,7 @@ $("burger").addEventListener("click", () => setDrawer($("drawer").hidden));
 $("drawerScrim").addEventListener("click", () => setDrawer(false));
 $("drawerClose").addEventListener("click", () => setDrawer(false));
 // buttons that act on the board or open something else close the drawer; sound, color and Give up keep it open
-["checkBtn", "letterBtn", "prev", "next", "unlimBtn", "statsBtn", "helpBtn"].forEach(id => $(id).addEventListener("click", () => setDrawer(false)));
+["checkBtn", "letterBtn", "prev", "next", "unlimBtn", "pauseBtn", "statsBtn", "helpBtn"].forEach(id => $(id).addEventListener("click", () => setDrawer(false)));
 document.querySelector("header h1").addEventListener("click", e => { if (!e.target.closest("#adminBadge")) setDrawer(false); });
 phone.addEventListener?.("change", placeChrome);
 placeChrome();
