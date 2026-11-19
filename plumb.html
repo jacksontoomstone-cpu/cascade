@@ -1528,6 +1528,48 @@ const PUZZLES = [
     ["STRAW|BERRY", 1, 10, ["Scarecrow stuffing", "Chuck of rock and roll"], "Seeds on the outside"],
     ["ASTRONOMER", 0, 1, ["Looks up for a living."], "side"],
   ],
+  [
+    ["ACCOMPLISHMENT", 0, 0, ["Feather in one's cap."], ""],
+    ["PEPPER|MINT", 4, 1, ["Ghost ___ (hot)", "Coin factory"], "Striped candy flavor"],
+    ["ECHO", 0, 2, ["'Helloooo… hellooo… hello…'"], ""],
+    ["CHECK|MATE", 5, 2, ["Hockey hit", "Aussie pal"], "Game over"],
+    ["CRATER", 1, 3, ["Meteor impact"], ""],
+    ["BALLOT", 8, 3, ["Mail-in vote"], ""],
+    ["COMPASS", 1, 4, ["Hiker's needle"], ""],
+    ["ALIBI", 9, 4, ["Proof you were elsewhere"], ""],
+    ["OTTER", 0, 5, ["Hand-holding floater"], ""],
+    ["FOOT|NOTE", 6, 5, ["___ the bill", "Do, re or mi"], "Fine print, often"],
+    ["MAESTRO", 0, 6, ["Symphony's leader"], ""],
+    ["SAFARI", 8, 6, ["Apple's browser"], ""],
+    ["BUTTER|FLY", 0, 7, ["___ up (flatter)", "Zip up your ___, bro"], "Stroke"],
+    ["FIRE|PLACE", 1, 8, ["Prometheus's theft", "Location"], "Stockings' spot"],
+    ["LASSO", 0, 9, ["Rope in, literally"], ""],
+    ["MIRAGE", 6, 9, ["Oasis that isn't there"], ""],
+    ["SNOW|BALL", 0, 10, ["TV static, once", "Not a strike or foul"], "Grow out of control"],
+    ["TANGO", 9, 10, ["It takes two"], ""],
+    ["HESITATION", 0, 1, ["Cold feet."], "side"],
+  ],
+  [
+    ["RESPONSIBILITY", 0, 0, ["Ball in your court."], ""],
+    ["PLACEBO", 0, 1, ["Trial's dud pill"], ""],
+    ["STATIC", 8, 1, ["Dryer's cling"], ""],
+    ["LEDGER", 0, 2, ["Heath of 'The Dark Knight'"], ""],
+    ["SPHINX", 8, 2, ["Giza's riddler"], ""],
+    ["SCARE|CROW", 2, 3, ["Jump ___ (horror trope)", "Gloat"], "Stuffed sentry"],
+    ["PARROT", 0, 4, ["Repeat mindlessly"], ""],
+    ["POP|CORN", 7, 4, ["Soda, in Ohio", "Fall maze material"], "Bucket filler"],
+    ["ANTHEM", 0, 5, ["Pregame song"], ""],
+    ["DONUT", 8, 5, ["Homer's weakness"], ""],
+    ["BACK|PACK", 1, 6, ["Endorse, as a candidate", "Cub Scout unit"], "Hiker's load"],
+    ["TOGA", 10, 6, ["Frat party bedsheet"], ""],
+    ["SPOT|LIGHT", 2, 7, ["Dalmatian's mark", "Diet, on a beer can"], "Center stage"],
+    ["EMBER", 1, 8, ["Campfire's last glow"], ""],
+    ["MANTIS", 7, 8, ["Prayerful predator"], ""],
+    ["CROSS|WORD", 2, 9, ["Ill-tempered", "Scrabble play"], "Daily grid"],
+    ["EYE|BROW", 1, 10, ["Hurricane's calm center", "Sweat of one's ___"], "Raised in doubt"],
+    ["KAYAK", 9, 10, ["Palindromic boat"], ""],
+    ["TEMPTATION", 0, 1, ["Forbidden fruit."], "side"],
+  ],
 ];
 const CFG = window.CASCADE_CONFIG || {};   // set at build time on Vercel (see build.sh); defaults when run anywhere else
 const LIVES = () => CFG.lives || 5;
@@ -1535,8 +1577,8 @@ const SAVE = "plumb15-";   // bumped from plumb14- to clear everyone's old progr
 // Players see two boards: the intro, which never changes, and today's daily. Every other board is archived (no way to reach it).
 const INTRO = 18;
 const DAILY_START = "2026-11-16";   // the first day with a daily puzzle
-const DAILY = [19, 21, 22, 23];                 // board for each day from DAILY_START; add one index per new day
-const DRAFTS = [20];                            // finished boards waiting for a day (not playable until moved into DAILY)
+const DAILY = [19, 21, 22, 23, 24];                 // board for each day from DAILY_START; add one index per new day
+const DRAFTS = [20, 25];                          // finished boards waiting for a day (not playable until moved into DAILY)
 const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const today = () => window.CASCADE_TODAY || dayKey(new Date());   // the player's own calendar day
 function dailyIdx() {
@@ -2617,6 +2659,8 @@ const BASELINES = {   // board index: [share who run out of lives, typical solve
   21: [.32, 9.5 * 60],   // Nov 17: harder compounds
   22: [.35, 10 * 60],    // Nov 18
   23: [.35, 10 * 60],    // Nov 19
+  24: [.4, 11 * 60],     // Nov 20: harder clues
+  25: [.4, 11 * 60],     // Nov 21: harder clues
 };
 const crowdData = {};   // board index -> { n, won: { "solve time / 10s": count }, lost: { "percent done, in 5s": count } }
 function crowdFor(i) {
