@@ -2908,7 +2908,7 @@ function dropNote(f, len) {
     g.gain.exponentialRampToValueAtTime(.0001, t + d);
     o.connect(g).connect(out()); o.start(t); o.stop(t + d + .05);
   });
-  splash(0, .018, .16, 2400);
+  hiss(0, .018, .16, 2400);
 }
 /* ---------- water-drop sounds ----------
    Every sound is a drop: a sine "plip" whose pitch jumps up as it hits the water, plus a soft hiss of filtered noise for splashes.
@@ -2927,7 +2927,9 @@ function plip(f, at = 0, vol = .16, len = .16) {
   o.connect(g).connect(out()); o.start(t); o.stop(t + len + .05);
 }
 let noiseBuf = null;
-function splash(at = 0, vol = .08, len = .35, freq = 1400) {
+// named hiss, not splash: a second function called splash replaced the pond's splash(x, y), so every letter
+// landing in the pond fired a burst of noise minutes later at hundreds of times full volume (the "zap")
+function hiss(at = 0, vol = .08, len = .35, freq = 1400) {
   if (!voice(at + len)) return;
   if (!noiseBuf) {
     noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
@@ -2944,7 +2946,7 @@ function thunk(at = 0) {   // a wrong guess: a dull, low drop into deep water
   o.type = "sine"; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(70, t + .22);
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.22, t + .008); g.gain.exponentialRampToValueAtTime(.0001, t + .28);
   o.connect(g).connect(out()); o.start(t); o.stop(t + .33);
-  splash(at, .05, .18, 500);
+  hiss(at, .05, .18, 500);
 }
 /* ---------- wood and marimba sounds ----------
    A marimba bar: a warm sine fundamental plus its 4th and 10th partials, which die away fast, the way a struck wooden bar rings.
@@ -2984,21 +2986,21 @@ function woodSfx(kind, step) {
 function dropSfx(kind, step) {
   const note = i => DROP_SCALE[Math.max(0, Math.min(DROP_SCALE.length - 1, i))];
   if (kind === "tick") plip(note(step) * (.97 + Math.random() * .06), 0, .13, .13);   // each landing letter, a little higher down the column
-  if (kind === "good") { plip(note(2), 0, .15); plip(note(5), .07, .13); splash(.03, .05, .3); }
+  if (kind === "good") { plip(note(2), 0, .15); plip(note(5), .07, .13); hiss(.03, .05, .3); }
   if (kind === "bad") thunk();
   if (kind === "crack") {   // a big splash and a rising cascade of drops
-    splash(0, .12, .7, 1800);
+    hiss(0, .12, .7, 1800);
     for (let i = 0; i < 10; i++) plip(note(i) * (.98 + Math.random() * .04), .06 + i * .065, .12, .2);
     [5, 7, 9].forEach((k, i) => plip(note(k), .8 + i * .02, .08, .5));
   }
   if (kind === "win") {     // bubbles rising to the surface
     for (let i = 0; i < 12; i++) plip(note(2 + (i * 7) % 8) * (1 + Math.random() * .08), i * .07 + Math.random() * .03, .1, .12);
-    splash(.85, .06, .5, 2200);
+    hiss(.85, .06, .5, 2200);
   }
   if (kind === "lose") { plip(note(4), 0, .13, .3); plip(note(2), .25, .12, .35); plip(note(0), .55, .12, .5); }
 }
 // sounds that are switched off: "crack" (big word cracked, sound 5) still made the harsh hit even after it was rebuilt softer
-const SFX_OFF = new Set(["crack"]), SONG_OFF = false;
+const SFX_OFF = new Set(["good", "bad", "crack", "win", "lose"]), SONG_OFF = false;   // only the letter-landing tick is on for now
 function sfx(kind, step = 0) {
   if (muted || SFX_OFF.has(kind)) return;
   try {
@@ -3227,7 +3229,7 @@ const SOUND_TEST = [
   ["Out of lives", "the puzzle is lost", () => sfx("lose")],
   ["Menu song note", "tapping the menu sky", () => { songNote(); }],
 ];
-const sndOff = i => i === 4;   // "big word cracked" (5) is off (see SFX_OFF)
+const sndOff = i => i >= 2;   // only 1 and 2 (the letter-landing tick) are on; 3-7 are off (see SFX_OFF)
 $("sndGrid").innerHTML = SOUND_TEST.map(([n, d], i) => `<button class="btn" data-snd="${i}"${sndOff(i) ? " disabled" : ""}>${i + 1}. ${n}<small>${sndOff(i) ? "switched off" : d}</small></button>`).join("");
 $("sndGrid").addEventListener("click", e => {
   const b = e.target.closest("[data-snd]"); if (!b) return;
