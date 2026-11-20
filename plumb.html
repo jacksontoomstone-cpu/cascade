@@ -2867,6 +2867,8 @@ function tone(f, at, dur, type = "sine", vol = .1, attack = .01) {
    Every letter you drop on the menu plays the next note of a song for the time of year, and the letter that falls is
    that note's name (C, D, E...). All public-domain melodies; it loops when it reaches the end. */
 const SONGS = [   // "note:beats" (beats default to 1); beat = seconds per beat at normal speed
+  // Drunken Sailor plays all year for now (it's first, so it wins); the seasonal songs below wait their turn
+  { months: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], name: "Drunken Sailor", beat: .3, notes: "A4 A4:.5 A4:.5 A4 A4:.5 A4:.5 A4 D4 F4 A4 G4 G4:.5 G4:.5 G4 G4:.5 G4:.5 G4 C4 E4 G4 A4 A4:.5 A4:.5 A4 A4:.5 A4:.5 A4 B4 C5 D5 C5 A4 G4 E4 D4:2 D4:2 A4:2 A4:1.5 A4:.5 A4 D4 F4 A4 G4:2 G4:1.5 G4:.5 G4 C4 E4 G4 A4:2 A4:1.5 A4:.5 A4 B4 C5 D5 C5 A4 G4 E4 D4:2 D4:2" },
   { months: [10, 11], name: "Jingle Bells", beat: .36, notes: "E4 E4 E4:2 E4 E4 E4:2 E4 G4 C4:1.5 D4:.5 E4:4 F4 F4 F4:1.5 F4:.5 F4 E4 E4 E4:.5 E4:.5 E4 D4 D4 E4 D4:2 G4:2 E4 E4 E4:2 E4 E4 E4:2 E4 G4 C4:1.5 D4:.5 E4:4 F4 F4 F4:1.5 F4:.5 F4 E4 E4 E4:.5 E4:.5 G4 G4 F4 D4 C4:4" },
   { months: [1, 2], name: "Ode to Joy", beat: .42, notes: "E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4:1.5 D4:.5 D4:2 E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4:1.5 C4:.5 C4:2" },
   { months: [3, 4], name: "Morning Mood", beat: .26, notes: "G4 E4 D4 C4 D4 E4:3 G4 E4 D4 C4 D4 E4:3 D4 E4 G4 E4 G4 A4:3 E4 A4 G4 E4 D4 C4:4" },
