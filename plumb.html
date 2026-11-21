@@ -69,6 +69,8 @@ header h1 { position: relative; }
 .admin-badge { position: absolute; left: 0; top: 100%; margin-top: 3px; font-family: "Press Start 2P", monospace; font-size: max(7px, .3em); line-height: 1; letter-spacing: .05em;
   color: #1a1206; background: #ffe066; padding: 3px 5px; border: 2px solid #1a1206; text-shadow: none; transform: rotate(-4deg); cursor: pointer; z-index: 3; text-transform: uppercase; box-shadow: 2px 2px 0 rgba(0,0,0,.5); }
 .admin-badge:hover { background: #fff1a8; }
+.admin-badge.reset { left: calc(5em + 22px); transform: rotate(3deg); background: #ffb3c1; }   /* admin only: wipe this board and start it over */
+.admin-badge.reset:hover { background: #ffd6de; }
 header h1 { font-family: var(--pixel); font-weight: 400; font-size: 1rem; margin: 0; text-transform: uppercase; color: var(--a); text-shadow: 3px 3px 0 var(--ad); }
 .nav { display: flex; align-items: center; white-space: nowrap; font-family: var(--pixel); font-size: .5rem; text-transform: uppercase; }
 .nav button { border: none; background: transparent; font-size: .8rem; font-family: var(--pixel); cursor: pointer; padding: 4px 5px; color: var(--a); }
@@ -735,7 +737,7 @@ html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; colo
 
 <div class="app">
   <header>
-    <h1>Cascade<button class="admin-badge" id="adminBadge" hidden aria-label="Admin mode: open admin panel">Admin</button></h1>
+    <h1>Cascade<button class="admin-badge" id="adminBadge" hidden aria-label="Admin mode: open admin panel">Admin</button><button class="admin-badge reset" id="adminReset" hidden aria-label="Reset this puzzle">Reset</button></h1>
     <div class="nav">
       <button id="prev" aria-label="Previous puzzle">‹</button>
       <span id="navLbl">1 of 8</span>
@@ -3216,6 +3218,18 @@ function wipeAll(input) {
   $("startLives").textContent = LIVES(); $("helpModal").hidden = false;
   toast("Reset to a fresh game");
 }
+// admin: wipe the open board (its save and its finish in your stats) so it plays from scratch. Click twice: the first arms it.
+let resetArm = null;
+$("adminReset").addEventListener("click", () => {
+  if (!adm() || TUT) return;
+  if (!resetArm) { $("adminReset").textContent = "Sure?"; resetArm = setTimeout(() => { resetArm = null; $("adminReset").textContent = "Reset"; }, 2500); return; }
+  clearTimeout(resetArm); resetArm = null; $("adminReset").textContent = "Reset";
+  closeModals();
+  const st = stats(); delete st.done[idx]; store.set(KS, st);
+  S = fresh(); save(); load(idx);
+  $("timer").textContent = clock(0);
+  toast("Puzzle reset");
+});
 $("adminBadge").addEventListener("click", () => { closeModals(); $("admResetForm").hidden = true; $("adminModal").hidden = false; });
 $("admArchive").addEventListener("click", openArchive);
 // admin sound test: every sound effect in the game, numbered, so a bad one can be named
@@ -3259,7 +3273,7 @@ $("adminForm").addEventListener("submit", e => { e.preventDefault(); enterAdmin(
 $("archAdminForm").addEventListener("submit", e => { e.preventDefault(); enterAdmin($("archAdminCode")); });
 $("archAdminLink").addEventListener("click", () => { $("wipeForm").hidden = true; $("archAdminForm").hidden = false; $("archAdminCode").focus(); });
 function renderUnlim() {
-  $("adminBadge").hidden = !adm();
+  $("adminBadge").hidden = $("adminReset").hidden = !adm();
   $("unlimBtn").textContent = "Unlimited";
   $("payBtn").disabled = !PAY_LINK;
   $("paySoon").hidden = !!PAY_LINK; $("payVia").hidden = !PAY_LINK;
@@ -3608,7 +3622,7 @@ $("menuTut").addEventListener("click", () => { store.set("cx-tut", 1); closeMenu
 $("menuHow").addEventListener("click", () => { if (store.get("cx-tut-done")) return replayTutorial(); closeMenu(); runTutorial(); });
 $("menuStats").addEventListener("click", () => { closeMenu(); openStats(); });
 $("menuUnlim").addEventListener("click", () => { closeMenu(); ok7() ? openArchive() : paywall(false); });
-document.querySelector("header h1").addEventListener("click", e => { if (!e.target.closest("#adminBadge")) openMenu(); });
+document.querySelector("header h1").addEventListener("click", e => { if (!e.target.closest(".admin-badge")) openMenu(); });
 
 /* ---------- phone drawer ----------
    On phones the header, Check buttons and lives, the top/side clue line and the tank move into the ☰ drawer, so the
@@ -3630,7 +3644,7 @@ $("drawerScrim").addEventListener("click", () => setDrawer(false));
 $("drawerClose").addEventListener("click", () => setDrawer(false));
 // buttons that act on the board or open something else close the drawer; sound, color and Give up keep it open
 ["checkBtn", "letterBtn", "prev", "next", "unlimBtn", "pauseBtn", "statsBtn", "helpBtn"].forEach(id => $(id).addEventListener("click", () => setDrawer(false)));
-document.querySelector("header h1").addEventListener("click", e => { if (!e.target.closest("#adminBadge")) setDrawer(false); });
+document.querySelector("header h1").addEventListener("click", e => { if (!e.target.closest(".admin-badge")) setDrawer(false); });
 phone.addEventListener?.("change", placeChrome);
 placeChrome();
 
