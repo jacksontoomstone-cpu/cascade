@@ -1688,6 +1688,12 @@ const allSolved = () => P.every((_, r) => rowSolved(r));
 const playing = () => S.status === "playing";
 const totalCols = () => Math.max(...P.filter(p => !p.side).map(p => p.x + p.w.length));
 
+// a board's layout (its words and where they sit, not its clues): a save made for an older layout is thrown away
+const layoutOf = i => PUZZLES[i].map(([w, x, y]) => `${w}@${x},${y}`).join(" ");
+function fits(sv) {   // an old save without a layout tag still has to match the board's shape
+  return Array.isArray(sv.typed) && Array.isArray(sv.locked) && sv.typed.length === P.length && sv.locked.length === P.length &&
+    P.every((p, r) => sv.typed[r]?.length === p.w.length && sv.locked[r]?.length === p.w.length) && sv.row < P.length;
+}
 function fresh() {
   return { typed: P.map(p => Array(p.w.length).fill("")), locked: P.map(p => Array(p.w.length).fill(false)),
            row: 1, seg: 0, cur: P[1].x, misses: 0, log: [], status: "playing", time: 0, started: false, score: 0, paid: P.map(() => false), cracked: false, crackedSide: false };
@@ -1706,7 +1712,10 @@ function load(i) {
   // a full bar stamps a letter into both special words; words pay 30% over this scale, so the bar fills fast
   { const n = P.map((_, r) => r).filter(r => !isSpecial(r) && !isCompound(r)); AVG = n.length ? Math.round(n.reduce((a, r) => a + plain(r), 0) / n.length / 5) * 5 : 50; }
   BAR = Math.floor(P.reduce((sum, _, r) => sum + (isSpecial(r) ? 0 : baseWorth(r)), 0) * .95 * 1.25 / 1.2 / STAMPS / 5) * 5;   // x1.25: power-ups cost 25% more points; /1.2: big-word letters come 20% more often
-  S = store.get(SAVE + i) || fresh();
+  S = store.get(SAVE + i);
+  const lay = layoutOf(i);
+  if (!S || (S.lay ? S.lay !== lay : !fits(S))) S = fresh();   // no save, or it was made for a different layout of this board
+  if (S.lay !== lay) { S.lay = lay; if (!TUT) store.set(SAVE + i, S); }
   duckBirths = (S.paid || []).filter(Boolean).length;   // a board opens with an empty pond; only words solved from here bring ducks
   fireUntil = 0;
   build();
@@ -2166,7 +2175,9 @@ function type(ch) {
   if (!playing() || shaking || segSolved(S.row, S.seg)) return;
   S.started = true;
   const c = S.cur;
-  S.typed[S.row][c - X(S.row)] = ch;
+  // a fallen letter can't be typed over with a different one: a wrong key just steps past it (the fallen letter still counts)
+  if (isLocked(S.row, c) && ch !== letterAt(S.row, c)) S.typed[S.row][c - X(S.row)] = "";
+  else S.typed[S.row][c - X(S.row)] = ch;
   const n = nextOpen(c);
   S.cur = n >= 0 ? n : c;
   if (n < 0) {   // end of this half: carry on into the next unsolved half of the same word
