@@ -1551,25 +1551,25 @@ const PUZZLES = [
     ["HESITATION", 0, 1, ["Cold feet."], "side"],
   ],
   [
-    ["RESPONSIBILITY", 0, 0, ["Ball in your court."], ""],
-    ["PLACEBO", 0, 1, ["Trial's dud pill"], ""],
-    ["STATIC", 8, 1, ["Dryer's cling"], ""],
-    ["LEDGER", 0, 2, ["Heath of 'The Dark Knight'"], ""],
+    ["RESPONSIBILITY", 0, 0, ["On your shoulders."], ""],
+    ["PUMPKIN", 0, 1, ["Cinderella's magic whip"], ""],
+    ["TUNDRA", 8, 1, ["Frozen, treeless plain"], ""],
+    ["LEDGER", 0, 2, ["Accountant's book"], ""],
     ["SPHINX", 8, 2, ["Giza's riddler"], ""],
-    ["SCARE|CROW", 2, 3, ["Jump ___ (horror trope)", "Gloat"], "Stuffed sentry"],
-    ["PARROT", 0, 4, ["Repeat mindlessly"], ""],
-    ["POP|CORN", 7, 4, ["Soda, in Ohio", "Fall maze material"], "Bucket filler"],
-    ["ANTHEM", 0, 5, ["Pregame song"], ""],
-    ["DONUT", 8, 5, ["Homer's weakness"], ""],
-    ["BACK|PACK", 1, 6, ["Endorse, as a candidate", "Cub Scout unit"], "Hiker's load"],
-    ["TOGA", 10, 6, ["Frat party bedsheet"], ""],
-    ["SPOT|LIGHT", 2, 7, ["Dalmatian's mark", "Diet, on a beer can"], "Center stage"],
-    ["EMBER", 1, 8, ["Campfire's last glow"], ""],
-    ["MANTIS", 7, 8, ["Prayerful predator"], ""],
-    ["CROSS|WORD", 2, 9, ["Ill-tempered", "Scrabble play"], "Daily grid"],
-    ["EYE|BROW", 1, 10, ["Hurricane's calm center", "Sweat of one's ___"], "Raised in doubt"],
-    ["KAYAK", 9, 10, ["Palindromic boat"], ""],
-    ["TEMPTATION", 0, 1, ["Forbidden fruit."], "side"],
+    ["LIFE|GUARD", 4, 3, ["Board game with tiny cars", "Point ___"], "'Help me, I'm drowning!'"],
+    ["PARROT", 0, 4, ["'Polly want a cracker?'"], ""],
+    ["PIG|TAIL", 7, 4, ["Wilbur of 'Charlotte's Web'", "Follow secretly"], "Braid style"],
+    ["ANTHEM", 2, 5, ["Hand-over-heart song"], ""],
+    ["PIXEL", 9, 5, ["Tiny dot on a screen"], ""],
+    ["GOAL|POST", 0, 6, ["Hat trick", "Instagram upload"], "Sometimes gets shifted"],
+    ["TOGA", 10, 6, ["Draped Roman garment"], ""],
+    ["MOUSE|TRAP", 3, 7, ["Mickey, e.g.", "Bunker"], "'Careful of free cheese!'"],
+    ["AMBER", 1, 8, ["The color of your energy"], ""],
+    ["MANTIS", 7, 8, ["Praying insect"], ""],
+    ["LOCK|SMITH", 2, 9, ["Strand of hair", "Black___ (horseshoer)"], "Picks for a living"],
+    ["TOOL|BOX", 0, 10, ["Hammer or wrench", "Spar in the ring"], "Handyman's kit"],
+    ["KAYAK", 8, 10, ["Palindromic boat"], ""],
+    ["TEMPTATION", 0, 1, ["Just one more bite."], "side"],
   ],
 ];
 const CFG = window.CASCADE_CONFIG || {};   // set at build time on Vercel (see build.sh); defaults when run anywhere else
@@ -1578,8 +1578,8 @@ const SAVE = "plumb15-";   // bumped from plumb14- to clear everyone's old progr
 // Players see two boards: the intro, which never changes, and today's daily. Every other board is archived (no way to reach it).
 const INTRO = 18;
 const DAILY_START = "2026-11-16";   // the first day with a daily puzzle
-const DAILY = [19, 21, 22, 23, 24];                 // board for each day from DAILY_START; add one index per new day
-const DRAFTS = [20, 25];                          // finished boards waiting for a day (not playable until moved into DAILY)
+const DAILY = [19, 21, 22, 23, 24, 25];                 // board for each day from DAILY_START; add one index per new day
+const DRAFTS = [20];                              // finished boards waiting for a day (not playable until moved into DAILY)
 const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const today = () => window.CASCADE_TODAY || dayKey(new Date());   // the player's own calendar day
 function dailyIdx() {
@@ -2661,7 +2661,7 @@ const BASELINES = {   // board index: [share who run out of lives, typical solve
   22: [.35, 10 * 60],    // Nov 18
   23: [.35, 10 * 60],    // Nov 19
   24: [.4, 11 * 60],     // Nov 20: harder clues
-  25: [.4, 11 * 60],     // Nov 21: harder clues
+  25: [.45, 12 * 60],    // Nov 21: harder clues, and fewer letters fall in from the top and side words
 };
 const crowdData = {};   // board index -> { n, won: { "solve time / 10s": count }, lost: { "percent done, in 5s": count } }
 function crowdFor(i) {
