@@ -3345,6 +3345,7 @@ function renderUnlim() {
   $("unlimBtn").textContent = "Unlimited";
   $("payBtn").disabled = !PAY_LINK;
   $("paySoon").hidden = !!PAY_LINK; $("payVia").hidden = !PAY_LINK;
+  if (S && P) render();   // admin or Unlimited just changed: redraw so the ‹ › locks match right away
 }
 // Stripe sends buyers back to playcascade.io/?unlocked=cs_... after paying
 function claimUnlock() {
