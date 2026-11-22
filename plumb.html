@@ -2273,7 +2273,8 @@ function check() {
 function peek() {
   if (!playing() || busy) return;
   const r = S.row, c = S.cur;
-  if (isSpecial(r)) { toast("These letters only come from the bar"); return; }
+  // the top and side words open up to Check letter once every other word on the board is solved
+  if (isSpecial(r) && !P.every((_, k) => isSpecial(k) || rowSolved(k))) { toast("Solve every other word first"); return; }
   if (isLocked(r, c)) { toast("That letter is already showing"); return; }
   if (S.misses >= LIVES() - 1) { toast("That would cost your last life"); return; }
   S.locked[r][c - X(r)] = true; S.typed[r][c - X(r)] = letterAt(r, c); S.misses++; S.log.push("h");
