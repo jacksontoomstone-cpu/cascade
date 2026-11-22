@@ -388,8 +388,11 @@ html.instant, html.instant *, html.instant *::before, html.instant *::after { tr
 /* the win celebration: a pixel-confetti canvas over everything, and a big SOLVED! banner over the board */
 #party { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40; }
 .party-banner { position: fixed; left: 50%; top: 42%; z-index: 41; pointer-events: none; font-family: var(--pixel); text-transform: uppercase;
-  font-size: clamp(1.6rem, 7vw, 3.4rem); color: #ffe066; text-shadow: 4px 4px 0 #1a1206, 0 0 24px rgba(255, 224, 102, .8); white-space: nowrap; }
-html.clean .party-banner { font-family: inherit; font-weight: 800; color: #121212; text-shadow: 0 2px 0 #ffe066; text-transform: none; }
+  font-size: clamp(1.6rem, 7vw, 3.4rem); color: #5ec8ff; text-shadow: 4px 4px 0 #062033, 0 0 26px rgba(94, 200, 255, .85); white-space: nowrap; }
+html.clean .party-banner { font-family: inherit; font-weight: 800; color: #1f7ae0; text-shadow: 0 3px 0 #0b2a4d; text-transform: none; }
+/* the results window's headline ("Board cleared" / "Out of lives") */
+#resTitle { font-size: clamp(1.5rem, 5.5vw, 2.2rem); line-height: 1.25; }
+html.clean #resTitle { font-size: clamp(1.8rem, 6vw, 2.6rem); }
 .toast { position: fixed; left: 50%; bottom: calc(176px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--screen); color: var(--a); border: 3px solid var(--a); padding: 9px 12px; font-family: var(--pixel); font-size: .55rem; text-transform: uppercase; z-index: 30; pointer-events: none; white-space: nowrap; box-shadow: 0 0 16px -2px var(--a); }
 
 .modal { position: fixed; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: 20; padding: 16px; }
@@ -2560,12 +2563,12 @@ function celebrate() {
       { duration: 420, delay: (r + c) * 32, easing: "ease-out" });
   }));
   const banner = document.createElement("div"); banner.className = "party-banner"; banner.textContent = "Solved!";
-  banner.style.top = (board.top + board.height * .45) + "px";
+  banner.style.left = (board.left + board.width / 2) + "px"; banner.style.top = (board.top + board.height / 2) + "px";   // dead center on the board
   document.body.appendChild(banner);
-  banner.animate([{ transform: "translate(-50%, -50%) scale(.2) rotate(-8deg)", opacity: 0 },
-    { transform: "translate(-50%, -50%) scale(1.15) rotate(3deg)", opacity: 1, offset: .25 },
-    { transform: "translate(-50%, -50%) scale(1) rotate(-2deg)", opacity: 1, offset: .8 },
-    { transform: "translate(-50%, -50%) scale(1.05) rotate(0)", opacity: 0 }], { duration: 2100, easing: "ease-out", fill: "forwards" }).onfinish = () => banner.remove();
+  banner.animate([{ transform: "translate(-50%, -50%) scale(.2) rotate(-14deg)", opacity: 0 },   // stays slanted the whole time
+    { transform: "translate(-50%, -50%) scale(1.15) rotate(-5deg)", opacity: 1, offset: .25 },
+    { transform: "translate(-50%, -50%) scale(1) rotate(-8deg)", opacity: 1, offset: .8 },
+    { transform: "translate(-50%, -50%) scale(1.05) rotate(-8deg)", opacity: 0 }], { duration: 2100, easing: "ease-out", fill: "forwards" }).onfinish = () => banner.remove();
   if (calm()) return;   // reduced motion: the banner only, no confetti
   const cv = document.createElement("canvas"); cv.id = "party"; document.body.appendChild(cv);
   const dpr = Math.min(2, devicePixelRatio || 1), W = innerWidth, H = innerHeight;
