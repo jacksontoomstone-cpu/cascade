@@ -2237,10 +2237,12 @@ function firstOpen(r, s) {
   const cols = segCols(r, s);
   return cols.find(c => !S.typed[r][c - X(r)] && !isLocked(r, c)) ?? cols.find(c => !S.typed[r][c - X(r)]) ?? cols[0];
 }
-function goToNext() { // the rest of this word first, then the first unsolved piece from the top down
+function goToNext() { // the rest of this word first, then the next unsolved word after it (wrapping back to the top at the end)
   const k = P[S.row].segs.findIndex((_, i) => !segSolved(S.row, i));
   if (k >= 0) { S.seg = k; S.cur = firstOpen(S.row, k); return; }
-  for (const r of [...P.keys()].slice(1).concat(0)) for (let s = 0; s < P[r].segs.length; s++)
+  const side = P.length - 1, rows = [...P.keys()].slice(1, side), at = rows.indexOf(S.row);   // -1 on the top/side word: start from the first row
+  const order = rows.slice(at + 1).concat(rows.slice(0, at + 1), side, 0);   // onward from here, then the earlier ones, then the side and top words
+  for (const r of order) for (let s = 0; s < P[r].segs.length; s++)
     if (!segSolved(r, s)) { S.row = r; S.seg = s; S.cur = firstOpen(r, s); return; }
 }
 
