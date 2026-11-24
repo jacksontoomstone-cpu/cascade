@@ -236,9 +236,9 @@ html.clean .tile.ghost { color: rgba(18, 18, 18, .35); }
 .tile.cmp { border: 3px solid var(--white); box-shadow: 0 0 0 1px hsl(0 0% 0% / .6), 0 0 12px 2px hsl(0 0% 100% / .7); }
 .tile.cmp::after { background: var(--white); height: 8px; top: calc(50% - 4px); }
 /* a selected compound: its first half is always blue and its second half always purple, whichever half you're typing in */
-.tile.cmp.locked.done2:not(.hot) { --hue: 268; }   /* a solved second half stays purple */
+.tile.cmp.locked.done2:not(.hot) { --hue: 222; --l: 46% !important; --on: #fff; transition: none; }   /* a solved second half turns dark blue at once, and stays that way */
 .tile.cmp.half1:not(.locked) { background: var(--kd); border-color: var(--k); }   /* the game's normal selected blue */
-.tile.cmp.half2:not(.locked) { background: hsl(266 70% 52%); border-color: hsl(270 100% 86%); box-shadow: 0 0 10px -2px hsl(270 100% 78%); }
+.tile.cmp.half2:not(.locked) { background: hsl(222 75% 22%); border-color: hsl(220 85% 58%); box-shadow: 0 0 8px -2px hsl(220 90% 55%); }   /* dark blue */
 .cmp-ring { position: absolute; pointer-events: none; z-index: 2; border: 2px solid #fff; }   /* thin (2px) solid white line around the whole compound */
 html.clean .cmp-ring { border-color: rgba(18, 18, 18, .35); box-shadow: none; border-radius: 4px; }
 .tile.cmp.locked { border-color: var(--white); box-shadow: inset -3px -3px 0 var(--kd), inset 3px 3px 0 rgba(255,255,255,.5), 0 0 13px 1px var(--white); }
@@ -670,9 +670,9 @@ html.clean .tile.locked.active { border-color: #121212; }
 html.clean .tile.revealed { background: #fff; color: #9a9ea2; border: 1px dashed #b9bdc2; }
 html.clean .tile.cmp { border: 2px solid #121212; box-shadow: none; }
 html.clean .tile.cmp::after { background: #121212; height: 2px; top: calc(50% - 1px); }
-html.clean .tile.cmp.locked.done2 { background: #9b7be0; border-color: #6b4fc0; color: #fff; }
+html.clean .tile.cmp.locked.done2 { background: #2f5fb8; border-color: #1d3f86; color: #fff; transition: none; }
 html.clean .tile.cmp.half1:not(.locked) { background: var(--c-sel); border-color: #7fb6e0; }
-html.clean .tile.cmp.half2:not(.locked) { background: #ece3ff; border-color: #b39af2; }
+html.clean .tile.cmp.half2:not(.locked) { background: #2f5fb8; border-color: #1d3f86; color: #fff; }
 html.clean .tile.cmp.locked { background: var(--c-cmp); border-color: #121212; color: #fff; box-shadow: none; }
 html.clean .tile.pwt { background: #fafafa; border-color: #c3c6ca; box-shadow: none; }
 html.clean .tile.pwt.active { background: var(--c-sel); border-color: #7fb6e0; }
@@ -1956,7 +1956,7 @@ function drip(ch, x, fromY, row, hue = null) {
   setTimeout(land, T + 800);   // safety: never leave the water waiting on a lost drop
   // the letter tile shrinks away while a water drop takes its place and falls
   const d = document.createElement("div"); d.className = "drip heat"; paint(d, row); d.textContent = ch;
-  if (hue !== null) d.style.setProperty("--hue", hue);
+  if (hue !== null) { d.style.setProperty("--hue", hue); d.style.setProperty("--l", "46%"); d.style.setProperty("--on", "#fff"); }
   d.style.left = (cx - 9) + "px"; d.style.top = (fromY - 10) + "px"; document.body.appendChild(d);
   d.animate([{ transform: "scale(.8)", opacity: 1, borderRadius: "0" }, { transform: `translateY(${Math.min(dist, 26)}px) scale(.3)`, opacity: 0, borderRadius: "50%" }],
     { duration: 200, easing: "ease-in", fill: "forwards" }).onfinish = () => d.remove();
@@ -2176,7 +2176,7 @@ function placeRing() {
   Object.assign(ring.style, { left: ra.left - box.left - pad + "px", top: ra.top - box.top - pad + "px",
     width: rb.right - ra.left + pad * 2 + "px", height: ra.height + pad * 2 + "px" });
 }
-const PURPLE = 268;   // hue of a compound's second half: it stays purple when solved, and its letters fall as purple drops
+const PURPLE = 222;   // hue of a compound's second half (now dark blue): it stays that color when solved, and its letters fall in it
 const isPurple = (r, c) => isCompound(r) && segAt(r, c) > 0;
 function render() {
   P.forEach((_, r) => colsOf(r).forEach(c => {
@@ -2400,7 +2400,7 @@ function drop(r, cols) {
     const T = (300 + dist * 1.1) * (TUT ? 1.6 * TUT_PACE : 1), wait = n * (TUT ? 110 * TUT_PACE : 70);   // the tutorial's letters fall a bit slower so you can follow them
     const f = document.createElement("div");
     f.className = "faller heat"; paint(f, r); f.textContent = letterAt(r, c);
-    const purp = isPurple(r, c); if (purp) f.style.setProperty("--hue", PURPLE);
+    const purp = isPurple(r, c); if (purp) { f.style.setProperty("--hue", PURPLE); f.style.setProperty("--l", "46%"); f.style.setProperty("--on", "#fff"); }
     f.style.left = (src.left - box.left) + "px"; f.style.top = y0 + "px";
     $("board").appendChild(f);
     const a = f.animate(
