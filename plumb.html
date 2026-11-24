@@ -236,6 +236,7 @@ html.clean .tile.ghost { color: rgba(18, 18, 18, .35); }
 .tile.cmp { border: 3px solid var(--white); box-shadow: 0 0 0 1px hsl(0 0% 0% / .6), 0 0 12px 2px hsl(0 0% 100% / .7); }
 .tile.cmp::after { background: var(--white); height: 8px; top: calc(50% - 4px); }
 /* a selected compound: its first half is always blue and its second half always purple, whichever half you're typing in */
+.tile.cmp.locked.done2:not(.hot) { --hue: 268; }   /* a solved second half stays purple */
 .tile.cmp.half1:not(.locked) { background: var(--kd); border-color: var(--k); }   /* the game's normal selected blue */
 .tile.cmp.half2:not(.locked) { background: hsl(266 70% 52%); border-color: hsl(270 100% 86%); box-shadow: 0 0 10px -2px hsl(270 100% 78%); }
 .cmp-ring { position: absolute; pointer-events: none; z-index: 2; border: 2px solid #fff; }   /* thin (2px) solid white line around the whole compound */
@@ -669,6 +670,7 @@ html.clean .tile.locked.active { border-color: #121212; }
 html.clean .tile.revealed { background: #fff; color: #9a9ea2; border: 1px dashed #b9bdc2; }
 html.clean .tile.cmp { border: 2px solid #121212; box-shadow: none; }
 html.clean .tile.cmp::after { background: #121212; height: 2px; top: calc(50% - 1px); }
+html.clean .tile.cmp.locked.done2 { background: #9b7be0; border-color: #6b4fc0; color: #fff; }
 html.clean .tile.cmp.half1:not(.locked) { background: var(--c-sel); border-color: #7fb6e0; }
 html.clean .tile.cmp.half2:not(.locked) { background: #ece3ff; border-color: #b39af2; }
 html.clean .tile.cmp.locked { background: var(--c-cmp); border-color: #121212; color: #fff; box-shadow: none; }
@@ -1945,7 +1947,7 @@ const dripsDone = () => dripsLeft ? new Promise(res => dripWait.push(res)) : Pro
 function dripLanded() { if (dripsLeft > 0 && --dripsLeft === 0) { dripWait.splice(0).forEach(f => f()); if (!draining) render(); } }
 const slapping = new Set();   // stamped cells waiting for their letter to land
 function tankBox() { const b = document.querySelector(".bar"); const r = b.getBoundingClientRect(); return r.height ? r : null; }
-function drip(ch, x, fromY, row) {
+function drip(ch, x, fromY, row, hue = null) {
   const tb = tankBox(); if (!tb || calm()) return dripLanded();
   const level = tb.bottom - $("barFill").getBoundingClientRect().height;
   const cx = Math.min(tb.right - 14, Math.max(tb.left + 14, x));
@@ -1954,27 +1956,28 @@ function drip(ch, x, fromY, row) {
   setTimeout(land, T + 800);   // safety: never leave the water waiting on a lost drop
   // the letter tile shrinks away while a water drop takes its place and falls
   const d = document.createElement("div"); d.className = "drip heat"; paint(d, row); d.textContent = ch;
+  if (hue !== null) d.style.setProperty("--hue", hue);
   d.style.left = (cx - 9) + "px"; d.style.top = (fromY - 10) + "px"; document.body.appendChild(d);
   d.animate([{ transform: "scale(.8)", opacity: 1, borderRadius: "0" }, { transform: `translateY(${Math.min(dist, 26)}px) scale(.3)`, opacity: 0, borderRadius: "50%" }],
     { duration: 200, easing: "ease-in", fill: "forwards" }).onfinish = () => d.remove();
-  const drop = document.createElement("div"); drop.className = "drop";
+  const drop = document.createElement("div"); drop.className = "drop"; if (hue !== null) drop.style.setProperty("--hue", hue);
   drop.style.left = cx + "px"; drop.style.top = fromY + "px"; document.body.appendChild(drop);
   drop.animate([{ transform: "translateY(0) rotate(45deg) scale(.4)", opacity: 0 }, { transform: "translateY(8px) rotate(45deg) scale(1)", opacity: 1, offset: .2 },
     { transform: `translateY(${dist}px) rotate(45deg) scale(1, 1.15)`, opacity: 1 }], { duration: T, easing: "cubic-bezier(.5,0,1,.7)" }).onfinish = () => {
-    drop.remove(); splash(cx, level); land();
+    drop.remove(); splash(cx, level, hue); land();
   };
 }
-function splash(x, y) {
+function splash(x, y, hue = null) {
   lastSplashX = x;
   // a few droplets jump up and fall back, and two rings spread across the surface
   [-1, -.4, .4, 1].forEach((k, n) => {
-    const p = document.createElement("div"); p.className = "spray"; p.style.left = x + "px"; p.style.top = y + "px"; document.body.appendChild(p);
+    const p = document.createElement("div"); p.className = "spray"; p.style.left = x + "px"; p.style.top = y + "px"; if (hue !== null) p.style.setProperty("--hue", hue); document.body.appendChild(p);
     const h = 10 + (n % 2) * 6;
     p.animate([{ transform: "translate(0,0)", opacity: 1 }, { transform: `translate(${k * 9}px, ${-h}px)`, opacity: 1, offset: .45 },
       { transform: `translate(${k * 14}px, 0)`, opacity: 0 }], { duration: 420, easing: "ease-out" }).onfinish = () => p.remove();
   });
   [0, 160].forEach(wait => setTimeout(() => {
-    const r = document.createElement("div"); r.className = "ripple"; r.style.left = x + "px"; r.style.top = y + "px";
+    const r = document.createElement("div"); r.className = "ripple"; r.style.left = x + "px"; r.style.top = y + "px"; if (hue !== null) r.style.setProperty("--hue", hue);
     document.body.appendChild(r); setTimeout(() => r.remove(), 850);
   }, wait));
 }
@@ -2173,6 +2176,8 @@ function placeRing() {
   Object.assign(ring.style, { left: ra.left - box.left - pad + "px", top: ra.top - box.top - pad + "px",
     width: rb.right - ra.left + pad * 2 + "px", height: ra.height + pad * 2 + "px" });
 }
+const PURPLE = 268;   // hue of a compound's second half: it stays purple when solved, and its letters fall as purple drops
+const isPurple = (r, c) => isCompound(r) && segAt(r, c) > 0;
 function render() {
   P.forEach((_, r) => colsOf(r).forEach(c => {
     const t = tiles[r][c], j = c - X(r), s = segAt(r, c), g = P[r].segs[s];
@@ -2188,7 +2193,8 @@ function render() {
       (sel && playing() && c === S.cur && !segSolved(r, s) ? " cur" : "") +
       (isSpecial(r) ? " pwt" : "") + (isSpecial(r) && lock && !hint && !crackedOf(r) ? " imprint" : "") +
       (litCells.has(cellKey(r, c)) ? " lit" : "") + (hotCells.has(cellKey(r, c)) ? " hot" : "") + (slapping.has(cellKey(r, c)) ? " await" : "") +
-      (ghost ? " ghost" : "") + (isCompound(r) && r === S.row && playing() ? (s === 0 ? " half1" : " half2") : "");
+      (ghost ? " ghost" : "") + (isCompound(r) && r === S.row && playing() ? (s === 0 ? " half1" : " half2") : "") +
+      (lock && !hint && isPurple(r, c) ? " done2" : "");
     t.setAttribute("aria-label", `Word ${r + 1}, letter ${j - g.a + 1}${ghost ? `, empty (hint ${L})` : L ? ", " + L : ", empty"}`);
   }));
   placeRing();
@@ -2394,12 +2400,13 @@ function drop(r, cols) {
     const T = (300 + dist * 1.1) * (TUT ? 1.6 * TUT_PACE : 1), wait = n * (TUT ? 110 * TUT_PACE : 70);   // the tutorial's letters fall a bit slower so you can follow them
     const f = document.createElement("div");
     f.className = "faller heat"; paint(f, r); f.textContent = letterAt(r, c);
+    const purp = isPurple(r, c); if (purp) f.style.setProperty("--hue", PURPLE);
     f.style.left = (src.left - box.left) + "px"; f.style.top = y0 + "px";
     $("board").appendChild(f);
     const a = f.animate(
       [{ transform: "translateY(0)", easing: "cubic-bezier(.33,0,.67,.33)" }, { transform: `translateY(${dist}px)` }],
       { duration: T, delay: wait, fill: "both" });
-    a.onfinish = () => { f.remove(); drip(f.textContent, src.left + src.width / 2, box.bottom, r); };
+    a.onfinish = () => { f.remove(); drip(f.textContent, src.left + src.width / 2, box.bottom, r, purp ? PURPLE : null); };
     last.push(a.finished.catch(() => {}));
     hits.forEach((j, h) => {
       // quadratic ease-in: distance d is reached at T * sqrt(d / dist)
