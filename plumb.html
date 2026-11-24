@@ -238,7 +238,7 @@ html.clean .tile.ghost { color: rgba(18, 18, 18, .35); }
 /* a selected compound: its first half is always blue and its second half always purple, whichever half you're typing in */
 .tile.cmp.half1:not(.locked) { background: var(--kd); border-color: var(--k); }   /* the game's normal selected blue */
 .tile.cmp.half2:not(.locked) { background: hsl(266 70% 52%); border-color: hsl(270 100% 86%); box-shadow: 0 0 10px -2px hsl(270 100% 78%); }
-.cmp-ring { position: absolute; pointer-events: none; z-index: 2; border: 1px solid #fff; }   /* thin solid white line around the whole compound */
+.cmp-ring { position: absolute; pointer-events: none; z-index: 2; border: 2px solid #fff; }   /* thin (2px) solid white line around the whole compound */
 html.clean .cmp-ring { border-color: rgba(18, 18, 18, .35); box-shadow: none; border-radius: 4px; }
 .tile.cmp.locked { border-color: var(--white); box-shadow: inset -3px -3px 0 var(--kd), inset 3px 3px 0 rgba(255,255,255,.5), 0 0 13px 1px var(--white); }
 /* a solved compound turns properly red, then cools back to the board's color */
