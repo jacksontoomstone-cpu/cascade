@@ -237,7 +237,7 @@ html.clean .tile.ghost { color: rgba(18, 18, 18, .35); }
 .tile.cmp::after { background: var(--white); height: 8px; top: calc(50% - 4px); }
 /* a selected compound: its first half is always blue and its second half always purple, whichever half you're typing in */
 .tile.cmp.half1:not(.locked) { background: var(--kd); border-color: var(--k); }   /* the game's normal selected blue */
-.tile.cmp.half2:not(.locked) { background: hsl(266 70% 52%); border-color: hsl(270 100% 86%); box-shadow: 0 0 10px -2px hsl(270 100% 78%); }
+.tile.cmp.half2:not(.locked) { background: hsl(222 75% 22%); border-color: hsl(220 85% 58%); box-shadow: 0 0 8px -2px hsl(220 90% 55%); }   /* dark blue */
 .cmp-ring { position: absolute; pointer-events: none; z-index: 2; border: 2px solid #fff; }   /* thin (2px) solid white line around the whole compound */
 html.clean .cmp-ring { border-color: rgba(18, 18, 18, .35); box-shadow: none; border-radius: 4px; }
 .tile.cmp.locked { border-color: var(--white); box-shadow: inset -3px -3px 0 var(--kd), inset 3px 3px 0 rgba(255,255,255,.5), 0 0 13px 1px var(--white); }
@@ -670,7 +670,7 @@ html.clean .tile.revealed { background: #fff; color: #9a9ea2; border: 1px dashed
 html.clean .tile.cmp { border: 2px solid #121212; box-shadow: none; }
 html.clean .tile.cmp::after { background: #121212; height: 2px; top: calc(50% - 1px); }
 html.clean .tile.cmp.half1:not(.locked) { background: var(--c-sel); border-color: #7fb6e0; }
-html.clean .tile.cmp.half2:not(.locked) { background: #ece3ff; border-color: #b39af2; }
+html.clean .tile.cmp.half2:not(.locked) { background: #2f5fb8; border-color: #1d3f86; color: #fff; }
 html.clean .tile.cmp.locked { background: var(--c-cmp); border-color: #121212; color: #fff; box-shadow: none; }
 html.clean .tile.pwt { background: #fafafa; border-color: #c3c6ca; box-shadow: none; }
 html.clean .tile.pwt.active { background: var(--c-sel); border-color: #7fb6e0; }
