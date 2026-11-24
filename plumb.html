@@ -2177,7 +2177,7 @@ function placeRing() {
     width: rb.right - ra.left + pad * 2 + "px", height: ra.height + pad * 2 + "px" });
 }
 const PURPLE = 222;   // hue of a compound's second half (now dark blue): it stays that color when solved, and its letters fall in it
-const isPurple = (r, c) => isCompound(r) && segAt(r, c) > 0;
+const isPurple = () => false;   // off: a solved compound is one normal-color word, and its letters fall in the normal color
 function render() {
   P.forEach((_, r) => colsOf(r).forEach(c => {
     const t = tiles[r][c], j = c - X(r), s = segAt(r, c), g = P[r].segs[s];
@@ -2479,7 +2479,8 @@ function settle() {
   P.forEach((_, r) => {
     if (rowSolved(r) && !S.paid[r]) {
       S.paid[r] = true; gain += worth(r);
-      if (isCompound(r)) { combo = r; flash(r, hotCells, 1300); } else flash(r);
+      if (isCompound(r)) combo = r;
+      flash(r);   // a finished compound flashes like any word and settles as one normal-blue word (no rainbow sweep)
     }
   });
   S.score += gain;
