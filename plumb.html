@@ -1584,6 +1584,48 @@ const PUZZLES = [
     ["SPHINX", 8, 10, ["Giza's riddler"], ""],
     ["TEMPTATION", 0, 1, ["Siren song or forbidden fruit."], "side"],
   ],
+  [
+    ["INFRASTRUCTURE", 0, 0, ["Roads and bridges."], ""],
+    ["PRETZEL", 1, 1, ["Yoga pose or salty snack"], ""],
+    ["COBRA", 9, 1, ["___ Kai (karate)"], ""],
+    ["JACK|POT", 0, 2, ["Car lifter", "The kitty in poker"], "Vegas dream"],
+    ["TIARA", 9, 2, ["Princess's crown"], ""],
+    ["WISH|BONE", 0, 3, ["Coin in the fountain", "Femur, e.g."], "Thanksgiving tug-of-war"],
+    ["OLIVE", 9, 3, ["Pizza topping, black or green"], ""],
+    ["PIN|WHEEL", 2, 4, ["ATM code", "Hamster's treadmill"], "Breeze-spun toy"],
+    ["LAND|MARK", 6, 5, ["___ of the free", "Gospel writer"], "Eiffel Tower, e.g."],
+    ["THUMB|NAIL", 5, 6, ["Hitchhiker's signal", "Holds pictures on the wall"], "YouTube preview"],
+    ["PELICAN", 0, 7, ["Pouch-billed bird"], ""],
+    ["BUTLER", 8, 7, ["Alfred, to Batman"], ""],
+    ["INK|BLOT", 0, 8, ["Squid's defense", "Smudge"], "Rorschach image"],
+    ["MOSAIC", 8, 8, ["Roman floor art or Gaudí's lizard"], ""],
+    ["VELCRO", 0, 9, ["Kids' sneaker strap"], ""],
+    ["ALPACA", 8, 9, ["Llama look-alike"], ""],
+    ["GAZEBO", 0, 10, ["Open-sided garden hut"], ""],
+    ["HELIUM", 7, 10, ["He, on the periodic table"], ""],
+    ["RESILIENCE", 0, 1, ["Bouncing back."], "side"],
+  ],
+  [
+    ["RECOMMENDATION", 0, 0, ["Five stars, from a friend."], ""],
+    ["ROOF|TOP", 0, 1, ["Raise the ___ (party hard)", "Big ___ (circus tent)"], "Santa's landing pad"],
+    ["ZOMBIE", 8, 1, ["'Want... brainsssss...'"], ""],
+    ["COW|BELL", 0, 2, ["Holy ___!", "Taco ___"], "SNL wanted more of it"],
+    ["TOUCAN", 8, 2, ["Froot Loops mascot"], ""],
+    ["TOOTH|PICK", 2, 3, ["Under the pillow, kiddo", "Choose"], "Cowboy's floss"],
+    ["GOBLIN", 2, 4, ["Gringotts banker"], ""],
+    ["GECKO", 9, 4, ["Car insurance mascot"], ""],
+    ["CACTUS", 0, 5, ["Plant you shouldn't hug"], ""],
+    ["FALCON", 8, 5, ["Millennium ___ (Han Solo's ship)"], ""],
+    ["KNEE|CAP", 1, 6, ["Propose on one", "Baseball hat"], "Leg joint protection"],
+    ["HAIKU", 9, 6, ["Five-seven-five"], ""],
+    ["LANTERN", 0, 7, ["Lunar New Year festival light"], ""],
+    ["WALTZ", 8, 7, ["Stroll in like you own the place"], ""],
+    ["FLAG|POLE", 2, 8, ["Stars and Stripes, e.g.", "Totem ___"], "Half-mast holder"],
+    ["MOUTH|WASH", 0, 9, ["River's end", "Car ___"], "Gargle"],
+    ["MUSTARD", 0, 10, ["Colonel ___ (Clue)"], ""],
+    ["NAPKIN", 8, 10, ["Lap cover at dinner"], ""],
+    ["MOTIVATION", 0, 1, ["Carrot on a stick."], "side"],
+  ],
 ];
 const CFG = window.CASCADE_CONFIG || {};   // set at build time on Vercel (see build.sh); defaults when run anywhere else
 const LIVES = () => CFG.lives || 5;
@@ -1591,7 +1633,7 @@ const SAVE = "plumb15-";   // bumped from plumb14- to clear everyone's old progr
 // Players see two boards: the intro, which never changes, and today's daily. Every other board is archived (no way to reach it).
 const INTRO = 18;
 const DAILY_START = "2026-11-16";   // the first day with a daily puzzle
-const DAILY = [19, 21, 22, 23, 24, 25];                 // board for each day from DAILY_START; add one index per new day
+const DAILY = [19, 21, 22, 23, 24, 25, 26, 27];                 // board for each day from DAILY_START; add one index per new day
 const DRAFTS = [20];                              // finished boards waiting for a day (not playable until moved into DAILY)
 const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const today = () => window.CASCADE_TODAY || dayKey(new Date());   // the player's own calendar day
@@ -2733,6 +2775,8 @@ const BASELINES = {   // board index: [share who run out of lives, typical solve
   22: [.35, 10 * 60],    // Nov 18
   23: [.35, 10 * 60],    // Nov 19
   24: [.4, 11 * 60],     // Nov 20: harder clues
+  26: [.4, 11 * 60],     // Nov 22: INFRASTRUCTURE
+  27: [.4, 11 * 60],     // Nov 23: RECOMMENDATION
   25: [.45, 12 * 60],    // Nov 21: harder clues, and fewer letters fall in from the top and side words
 };
 const crowdData = {};   // board index -> { n, won: { "solve time / 10s": count }, lost: { "percent done, in 5s": count } }
