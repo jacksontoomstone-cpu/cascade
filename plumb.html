@@ -1586,23 +1586,23 @@ const PUZZLES = [
   ],
   [
     ["INFRASTRUCTURE", 0, 0, ["Roads and bridges."], ""],
-    ["PRETZEL", 1, 1, ["Yoga pose or salty snack"], ""],
+    ["JACK|POT", 0, 1, ["Car lifter", "The kitty in poker"], "Vegas dream"],
     ["COBRA", 9, 1, ["___ Kai (karate)"], ""],
-    ["JACK|POT", 0, 2, ["Car lifter", "The kitty in poker"], "Vegas dream"],
-    ["TIARA", 9, 2, ["Princess's crown"], ""],
+    ["PIN|WHEEL", 3, 2, ["ATM code", "Hamster's treadmill"], "Breeze-spun toy"],
     ["WISH|BONE", 0, 3, ["Coin in the fountain", "Femur, e.g."], "Thanksgiving tug-of-war"],
-    ["OLIVE", 9, 3, ["Pizza topping, black or green"], ""],
-    ["PIN|WHEEL", 2, 4, ["ATM code", "Hamster's treadmill"], "Breeze-spun toy"],
-    ["LAND|MARK", 6, 5, ["___ of the free", "Gospel writer"], "Eiffel Tower, e.g."],
-    ["THUMB|NAIL", 5, 6, ["Hitchhiker's signal", "Holds pictures on the wall"], "YouTube preview"],
-    ["PELICAN", 0, 7, ["Pouch-billed bird"], ""],
-    ["BUTLER", 8, 7, ["Alfred, to Batman"], ""],
-    ["INK|BLOT", 0, 8, ["Squid's defense", "Smudge"], "Rorschach image"],
-    ["MOSAIC", 8, 8, ["Roman floor art or Gaudí's lizard"], ""],
-    ["VELCRO", 0, 9, ["Kids' sneaker strap"], ""],
-    ["ALPACA", 8, 9, ["Llama look-alike"], ""],
-    ["GAZEBO", 0, 10, ["Open-sided garden hut"], ""],
-    ["HELIUM", 7, 10, ["He, on the periodic table"], ""],
+    ["TIARA", 9, 3, ["Princess's crown"], ""],
+    ["THUMB|NAIL", 2, 4, ["Hitchhiker's signal", "Holds pictures on the wall"], "YouTube preview"],
+    ["OLIVE", 1, 5, ["Pizza topping, black or green"], ""],
+    ["ALPACA", 8, 5, ["Llama look-alike"], ""],
+    ["HELIUM", 0, 6, ["He, on the periodic table"], ""],
+    ["INK|BLOT", 7, 6, ["Squid's defense", "Smudge"], "Rorschach image"],
+    ["GAZEBO", 0, 7, ["Open-sided garden hut"], ""],
+    ["PELICAN", 7, 7, ["Pouch-billed bird"], ""],
+    ["LAND|MARK", 1, 8, ["___ of the free", "Gospel writer"], "Eiffel Tower, e.g."],
+    ["MOSAIC", 0, 9, ["Roman floor art or Gaudí's lizard"], ""],
+    ["BUTLER", 8, 9, ["Alfred, to Batman"], ""],
+    ["PRETZEL", 0, 10, ["Yoga pose or salty snack"], ""],
+    ["VELCRO", 8, 10, ["Kids' sneaker strap"], ""],
     ["RESILIENCE", 0, 1, ["Bouncing back."], "side"],
   ],
   [
@@ -3708,7 +3708,7 @@ function openMenu(pause = false) {
   $("menu").hidden = false; skyStart();
   setTimeout(() => $("menuPlay").focus({ preventScroll: true }), 50);
 }
-const SUN = true;   // TEMPORARY: brighter screen for reading in the sun; set to false to go back to normal
+const SUN = false;  // TEMPORARY: brighter screen for reading in the sun; set to false to go back to normal
 document.documentElement.classList.toggle("sun", SUN);
 function applyMode() {
   const on = store.get("cx-clean") === "1";
