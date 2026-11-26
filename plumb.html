@@ -2183,7 +2183,7 @@ function render() {
     const t = tiles[r][c], j = c - X(r), s = segAt(r, c), g = P[r].segs[s];
     const lock = S.locked[r][j] && !pending.has(cellKey(r, c));
     const revealed = !playing() && !S.locked[r][j];
-    const sel = r === S.row && s === S.seg && (playing() || S.status === "lost");
+    const sel = r === S.row && s === S.seg && (playing() || S.status === "lost" || S.status === "won");
     // a fallen letter in the word you're on is a hint: faded until you type over it
     const hint = lock && sel && playing() && !segSolved(r, s), ghost = hint && !S.typed[r][j];
     const L = hint ? S.typed[r][j] || W(r)[j] : lock || revealed ? W(r)[j] : S.typed[r][j];
@@ -2231,7 +2231,7 @@ function render() {
 
 /* ---------- input ---------- */
 function select(r, c) {
-  if (S.status === "lost" && !busy) { S.row = r; S.seg = segAt(r, c); S.cur = c; render(); return; }   // out of lives: tap any word to read its clue
+  if ((S.status === "lost" || S.status === "won") && !busy) { S.row = r; S.seg = segAt(r, c); S.cur = c; render(); return; }   // finished (won or out of lives): tap any word to read its clue
   if (!playing() || shaking) return; S.started = true; S.row = r; S.seg = segAt(r, c); S.cur = c; render(); }
 /* Letters that fall into a word you haven't solved are hints: in the word you're on they show faded, and typing walks
    over them like any other square. Type over one to replace it, or skip past it (arrow keys, space, or just pressing
