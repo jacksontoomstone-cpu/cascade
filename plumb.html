@@ -442,6 +442,14 @@ html.clean .snd-grid .btn { border-radius: 8px; font-size: .85rem; } html.clean 
 .ss-list li { --bc: var(--a); position: relative; overflow: hidden; display: grid; grid-template-columns: 1fr auto; row-gap: 8px; column-gap: 12px; align-items: center;
   padding: 14px 16px; background: var(--cab); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--bc) 55%, var(--bezel)); font-size: 1.25rem; }
 .ss-list li.intro { --bc: #ffd166; }
+/* admin only: how many people started and finished each puzzle (from the results database) */
+.adm-players { border-top: 2px dashed #ffe066; padding-top: 10px; margin-top: 4px; }
+.adm-players h3 { margin: 0 0 8px; font-family: var(--pixel); font-weight: 400; font-size: .55rem; text-transform: uppercase; color: #ffe066; }
+.adm-players table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.adm-players th, .adm-players td { text-align: right; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.adm-players th:first-child, .adm-players td:first-child { text-align: left; }
+.adm-players th { font-weight: 400; opacity: .7; font-size: .7rem; }
+.adm-players .note { font-size: .72rem; opacity: .7; margin: 6px 0 0; }
 .ss-list li.lost { --bc: #ff5d8f; }
 .ss-list li::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--pct, 0%); background: linear-gradient(90deg, color-mix(in srgb, var(--bc) 10%, transparent), color-mix(in srgb, var(--bc) 30%, transparent)); pointer-events: none; }
 .ss-list li > * { position: relative; }
@@ -833,6 +841,7 @@ html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; colo
       </div>
       <p class="arch-head">Completed puzzles</p>
       <ol class="ss-list" id="ssList"></ol>
+      <div class="adm-players" id="ssAdmin" hidden></div>
     </aside>
   </main>
 </div>
@@ -925,6 +934,7 @@ html.clean .tut-welcome span { font-family: var(--pixel); font-weight: 600; colo
     </div>
     <p class="arch-head">Puzzles finished</p>
     <div class="done-list" id="stDone"></div>
+      <div class="adm-players" id="stAdmin" hidden></div>
     <p class="pay-small" style="text-align:center">Streaks count dailies solved on their own day.</p>
   </div>
 </div>
@@ -2232,7 +2242,7 @@ function render() {
 /* ---------- input ---------- */
 function select(r, c) {
   if ((S.status === "lost" || S.status === "won") && !busy) { S.row = r; S.seg = segAt(r, c); S.cur = c; render(); return; }   // finished (won or out of lives): tap any word to read its clue
-  if (!playing() || shaking) return; S.started = true; S.row = r; S.seg = segAt(r, c); S.cur = c; render(); }
+  if (!playing() || shaking) return; S.started = true; sendStart(); S.row = r; S.seg = segAt(r, c); S.cur = c; render(); }
 /* Letters that fall into a word you haven't solved are hints: in the word you're on they show faded, and typing walks
    over them like any other square. Type over one to replace it, or skip past it (arrow keys, space, or just pressing
    Enter) and it counts as it is. A word whose letters all fell in is already solved. */
@@ -2255,7 +2265,7 @@ function goToNext() { // the rest of this word first, then the next unsolved wor
 
 function type(ch) {
   if (!playing() || shaking || segSolved(S.row, S.seg)) return;
-  S.started = true;
+  S.started = true; sendStart();
   const c = S.cur;
   // a fallen letter can't be typed over with a different one: a wrong key just steps past it (the fallen letter still counts)
   if (isLocked(S.row, c) && ch !== letterAt(S.row, c)) S.typed[S.row][c - X(S.row)] = "";
@@ -2592,7 +2602,22 @@ function openStats() {
   $("stDone").innerHTML = order.length ? order.map(i => `<span class="${st.done[i]}">${boardName(+i)}</span>`).join("") : '<span>None yet</span>';
   closeModals();
   if (wide.matches) return openSideStats();   // wide screens: the panel in the empty right column
+  renderAdminPlayers($("stAdmin"));
   $("statsModal").hidden = false;
+}
+// admin only: started / finished / solved per puzzle, newest first, from the results database
+function renderAdminPlayers(el) {
+  el.hidden = !adm(); if (!adm()) return;
+  const boards = [...DAILY].reverse().filter(i => dateOf(i) <= new Date()).concat(INTRO);
+  const cell = v => v == null ? "–" : v;
+  const rows = boards.map(i => {
+    const h = crowdData[i], won = h ? Object.values(h.won || {}).reduce((a, b) => a + b, 0) : null;
+    return `<tr><td>${boardName(i)}</td><td>${cell(h?.started)}</td><td>${cell(h?.n)}</td><td>${cell(won)}</td></tr>`;
+  }).join("");
+  el.innerHTML = `<h3>Players (admin only)</h3><table><tr><th>Puzzle</th><th>Started</th><th>Finished</th><th>Solved</th></tr>${rows}</table>` +
+    (RESULTS_API ? (boards.some(i => crowdData[i]) ? "" : '<p class="note">Waiting on the results database (shows – until it answers).</p>')
+                 : '<p class="note">Counts only come in on playcascade.io.</p>');
+  boards.forEach(i => fetchCrowd(i, () => renderAdminPlayers(el)));
 }
 // every finished puzzle, newest first, with its time and lives; click one to open it
 function openSideStats() {
@@ -2613,6 +2638,7 @@ function openSideStats() {
       `<span class="mt">${meta}</span><span class="pc">${pct == null ? "" : `Better than <b>${pct}%</b>`}</span></li>`;
   }).join("") : '<li><span class="nm">None yet</span></li>';
   $("sideStats").hidden = false;
+  renderAdminPlayers($("ssAdmin"));
   order.forEach(i => fetchCrowd(i, () => { if (!$("sideStats").hidden) openSideStats(); }));   // real percentiles as they arrive
 }
 // click a finished puzzle: its result window with the distribution, from its saved result
@@ -2823,6 +2849,12 @@ const sumOf = o => Object.values(o || {}).reduce((a, b) => a + b, 0);
 // (the claude.ai artifact, a local preview) the game just uses the baselines
 const RESULTS_API = /(^|\.)playcascade\.io$|\.vercel\.app$/.test(location.hostname) ? "/api/results" : null;
 // one anonymous line per finished puzzle: which board, solved or not, the time, and how much was filled in
+// the first time this device plays a board, tell the results database someone started it (admins don't count)
+function sendStart() {
+  if (!RESULTS_API || adm() || TUT || store.get("cx-started-" + idx)) return;
+  store.set("cx-started-" + idx, 1);
+  try { fetch(RESULTS_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ p: idx, s: "start" }), keepalive: true }).catch(() => {}); } catch {}
+}
 function sendResult(status) {
   if (!RESULTS_API || adm() || TUT) return;   // admin play-testing doesn't count
   const body = JSON.stringify({ p: idx, s: status, t: S.time, c: filled() });

@@ -1,7 +1,8 @@
 // Cascade results: an anonymous tally of how players finish each puzzle, used for the "Better than X%" curve.
 //
 //   POST /api/results  { p: board index, s: "won" | "lost", t: seconds, c: percent of the board filled }
-//   GET  /api/results?p=21  ->  { n, won: { "<seconds / 10>": count }, lost: { "<percent, in steps of 5>": count } }
+//   POST /api/results  { p: board index, s: "start" }   (sent once per device the first time someone plays a board)
+//   GET  /api/results?p=21  ->  { n, started, won: { "<seconds / 10>": count }, lost: { "<percent, in steps of 5>": count } }
 //
 // Storage is a Redis hash per puzzle (key cx:r:<board>), counting finishes per 10-second time bucket ("w:<bucket>")
 // or per 5% fill bucket for boards that ran out of lives ("l:<pct>"). No names, ids or IP addresses are stored.
@@ -35,15 +36,16 @@ module.exports = async (req, res) => {
       if (p === null) return res.status(400).json({ error: "bad puzzle" });
       const [out] = await redis([["HGETALL", `cx:r:${p}`]]);
       const flat = (out && out.result) || [], won = {}, lost = {};
-      let n = 0;
+      let n = 0, started = 0;
       for (let k = 0; k + 1 < flat.length; k += 2) {
         const [kind, bucket] = String(flat[k]).split(":"), count = Number(flat[k + 1]) || 0;
+        if (kind === "start") { started = count; continue; }
         if (kind === "w") won[bucket] = count;
         else if (kind === "l") lost[bucket] = count;
         else continue;
         n += count;
       }
-      return res.status(200).json({ n, won, lost });
+      return res.status(200).json({ n, started, won, lost });
     }
     if (req.method === "POST") {
       let body = req.body;
@@ -52,7 +54,8 @@ module.exports = async (req, res) => {
       const p = board(body.p);
       if (p === null) return res.status(400).json({ error: "bad puzzle" });
       let field;
-      if (body.s === "won") {
+      if (body.s === "start") field = "start";
+      else if (body.s === "won") {
         const t = Math.round(Number(body.t));
         if (!(t >= 5 && t <= 6 * 3600)) return res.status(400).json({ error: "bad time" });   // 5 seconds to 6 hours
         field = `w:${Math.floor(t / 10)}`;
