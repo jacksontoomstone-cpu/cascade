@@ -2494,6 +2494,8 @@ function settle() {
   if (S.cracked && S.crackedSide && S.colBase == null) { S.colBase = earned(); S.cols = 0; }   // bars count from here
   render(); save();
   const power = !CLEAN() && S.colBase != null && earned() - S.colBase > S.cols;
+  // claim it now: the drop itself runs seconds later, and a word solved in between must not see it as still owed (two drops)
+  if (power) { S.cols++; save(); }
   if (full && !calm() && !CLEAN()) drainTank(stamped, power);
   else if (stamped.length) stamped.forEach(({ t }) => { t.classList.remove("land"); void t.offsetWidth; t.classList.add("land"); });
   if (stamped.length && combo === null && !CLEAN()) toast("New letters!");   // Clean mode: the invisible pond adds them silently
@@ -2506,8 +2508,7 @@ function fillCol() {
   P.forEach((_, r) => { if (!isSpecial(r)) colsOf(r).forEach(c => { const e = count.get(c) || [0, 0]; e[isLocked(r, c) ? 0 : 1]++; count.set(c, e); }); });
   let best = null;
   count.forEach(([f, o], c) => { if (o && (!best || f < best.f || (f === best.f && o > best.o))) best = { c, f, o }; });
-  if (!best) return;
-  S.cols++;
+  if (!best) return;   // (the power-up was already counted when it was earned, in settle)
   const c = best.c, rows = P.map((_, r) => r).filter(r => !isSpecial(r) && colsOf(r).includes(c) && !isLocked(r, c));
   rows.forEach(r => { S.locked[r][c - X(r)] = true; pending.add(cellKey(r, c)); });
   if (!allSolved()) { if (segSolved(S.row, S.seg)) goToNext(); else S.cur = firstOpen(S.row, S.seg); }
